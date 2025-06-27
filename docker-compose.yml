@@ -1,0 +1,121 @@
+services:
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  # Auth Service Database
+  auth-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password
+      POSTGRES_DB: auth_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+
+  # User Service Database  
+  user-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: user_user
+      POSTGRES_PASSWORD: user_password
+      POSTGRES_DB: user_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - user_postgres_data:/var/lib/postgresql/data
+
+  # Problems Service Database
+  problems-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: problems_user
+      POSTGRES_PASSWORD: problems_password
+      POSTGRES_DB: problems_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - problems_postgres_data:/var/lib/postgresql/data
+
+  # Duels Service Database
+  duels-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: duels_user
+      POSTGRES_PASSWORD: duels_password
+      POSTGRES_DB: duels_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - duels_postgres_data:/var/lib/postgresql/data
+
+  auth-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.auth
+    env_file:
+      - ./backend/.env.auth
+    depends_on:
+      - redis
+      - auth-db
+    ports:
+      - "8001:8000"
+    environment:
+      - UVICORN_LOG_LEVEL=info
+      - UVICORN_ACCESS_LOG=true
+
+  user-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.user
+    env_file:
+      - ./backend/.env.user
+    depends_on:
+      - redis
+      - user-db
+    ports:
+      - "8002:8000"
+    environment:
+      - UVICORN_LOG_LEVEL=info
+      - UVICORN_ACCESS_LOG=true
+
+  problems-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.problems
+    env_file:
+      - ./backend/.env.problems
+    depends_on:
+      - redis
+      - problems-db
+    ports:
+      - "8003:8000"
+    environment:
+      - UVICORN_LOG_LEVEL=info
+      - UVICORN_ACCESS_LOG=true
+
+  duels-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.duels
+    env_file:
+      - ./backend/.env.duels
+    depends_on:
+      - redis
+      - duels-db
+    ports:
+      - "8004:8004"
+    environment:
+      - UVICORN_LOG_LEVEL=info
+      - UVICORN_ACCESS_LOG=true
+      # Uncomment and set your OpenAI API key for AI problem generation
+      # - OPENAI_API_KEY=your-openai-api-key-here
+
+volumes:
+  auth_postgres_data:
+  user_postgres_data:
+  problems_postgres_data:
+  duels_postgres_data: 

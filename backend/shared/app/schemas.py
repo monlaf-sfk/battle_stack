@@ -1,0 +1,98 @@
+from pydantic import BaseModel, EmailStr, UUID4, field_validator
+from typing import Optional
+from datetime import datetime
+import uuid
+import re
+import os
+
+
+class UserBase(BaseModel):
+    username: str
+    email: str
+    full_name: str | None = None
+
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        """Custom email validation that allows test domains in development"""
+        # Basic email format validation
+        email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+        
+        if not email_pattern.match(v):
+            raise ValueError("Invalid email format")
+        
+        # In development, allow test domains like .test, .local, .dev
+        environment = os.getenv("ENVIRONMENT", "development")
+        if environment == "development":
+            test_domains = ['.test', '.local', '.dev', '.localhost']
+            if any(v.lower().endswith(domain) for domain in test_domains):
+                return v.lower()
+        
+        # For production or non-test domains, use strict validation
+        try:
+            from email_validator import validate_email, EmailNotValidError
+            validated_email = validate_email(v, check_deliverability=False)
+            return validated_email.normalized
+        except EmailNotValidError as e:
+            raise ValueError(f"Invalid email address: {str(e)}")
+        except ImportError:
+            # Fallback if email-validator is not available
+            return v.lower()
+
+
+class UserCreate(UserBase):
+    password: str
+
+
+class User(UserBase):
+    id: str
+    role: str
+    is_active: bool
+    is_verified: bool
+    created_at: str
+    updated_at: str
+    last_login: Optional[str] = None
+
+    @field_validator('id', mode='before')
+    @classmethod
+    def convert_uuid_to_str(cls, v):
+        if isinstance(v, uuid.UUID):
+            return str(v)
+        return v
+
+    @field_validator('created_at', 'updated_at', mode='before')
+    @classmethod
+    def convert_datetime_to_str(cls, v):
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return v
+
+    @field_validator('last_login', mode='before')
+    @classmethod
+    def convert_optional_datetime_to_str(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return v
+
+    class Config:
+        from_attributes = True
+
+
+class UserInDB(UserBase):
+    hashed_password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: str | None = None
+
+
+class TokenRefreshRequest(BaseModel):
+    refresh_token: str

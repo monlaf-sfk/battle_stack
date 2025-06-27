@@ -1,0 +1,444 @@
+# ===============================
+# BattleStack Project .gitignore
+# ===============================
+
+# ===== ENVIRONMENT & SECRETS =====
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+!.env.example
+backend/.env.*
+frontend/.env.*
+
+# ===== PYTHON/BACKEND =====
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+backend/venv/
+backend/ENV/
+backend/env/
+
+# Django/Flask stuff
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# FastAPI/SQLAlchemy
+alembic.ini.local
+*/alembic/versions/*_local.py
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# ===== NODE.JS/FRONTEND =====
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage
+.grunt
+
+# Bower dependency directory
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons
+build/Release
+
+# Dependency directories
+node_modules/
+jspm_packages/
+frontend/node_modules/
+frontend/jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+out
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+public
+
+# Vite build output
+dist/
+dist-ssr/
+frontend/dist/
+frontend/dist-ssr/
+
+# Rollup cache
+.rollup.cache/
+
+# Svelte kit
+.svelte-kit
+
+# ===== DOCKER =====
+# Docker volumes
+docker-volumes/
+postgres-data/
+redis-data/
+
+# Docker build cache
+.dockerignore
+
+# ===== DATABASE =====
+# PostgreSQL
+*.dump
+*.sql.gz
+pgdata/
+postgres-data/
+
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# Redis
+dump.rdb
+
+# ===== IDE & EDITORS =====
+# Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# PyCharm
+.idea/
+
+# Sublime Text
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+
+# Atom
+.atom/
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+Sessionx.vim
+.netrwhist
+*~
+tags
+[._]*.un~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ===== OPERATING SYSTEM =====
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.tmp
+*.temp
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ===== LOGS & TEMPORARY FILES =====
+# Application logs
+logs/
+*.log
+log/
+backend/logs/
+frontend/logs/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+.temp/
+
+# ===== BUILD & CACHE =====
+# Build artifacts
+build/
+dist/
+out/
+target/
+
+# Cache directories
+.cache/
+.npm/
+.yarn/
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# ESLint cache
+.eslintcache
+
+# Prettier cache
+.prettiercache
+
+# Stylelint cache
+.stylelintcache
+
+# ===== TESTING =====
+# Test coverage
+coverage/
+.coverage
+htmlcov/
+.nyc_output/
+
+# Test artifacts
+test-results/
+junit.xml
+
+# ===== MISCELLANEOUS =====
+# Backup files
+*.backup
+*.bak
+*.swp
+*.swo
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+
+# Local configuration overrides
+local.json
+local.yml
+local.yaml
+
+# AI/ML models (if any)
+*.model
+*.pkl
+*.joblib
+
+# Certificates
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# ===== PROJECT SPECIFIC =====
+# BattleStack specific
+uploads/
+avatars/
+static/media/
+media/
+
+# Alembic
+backend/*/alembic/versions/*.py
+!backend/*/alembic/versions/.gitkeep
+
+# Code runner sandboxes
+code-runner-temp/
+sandbox/
+
+# Performance monitoring
+*.prof
+*.trace
+
+# Documentation build
+docs/_build/
+docs/build/
+site/ 
+.cursor/
+.cursorrules

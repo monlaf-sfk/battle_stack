@@ -1,0 +1,59 @@
+@theme {
+  /* Modern Color Palette */
+  --color-arena-dark: #0a0a0a;
+  --color-arena-med: #1a1a1a;
+  --color-arena-light: #2a2a2a;
+  --color-arena-surface: #181818;
+  --color-arena-card: rgba(255, 255, 255, 0.03);
+  --color-arena-border: rgba(255, 255, 255, 0.08);
+  
+  /* Vibrant Accent Colors */
+  --color-arena-accent: #00ff88;
+  --color-arena-accent-hover: #00ff9d;
+  --color-arena-accent-glow: rgba(0, 255, 136, 0.4);
+  --color-arena-secondary: #8b5cf6;
+  --color-arena-secondary-hover: #9f7aea;
+  --color-arena-tertiary: #06b6d4;
+  
+  /* Text Colors */
+  --color-arena-text: #ffffff;
+  --color-arena-text-muted: #a1a1aa;
+  --color-arena-text-dim: #71717a;
+  
+  /* Gradients */
+  --gradient-arena-primary: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%);
+  --gradient-arena-secondary: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  --gradient-arena-dark: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
+  --gradient-arena-radial: radial-gradient(circle at 50% 0%, rgba(0, 255, 136, 0.1) 0%, transparent 50%);
+  --gradient-arena-mesh: 
+    radial-gradient(at 40% 20%, hsla(158, 100%, 50%, 0.3) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, hsla(189, 100%, 56%, 0.3) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(280, 100%, 69%, 0.3) 0px, transparent 50%);
+  
+  /* Shadows */
+  --shadow-arena-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-arena-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-arena-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-arena-glow: 0 0 40px var(--color-arena-accent-glow);
+  
+  /* Blur Effects */
+  --blur-arena-sm: blur(8px);
+  --blur-arena-md: blur(16px);
+  --blur-arena-lg: blur(24px);
+  
+  /* Animation Timings */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* Fonts */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+  
+  /* Border Radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+} 

@@ -1,0 +1,31 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    netcat-openbsd \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better layer caching
+COPY requirements.txt .
+RUN pip install --upgrade pip
+RUN pip install --default-timeout=100 --no-cache-dir -r requirements.txt
+
+# Copy only required application code
+COPY shared/ ./backend/shared/
+COPY duel_service/ ./backend/duel_service/
+
+# Set the Python path to include the shared modules
+ENV PYTHONPATH="/app/backend"
+
+# Make entrypoint executable
+RUN chmod +x /app/backend/duel_service/entrypoint.sh
+
+# Expose port
+EXPOSE 8004
+
+# Run the entrypoint script
+CMD ["/app/backend/duel_service/entrypoint.sh"] 
