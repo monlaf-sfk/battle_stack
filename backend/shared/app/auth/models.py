@@ -33,6 +33,12 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     
+    # Google OAuth fields
+    google_id: Mapped[str | None] = mapped_column(String, unique=True, index=True)
+    google_email: Mapped[str | None] = mapped_column(String, index=True)
+    google_picture: Mapped[str | None] = mapped_column(String)
+    oauth_provider: Mapped[str | None] = mapped_column(String, default=None, index=True)  # 'google', 'github', etc.
+    
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())

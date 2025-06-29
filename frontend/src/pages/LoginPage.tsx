@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Header } from "@/components/layout/Header";
+import { GoogleOAuthButton } from "@/components/auth/GoogleOAuthButton";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Lock, LogIn, Sparkles, AlertTriangle, CheckCircle2, Swords } from "lucide-react";
+import { User, Lock, LogIn, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
@@ -90,7 +91,7 @@ const LoginPage = () => {
       // Show success toast
       addToast({
         type: 'success',
-        title: 'Welcome back to the Arena!',
+        title: 'Login Successful',
         message: rememberMe 
           ? 'Login successful with extended session. You\'ll stay logged in for 30 days!' 
           : 'Login successful. Redirecting to dashboard...',
@@ -114,12 +115,12 @@ const LoginPage = () => {
       }, 1000);
       
     } catch (err: any) {
-      let errorMessage = 'Arena access denied. Please try again.';
-      let errorTitle = 'Authentication Failed';
+      let errorMessage = 'Authentication failed. Please try again.';
+      let errorTitle = 'Login Failed';
       
       if (err.response?.status === 401) {
         errorMessage = 'Invalid credentials. Check your username and password.';
-        errorTitle = 'Arena Access Denied';
+        errorTitle = 'Invalid Credentials';
       } else if (err.response?.status === 429) {
         errorMessage = 'Too many attempts. Please wait before trying again.';
         errorTitle = 'Rate Limited';
@@ -144,32 +145,29 @@ const LoginPage = () => {
 
   if (showSuccess) {
     return (
-      <div className="min-h-screen bg-arena-dark relative flex items-center justify-center">
-        {/* Background mesh effect */}
-        <div className="fixed inset-0 bg-arena-gradient-mesh opacity-30 pointer-events-none" />
-        
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <motion.div
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="text-center relative z-10"
+          className="text-center"
         >
           <motion.div
-            className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-arena-accent to-arena-tertiary rounded-2xl flex items-center justify-center shadow-arena-glow"
+            className="w-24 h-24 mx-auto mb-6 bg-white rounded-lg flex items-center justify-center"
             animate={{ scale: [1, 1.1, 1], rotate: [0, 5, 0] }}
             transition={{ duration: 0.8, repeat: 2 }}
           >
-            <CheckCircle2 size={48} className="text-arena-dark" />
+            <CheckCircle2 size={48} className="text-black" />
           </motion.div>
-          <h2 className="text-3xl font-bold gradient-text mb-3">Arena Access Granted!</h2>
-          <p className="text-arena-text-muted text-lg">Redirecting to your dashboard...</p>
+          <h2 className="text-3xl font-bold text-white mb-3 font-mono">LOGIN SUCCESSFUL</h2>
+          <p className="text-gray-400 text-lg font-mono">REDIRECTING TO DASHBOARD...</p>
           <motion.div 
-            className="mt-4 w-48 h-1 mx-auto bg-arena-border rounded-full overflow-hidden"
+            className="mt-4 w-48 h-1 mx-auto bg-gray-800 rounded-full overflow-hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
             <motion.div
-              className="h-full bg-gradient-to-r from-arena-accent to-arena-tertiary"
+              className="h-full bg-white"
               initial={{ width: 0 }}
               animate={{ width: "100%" }}
               transition={{ duration: 1, ease: "easeOut" }}
@@ -181,13 +179,10 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-arena-dark relative overflow-hidden">
-      {/* Background mesh effect */}
-      <div className="fixed inset-0 bg-arena-gradient-mesh opacity-30 pointer-events-none" />
-
+    <div className="min-h-screen bg-black text-white">
       <Header />
       
-      <main className="flex items-center justify-center min-h-screen pt-20 pb-12 px-6 relative z-10">
+      <main className="flex items-center justify-center min-h-screen pt-20 pb-12 px-6">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -195,7 +190,7 @@ const LoginPage = () => {
           className="w-full max-w-md"
         >
           {/* Login Card */}
-          <Card variant="glass" className="border-arena-accent/20 shadow-arena-glow">
+          <Card className="bg-gray-900 border border-gray-800">
             <CardContent className="p-8 sm:p-10">
               {/* Logo and Title */}
               <motion.div
@@ -205,20 +200,20 @@ const LoginPage = () => {
                 className="text-center mb-8"
               >
                 <motion.div
-                  className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-arena-accent to-arena-tertiary mb-6 shadow-arena-glow"
+                  className="inline-flex items-center justify-center w-20 h-20 rounded-lg bg-white mb-6"
                   animate={{ 
                     rotate: [0, 5, -5, 0],
                     scale: [1, 1.05, 1]
                   }}
                   transition={{ duration: 6, repeat: Infinity }}
                 >
-                  <Swords size={40} className="text-arena-dark" />
+                  <span className="text-2xl font-bold text-black font-mono">BS</span>
                 </motion.div>
-                <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-3">
-                  Welcome Back
+                <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 font-mono">
+                  WELCOME BACK
                 </h1>
-                <p className="text-arena-text-muted text-lg">
-                  Enter the arena and continue your coding journey
+                <p className="text-gray-400 text-lg font-mono">
+                  ENTER YOUR CREDENTIALS TO CONTINUE
                 </p>
               </motion.div>
 
@@ -232,16 +227,14 @@ const LoginPage = () => {
                   <Input
                     ref={usernameRef}
                     type="text"
-                    label="Username or Email"
+                    label="USERNAME OR EMAIL"
                     icon={<User size={18} />}
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    variant="glass"
-                    hint="Enter your arena credentials"
                     autoComplete="username"
                     disabled={isLoading}
-                    className="bg-arena-surface/50 border-arena-border focus:border-arena-accent/50"
+                    className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
                   />
                 </motion.div>
 
@@ -252,16 +245,15 @@ const LoginPage = () => {
                 >
                   <Input
                     type="password"
-                    label="Password"
+                    label="PASSWORD"
                     icon={<Lock size={18} />}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    variant="glass"
                     showPasswordToggle
                     autoComplete="current-password"
                     disabled={isLoading}
-                    className="bg-arena-surface/50 border-arena-border focus:border-arena-accent/50"
+                    className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
                   />
                 </motion.div>
 
@@ -274,11 +266,11 @@ const LoginPage = () => {
                       exit={{ opacity: 0, y: -10, scale: 0.95 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <Card variant="glass" className="border-red-400/30 bg-red-500/10">
+                      <Card className="border-red-600 bg-red-900/20">
                         <CardContent className="p-4">
                           <div className="flex items-center gap-3">
                             <AlertTriangle size={20} className="text-red-400 flex-shrink-0" />
-                            <p className="text-sm text-red-400 font-medium">{error}</p>
+                            <p className="text-sm text-red-400 font-medium font-mono">{error}</p>
                           </div>
                         </CardContent>
                       </Card>
@@ -298,18 +290,18 @@ const LoginPage = () => {
                       type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="w-4 h-4 rounded bg-arena-surface border-arena-border text-arena-accent focus:ring-arena-accent/50 transition-all"
+                      className="w-4 h-4 rounded bg-gray-800 border-gray-700 text-white focus:ring-gray-600 transition-all"
                       whileTap={{ scale: 0.95 }}
                     />
-                    <span className="ml-3 text-sm text-arena-text-muted group-hover:text-arena-text transition-colors">
-                      Remember me
+                    <span className="ml-3 text-sm text-gray-400 group-hover:text-white transition-colors font-mono">
+                      REMEMBER ME
                     </span>
                   </label>
                   <Link
                     to="/forgot-password"
-                    className="text-sm text-arena-accent hover:text-arena-accent-hover transition-colors font-medium"
+                    className="text-sm text-gray-400 hover:text-white transition-colors font-medium font-mono"
                   >
-                    Forgot password?
+                    FORGOT PASSWORD?
                   </Link>
                 </motion.div>
 
@@ -321,13 +313,12 @@ const LoginPage = () => {
                 >
                   <Button
                     type="submit"
-                    variant="gradient"
-                    className="w-full text-lg py-4 font-bold shadow-arena-glow"
+                    className="w-full text-lg py-4 font-bold bg-white text-black hover:bg-gray-200 font-mono"
                     loading={isLoading}
                     disabled={isLoading}
                   >
                     <LogIn size={20} className="mr-3" />
-                    {isLoading ? 'Entering Arena...' : 'Enter Arena'}
+                    {isLoading ? 'LOGGING IN...' : 'LOGIN'}
                   </Button>
                 </motion.div>
               </form>
@@ -340,11 +331,11 @@ const LoginPage = () => {
                 className="relative my-8"
               >
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-arena-border" />
+                  <div className="w-full border-t border-gray-800" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-arena-dark/90 text-arena-text-muted backdrop-blur-sm rounded-lg border border-arena-border">
-                    Or continue with
+                  <span className="px-4 bg-gray-900 text-gray-400 font-mono">
+                    OR CONTINUE WITH
                   </span>
                 </div>
               </motion.div>
@@ -354,15 +345,37 @@ const LoginPage = () => {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.8, duration: 0.4 }}
-                className="grid grid-cols-2 gap-4"
+                className="space-y-4"
               >
-                <Button variant="glass" className="w-full border border-arena-border hover:border-arena-accent/40" disabled={isLoading}>
-                  <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5 mr-2" />
-                  Google
-                </Button>
-                <Button variant="glass" className="w-full border border-arena-border hover:border-arena-accent/40" disabled={isLoading}>
-                  <img src="https://www.svgrepo.com/show/512120/github-142.svg" alt="GitHub" className="w-5 h-5 mr-2" />
-                  GitHub
+                {/* 🔐 Google OAuth Button */}
+                <GoogleOAuthButton
+                  variant="signin"
+                  onSuccess={() => {
+                    addToast({
+                      type: 'success',
+                      title: 'Google Login Successful',
+                      message: 'Redirecting to dashboard...',
+                      duration: 3000
+                    });
+                  }}
+                  onError={(error) => {
+                    addToast({
+                      type: 'error',
+                      title: 'Google Login Failed',
+                      message: error,
+                      duration: 5000
+                    });
+                  }}
+                />
+                
+                {/* GitHub Button (placeholder for future implementation) */}
+                <Button 
+                  className="w-full bg-gray-800 text-white border border-gray-700 hover:border-gray-600 font-mono text-sm uppercase tracking-wider" 
+                  disabled={true}
+                  type="button"
+                >
+                  <img src="https://www.svgrepo.com/show/512120/github-142.svg" alt="GitHub" className="w-5 h-5 mr-3" />
+                  GITHUB (COMING SOON)
                 </Button>
               </motion.div>
 
@@ -373,13 +386,13 @@ const LoginPage = () => {
                 transition={{ delay: 0.9, duration: 0.4 }}
                 className="mt-8 text-center"
               >
-                <p className="text-arena-text-muted">
-                  New to the arena?{' '}
+                <p className="text-gray-400 font-mono">
+                  NEW TO BATTLESTACK?{' '}
                   <Link
                     to="/register"
-                    className="text-arena-accent hover:text-arena-accent-hover transition-colors font-bold"
+                    className="text-white hover:text-gray-300 transition-colors font-bold"
                   >
-                    Join the battle!
+                    CREATE ACCOUNT
                   </Link>
                 </p>
               </motion.div>

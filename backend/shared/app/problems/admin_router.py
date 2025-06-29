@@ -3,6 +3,7 @@ from math import ceil
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from pydantic import UUID4
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.app.auth.models import User
 from shared.app.auth.audit import AuditService
@@ -32,12 +33,19 @@ from .schemas import (
     TestCaseCreate, TestCaseResponse, TestCaseUpdate,
     
     # Submission schemas
-    SubmissionResponse
+    SubmissionResponse, ProblemGenerationRequest
 )
 from .models import ProblemStatus, DifficultyLevel, ProblemType
+from shared.app.database import get_db
+from shared.app.auth.security import is_admin
+from shared.app.ai.generator import generate_problem as ai_generate_problem
 
 
-router = APIRouter(prefix="/admin", tags=["Admin - Problems"])
+router = APIRouter(
+    prefix="/admin",
+    tags=["Admin: Problems"],
+    dependencies=[Depends(is_admin)]
+)
 
 
 # Dashboard endpoint
@@ -93,7 +101,13 @@ async def create_problem(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.get("/problems", response_model=ProblemListResponse)
+@router.get(
+    "/problems",
+    response_model=ProblemListResponse,
+    dependencies=[Depends(is_admin)],
+    summary="List all problems (Admin)",
+    description="Get a paginated list of all problems with advanced filtering.",
+)
 async def get_problems(
     title: Optional[str] = Query(None, description="Filter by title"),
     difficulty: Optional[DifficultyLevel] = Query(None, description="Filter by difficulty"),
@@ -138,8 +152,14 @@ async def get_problems(
     )
 
 
-@router.get("/problems/{problem_id}", response_model=ProblemPublicResponse)
-async def get_problem(
+@router.get(
+    "/{problem_id}",
+    response_model=ProblemDetailResponse,
+    dependencies=[Depends(is_admin)],
+    summary="Get a single problem by ID (Admin)",
+    description="Retrieve detailed information about a single problem, including test cases and solutions.",
+)
+async def get_problem_by_id(
     problem_id: UUID4,
     current_user: User = Depends(get_current_admin_user),
     problem_service: ProblemService = Depends(get_problem_service)
@@ -396,4 +416,48 @@ async def get_problem_stats(
 ):
     """Get problem statistics"""
     stats = await problem_service.get_problem_stats()
-    return stats 
+    return stats
+
+
+@router.post("/problems/generate", response_model=ProblemPublicResponse, status_code=status.HTTP_201_CREATED)
+async def generate_and_save_problem(
+    generation_request: ProblemGenerationRequest,
+    current_user: User = Depends(get_current_admin_user),
+    problem_service: ProblemService = Depends(get_problem_service),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Generates a new problem using AI and saves it to the database.
+    Requires admin privileges.
+    """
+    try:
+        # 1. Generate the problem content using the AI generator
+        ai_problem = await ai_generate_problem(
+            category=generation_request.category,
+            difficulty=generation_request.difficulty,
+            topic=generation_request.topic,
+        )
+
+        # 2. Create a ProblemCreate schema to save it
+        problem_to_create = ProblemCreate(
+            title=f"{generation_request.topic} ({generation_request.difficulty})",
+            description=ai_problem.task_description,
+            difficulty=generation_request.difficulty,
+            category=generation_request.category,
+            test_cases={
+                "schema_setup": ai_problem.schema_setup_sql,
+                "solution": ai_problem.correct_solution_sql,
+                "verification": [tc.dict() for tc in ai_problem.test_cases]
+            }
+        )
+
+        # 3. Save the new problem using the service layer, like other endpoints
+        new_problem = await problem_service.create_problem(problem_to_create, current_user.id)
+        return new_problem
+
+    except Exception as e:
+        # If anything goes wrong with AI generation or saving
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate and save problem: {str(e)}"
+        ) 

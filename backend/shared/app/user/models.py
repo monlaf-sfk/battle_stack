@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Dict, List
 
-from sqlalchemy import Column, Integer, DateTime, JSON, String, Boolean
+from sqlalchemy import Column, Integer, DateTime, JSON, String, Boolean, Float
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -48,6 +48,16 @@ class UserProfile(Base):
     last_active: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Новые поля для расширенной статистики
+    average_solve_time: Mapped[float | None] = mapped_column(Float, default=None)
+    fastest_solve_time: Mapped[float | None] = mapped_column(Float, default=None)
+    total_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    success_rate: Mapped[float | None] = mapped_column(Float, default=None)
+    ai_duels: Mapped[int] = mapped_column(Integer, default=0)
+    pvp_duels: Mapped[int] = mapped_column(Integer, default=0)
+    best_streak: Mapped[int] = mapped_column(Integer, default=0)
+    tournaments_played: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class UserProgress(Base):

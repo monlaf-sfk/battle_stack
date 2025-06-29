@@ -1,16 +1,26 @@
+export type DuelMode = 'random_player' | 'private_room' | 'ai_opponent';
+export type DuelDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
+export type ProblemType = 'algorithm' | 'data_structure' | 'dynamic_programming' | 'graph' | 'string' | 'array' | 'tree' | 'math' | 'hash_table' | 'stack_queue' | 'heap' | 'linked_list' | 'binary_search' | 'recursion' | 'backtracking' | 'bit_manipulation' | 'sliding_window' | 'two_pointers' | 'sorting' | 'searching' | 'design' | 'simulation' | 'geometry' | 'combinatorics';
+export type DuelStatus = 'waiting' | 'in_progress' | 'completed' | 'cancelled';
+export type ParticipantStatus = 'joined' | 'ready' | 'coding' | 'finished' | 'disconnected';
+export type Language = 'python' | 'javascript' | 'java' | 'cpp';
+
+export interface TestCase {
+  input_data: string;
+  expected_output: string;
+  explanation?: string;
+  is_hidden?: boolean;
+}
+
 export interface DuelProblem {
   id: string;
   title: string;
   description: string;
   difficulty: string;
-  starter_code: Record<string, string>;
-  test_cases: Array<{
-    input: string;
-    output: string;
-    is_hidden: boolean;
-  }>;
   constraints?: string;
-  hints?: string[];
+  starter_code?: { [key: string]: string };
+  code_templates?: { language: string, template_code: string }[];
+  test_cases: TestCase[];
 }
 
 export interface Participant {
@@ -51,12 +61,14 @@ export interface CodeUpdate {
 export interface DuelComplete {
   type: 'duel_complete';
   result: {
-    winner_id: string;
-    winner_username: string;
-    winner_solve_time: string;
+    winner_id: string | null;
+    winner_username: string | null;
+    winner_solve_time: string | null;
     winner_rating_change: number;
     loser_username?: string;
     loser_rating_change?: number;
+    timeout?: boolean;
+    message?: string;
   };
   timestamp: number;
 }
@@ -81,7 +93,59 @@ export interface DuelStarted {
   timestamp: number;
 }
 
-export type WSMessage = TestResult | CodeUpdate | DuelComplete | TypingStatus | UserStatus | DuelStarted;
+// Backend-compatible result schemas
+export interface PlayerResult {
+    player_id: string;
+    score: number;
+    time_taken_seconds: number;
+    submission_count: number;
+    is_winner: boolean;
+}
+
+export interface DuelResult {
+    winner_id: string | null;
+    player_one_result: PlayerResult | null;
+    player_two_result: PlayerResult | null;
+    finished_at: string;
+}
+
+// New WebSocket message for duel end
+export interface DuelEndMessage {
+  type: 'duel_end';
+  data: DuelResult;
+}
+
+export interface DuelStartMessage {
+    type: 'duel_start';
+    data: Duel;
+}
+
+export interface TestResultMessage {
+    type: 'test_result';
+    user_id: string;
+    data: {
+        is_correct: boolean;
+        error?: string;
+        details?: string[];
+    };
+}
+
+export interface AIProgressMessage {
+    type: 'ai_progress';
+    data: {
+        code: string;
+    };
+}
+
+export type WSMessage = 
+    | CodeUpdate 
+    | DuelComplete 
+    | TypingStatus 
+    | UserStatus 
+    | DuelStartMessage 
+    | DuelEndMessage 
+    | TestResultMessage 
+    | AIProgressMessage;
 
 export interface Notification {
   id: number;
@@ -91,4 +155,177 @@ export interface Notification {
   timestamp: number;
 }
 
-export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error'; 
+export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+
+export interface DuelParticipant {
+  user_id: string;
+  username: string;
+  avatar_url?: string;
+  rating: number;
+  status: ParticipantStatus;
+  joined_at: string;
+  code_snapshots: Array<{
+    language: string;
+    code: string;
+    timestamp: string;
+  }>;
+  submissions: Array<{
+    id: string;
+    code: string;
+    language: string;
+    score: number;
+    submitted_at: string;
+  }>;
+  current_progress: {
+    tests_passed: number;
+    total_tests: number;
+    percentage: number;
+  };
+}
+
+export interface DuelResponse {
+  id: string;
+  mode: DuelMode;
+  status: DuelStatus;
+  difficulty: DuelDifficulty;
+  problem_type: ProblemType;
+  problem: DuelProblem;
+  participants: DuelParticipant[];
+  room_code?: string;
+  max_participants: number;
+  time_limit_minutes: number;
+  created_at: string;
+  started_at?: string;
+  completed_at?: string;
+  winner_id?: string;
+  rating_changes?: Record<string, number>;
+  problem_id: string;
+  player_one_id: string;
+  player_two_id?: string | null;
+  results?: DuelResult | null;
+  finished_at?: string | null;
+}
+
+export interface DuelCreateRequest {
+  mode: DuelMode;
+  difficulty: DuelDifficulty;
+  problem_type: ProblemType;
+  room_code?: string;
+  time_limit_minutes?: number;
+}
+
+export interface DuelSubmission {
+  player_id: string;
+  language: Language;
+  code: string;
+}
+
+export interface DuelJoinRequest {
+  room_code?: string;
+  difficulty?: DuelDifficulty;
+}
+
+export interface CodeSubmission {
+  code: string;
+  language: Language;
+}
+
+export interface TestResultResponse {
+  passed: number;
+  failed: number;
+  total_tests: number;
+  percentage: number;
+  execution_time_ms: number;
+  memory_usage_mb: number;
+  error?: string;
+  progress_percentage: number;
+  is_solution_correct?: boolean;
+  test_results: Array<{
+    test_case: number;
+    status: 'passed' | 'failed';
+    execution_time_ms: number;
+    input: string;
+    expected: string;
+    actual: string;
+    error?: string;
+  }>;
+}
+
+export interface SubmissionResponse {
+  is_correct: boolean;
+  error?: string;
+  details?: string[];
+  passed: number;
+  total: number;
+}
+
+export interface WebSocketMessage {
+  type: 'code_update' | 'typing_status' | 'test_result' | 'submission_result' | 'user_joined' | 'user_left' | 'duel_completed' | 'ping' | 'pong';
+  user_id: string;
+  data: Record<string, unknown>;
+  timestamp: string;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  user_id: string;
+  username: string;
+  elo_rating: number;
+  total_matches: number;
+  wins: number;
+  win_rate: number;
+  current_streak: number;
+}
+
+export interface MatchHistoryItem {
+  id: string;
+  duel_id: string;
+  opponent_name: string;
+  is_victory: boolean;
+  rating_change?: number;
+  problem_title: string;
+  solve_time?: string;
+  played_at: string;
+}
+
+export interface PlayerRating {
+  total_duels: number;
+  wins: number;
+  losses: number;
+  win_rate: number;
+  elo_rating: number;
+  rank: string;
+  current_streak: number;
+  best_streak: number;
+  average_solve_time?: number;
+}
+
+export interface PlayerAchievement {
+  achievement_type: string;
+  earned_at: string;
+  description?: string;
+}
+
+export interface PlayerStats {
+  user_id: string;
+  username: string;
+  rating: PlayerRating;
+  recent_matches: MatchHistoryItem[];
+  achievements: PlayerAchievement[];
+}
+
+export interface Duel {
+  id: string;
+  problem_id: string;
+  status: DuelStatus;
+  player_one_id: string;
+  player_two_id?: string;
+  player_one_code?: string;
+  player_two_code?: string;
+  results?: { [key: string]: any }; 
+  time_limit_seconds?: number;
+  created_at: string;
+  started_at?: string;
+  finished_at?: string;
+  problem?: DuelProblem;
+} 

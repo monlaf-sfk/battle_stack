@@ -118,7 +118,7 @@ class Problem(Base):
     published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     
     # Автор
-    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('users.id'))
+    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     
     # Связи
     tags = relationship("Tag", secondary=problem_tags, back_populates="problems")
@@ -209,7 +209,7 @@ class UserSubmission(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('users.id'))
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     problem_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('problems.id'))
     
     # Код решения

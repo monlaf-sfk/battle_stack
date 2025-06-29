@@ -8,6 +8,8 @@ from sqlalchemy import and_, func, or_, select, desc, asc, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
 from pydantic import UUID4
+from sqlalchemy.future import select
+from sqlalchemy import case, literal_column
 
 from .models import (
     Problem, Tag, Company, TestCase, CodeTemplate, UserSubmission,
@@ -799,4 +801,32 @@ class SubmissionService:
                 )
         except Exception as e:
             # Don't fail the submission if user service is down
-            print(f"Failed to notify user service: {e}") 
+            print(f"Failed to notify user service: {e}")
+
+
+async def get_problem(db: AsyncSession, problem_id: UUID4) -> Problem | None:
+    problem_service = ProblemService(db)
+    return await problem_service.get_problem_by_id(problem_id)
+
+async def get_random_problem(db: AsyncSession, difficulty: str) -> Dict[str, Any]:
+    """Gets a random problem, optionally filtering by difficulty."""
+    query = select(Problem.id)  # Select only the ID for efficiency
+    if difficulty:
+        query = query.where(Problem.difficulty == difficulty)
+    
+    # Use database-specific function for random ordering
+    query = query.order_by(func.random())
+    
+    query = query.limit(1)
+    
+    result = await db.execute(query)
+    problem_id = result.scalar_one_or_none()
+
+    if problem_id:
+        problem_service = ProblemService(db)
+        return await problem_service.get_problem_dict_by_id(problem_id)
+        
+    return None
+
+async def get_problems(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[Problem]:
+    return await db.scalars(select(Problem).offset(skip).limit(limit)) 

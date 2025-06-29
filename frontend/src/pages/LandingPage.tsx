@@ -1,7 +1,7 @@
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
-import { UserPlus, ListChecks, Code, Trophy, Zap, Shield, Users, Brain, Sparkles, Swords, Target } from "lucide-react";
+import { UserPlus, ListChecks, Code, Trophy, Timer, Shield, Users, Brain, Play } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 
@@ -65,19 +65,17 @@ const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, titl
     className="group relative"
     whileHover={{ y: -10 }}
   >
-    <Card variant="glass" hover="glow" className="border-arena-accent/20 h-full">
-      <CardContent className="p-8 text-center h-full">
-        <motion.div 
-          className="flex items-center justify-center h-16 w-16 rounded-xl bg-gradient-to-br from-arena-accent to-arena-tertiary text-arena-dark mx-auto mb-6 shadow-arena-glow"
-          whileHover={{ scale: 1.1, rotate: 5 }}
-          transition={{ type: "spring", stiffness: 300 }}
-        >
-          {icon}
-        </motion.div>
-        <h3 className="text-xl font-bold text-arena-text mb-4">{title}</h3>
-        <p className="text-arena-text-muted leading-relaxed">{description}</p>
-      </CardContent>
-    </Card>
+    <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 h-full text-center">
+      <motion.div 
+        className="flex items-center justify-center h-16 w-16 rounded-lg bg-white text-black mx-auto mb-6"
+        whileHover={{ scale: 1.1, rotate: 5 }}
+        transition={{ type: "spring", stiffness: 300 }}
+      >
+        {icon}
+      </motion.div>
+      <h3 className="text-xl font-bold text-white mb-4 font-mono">{title}</h3>
+      <p className="text-gray-400 leading-relaxed font-mono text-sm">{description}</p>
+    </div>
   </motion.div>
 );
 
@@ -96,52 +94,72 @@ const Step = ({ icon, title, children, index }: { icon: React.ReactNode, title: 
     >
       {index < 3 && (
         <motion.div 
-          className="hidden lg:block absolute top-8 -right-16 w-32 h-0.5 bg-gradient-to-r from-arena-accent/50 to-transparent"
+          className="hidden lg:block absolute top-8 -right-16 w-32 h-0.5 bg-gray-700"
           initial={{ width: 0 }}
           whileInView={{ width: "8rem" }}
           transition={{ delay: (index + 1) * 0.2, duration: 0.8 }}
         />
       )}
-      <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-arena-accent to-arena-tertiary text-arena-dark mx-auto mb-4 shadow-arena-glow group-hover:shadow-xl transition-all duration-300">
+      <div className="flex items-center justify-center h-16 w-16 rounded-lg bg-white text-black mx-auto mb-4 group-hover:shadow-xl transition-all duration-300">
         {icon}
       </div>
     </motion.div>
-    <h3 className="text-xl font-bold gradient-text mb-3">{title}</h3>
-    <p className="text-arena-text-muted leading-relaxed">{children}</p>
+    <h3 className="text-xl font-bold text-white mb-3 font-mono">{title}</h3>
+    <p className="text-gray-400 leading-relaxed font-mono text-sm">{children}</p>
   </motion.div>
 );
 
-const player1Code = `
-def is_palindrome(s):
-  # Clean the string
-  s = ''.join(filter(str.isalnum, s)).lower()
-  # Check if it reads the same forwards and backwards
-  return s == s[::-1]
+const player1Code = `# CODE WARRIOR 1
+def solve_problem(arr, target):
+    # Two pointer approach
+    left, right = 0, len(arr) - 1
+    result = []
+    
+    while left < right:
+        current_sum = arr[left] + arr[right]
+        if current_sum == target:
+            result.append([left, right])
+            left += 1
+            right -= 1
+        elif current_sum < target:
+            left += 1
+        else:
+            right -= 1
+    
+    return result
 
-print(is_palindrome("A man, a plan, a canal: Panama"))
+# PROBLEMS SOLVED: 83
+# WPM: 120
 `;
 
-const player2Code = `
-def is_palindrome(s):
-  s = ''.join(e for e in s if e.isalnum()).lower()
-  left, right = 0, len(s) - 1
-  while left < right:
-    if s[left] != s[right]:
-      return False
-    left += 1
-    right -= 1
-  return True
+const player2Code = `# AI OPPONENT  
+def optimal_solution(nums, k):
+    # Dynamic programming approach
+    dp = [float('inf')] * (k + 1)
+    dp[0] = 0
+    
+    for num in nums:
+        for i in range(k, num - 1, -1):
+            if dp[i - num] != float('inf'):
+                dp[i] = min(dp[i], dp[i - num] + 1)
+    
+    return dp[k] if dp[k] != float('inf') else -1
 
-print(is_palindrome("A man, a plan, a canal: Panama"))
+# Neural network optimized
+# Time: O(n*k), Space: O(k)
+
+# PROBLEMS SOLVED: 75
+# WPM: 95
 `;
 
-const CodePanel = ({ playerName, code, speed, isPlaying, onFinish, isWinner }: { 
+const CodePanel = ({ playerName, code, speed, isPlaying, onFinish, isWinner, stats }: { 
   playerName: string, 
   code: string, 
   speed: number, 
   isPlaying: boolean,
   onFinish: () => void,
-  isWinner: boolean | null
+  isWinner: boolean | null,
+  stats: { pieces: number, attack: string, speed: string }
 }) => {
   const { displayedText, isDone } = useTypingEffect(code, speed, isPlaying);
 
@@ -151,8 +169,7 @@ const CodePanel = ({ playerName, code, speed, isPlaying, onFinish, isWinner }: {
     }
   }, [isDone, onFinish]);
 
-  const borderColor = isWinner === true ? 'border-arena-accent shadow-arena-glow' : isWinner === false ? 'border-red-400/50' : 'border-arena-border';
-  const status = isDone ? (isWinner ? 'Winner! 🏆' : 'Finished') : 'Coding...';
+  const borderColor = isWinner === true ? 'border-white' : isWinner === false ? 'border-gray-600' : 'border-gray-800';
 
   return (
     <motion.div
@@ -161,33 +178,52 @@ const CodePanel = ({ playerName, code, speed, isPlaying, onFinish, isWinner }: {
       transition={{ duration: 0.5 }}
       className="relative group"
     >
-      <Card variant="glass" className={`border ${borderColor} overflow-hidden transition-all duration-300 h-full`}>
-        <div className="bg-arena-surface/50 px-6 py-4 border-b border-arena-border flex justify-between items-center">
+      <div className={`bg-gray-900 border ${borderColor} rounded-lg overflow-hidden transition-all duration-300 h-full`}>
+        {/* Header */}
+        <div className="bg-gray-800 px-6 py-4 border-b border-gray-700 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-3 h-3 bg-arena-accent rounded-full animate-pulse"></div>
-            <p className="text-sm font-bold text-arena-text">{playerName}</p>
+            <div className={`w-3 h-3 rounded-full ${isWinner === true ? 'bg-white' : isWinner === false ? 'bg-gray-600' : 'bg-gray-400'}`}></div>
+            <p className="text-sm font-bold text-white font-mono">{playerName}</p>
           </div>
-          <motion.div
-            className="text-xs text-arena-text-muted bg-arena-dark/50 px-3 py-1 rounded-full border border-arena-border"
-            animate={{ opacity: isPlaying && !isDone ? [1, 0.5, 1] : 1 }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
-            {status}
-          </motion.div>
+          <div className="flex items-center gap-4">
+            <div className="text-xs text-gray-400 bg-gray-800 px-3 py-1 rounded border border-gray-700 font-mono">
+              {isDone ? (isWinner ? 'WINNER' : 'DONE') : 'CODING...'}
+            </div>
+          </div>
         </div>
+
+        {/* Stats Bar */}
+        <div className="bg-gray-800 px-6 py-3 border-b border-gray-700">
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <div className="text-gray-400 text-xs font-mono">PIECES</div>
+              <div className="text-white text-lg font-bold font-mono">{stats.pieces}</div>
+            </div>
+            <div>
+              <div className="text-gray-400 text-xs font-mono">SPEED</div>
+              <div className="text-white text-lg font-bold font-mono">{stats.speed}</div>
+            </div>
+            <div>
+              <div className="text-gray-400 text-xs font-mono">ATTACK</div>
+              <div className="text-white text-lg font-bold font-mono">{stats.attack}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Code Area */}
         <div className="p-6">
-          <pre className="text-sm font-mono text-arena-text overflow-x-auto min-h-[280px] leading-relaxed">
+          <pre className="text-sm font-mono text-white overflow-x-auto min-h-[280px] leading-relaxed">
             <code>{displayedText}</code>
             {!isDone && isPlaying && (
               <motion.span
-                className="inline-block w-2 h-4 bg-arena-accent ml-1 rounded-sm"
+                className="inline-block w-2 h-4 bg-white ml-1 rounded-sm"
                 animate={{ opacity: [1, 0] }}
                 transition={{ duration: 0.5, repeat: Infinity }}
               />
             )}
           </pre>
         </div>
-      </Card>
+      </div>
     </motion.div>
   );
 };
@@ -211,14 +247,14 @@ const LandingPage = () => {
     }
   };
 
+  const player1Stats = { pieces: 83, attack: "120 WPM", speed: "0.55/S" };
+  const player2Stats = { pieces: 75, attack: "95 WPM", speed: "0.50/S" };
+
   return (
-    <div className="min-h-screen bg-arena-dark font-sans relative">
-      {/* Background mesh effect */}
-      <div className="fixed inset-0 bg-arena-gradient-mesh opacity-30 pointer-events-none" />
-      
+    <div className="min-h-screen bg-black text-white">
       <Header />
 
-      <main className="pt-20 relative z-10">
+      <main className="pt-20 relative">
         {/* Hero Section */}
         <motion.section 
           className="text-center py-20 lg:py-32 px-6 relative"
@@ -229,23 +265,24 @@ const LandingPage = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
+              className="bg-gray-900 border border-gray-800 rounded-lg p-12"
             >
               <motion.h1 
-                className="text-5xl lg:text-7xl font-bold text-arena-text mb-6"
+                className="text-5xl lg:text-7xl font-bold text-white mb-6 font-mono"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
               >
-                Welcome to <span className="gradient-text">BattleStack</span>
+                BATTLESTACK
               </motion.h1>
               <motion.p 
-                className="text-xl lg:text-2xl text-arena-text-muted max-w-4xl mx-auto mb-10 leading-relaxed"
+                className="text-xl lg:text-2xl text-gray-400 max-w-4xl mx-auto mb-10 leading-relaxed font-mono"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
               >
-                Где программисты сражаются в реальном времени, решая задачи и получая мгновенную обратную связь от ИИ. 
-                Поднимайтесь по рейтингу и доказывайте свое мастерство!
+                CODING ARENA WHERE ALGORITHMS MEET BATTLE.<br/>
+                JOIN THE WORLD OF PROGRAMMING AND FIGHT THE BEST DEVELOPERS.
               </motion.p>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -253,14 +290,21 @@ const LandingPage = () => {
                 transition={{ duration: 0.8, delay: 0.6 }}
                 className="flex flex-col sm:flex-row gap-4 justify-center items-center"
               >
-                <Button variant="gradient" className="text-xl font-bold py-4 px-8 shadow-arena-glow">
-                  <Swords size={24} className="mr-3" />
-                  Войти в арену
-                </Button>
-                <Button variant="glass" className="text-xl font-bold py-4 px-8 border border-arena-border hover:border-arena-accent/40">
-                  <Target size={24} className="mr-3" />
-                  Смотреть демо
-                </Button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-white text-black text-xl font-bold py-4 px-8 rounded-lg font-mono"
+                >
+                  ENTER ARENA
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-gray-800 text-white text-xl font-bold py-4 px-8 rounded-lg font-mono border border-gray-700 hover:border-gray-600 transition-colors"
+                >
+                  <Play size={24} className="mr-3 inline" />
+                  WATCH DEMO
+                </motion.button>
               </motion.div>
             </motion.div>
           </div>
@@ -276,34 +320,33 @@ const LandingPage = () => {
               viewport={{ once: true }}
               className="text-center mb-16"
             >
-              <h2 className="text-4xl lg:text-5xl font-bold gradient-text mb-6 flex items-center justify-center gap-3">
-                <Sparkles size={40} className="text-arena-accent" />
-                Почему BattleStack?
+              <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6 font-mono">
+                PLATFORM FEATURES
               </h2>
-              <p className="text-xl text-arena-text-muted max-w-2xl mx-auto">
-                Превратите развитие навыков в захватывающую игру
+              <p className="text-xl text-gray-400 max-w-2xl mx-auto font-mono">
+                MODERN TECHNOLOGY FOR PROGRAMMING DUELS
               </p>
             </motion.div>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               <FeatureCard
-                icon={<Zap size={32} />}
-                title="Битвы в реальном времени"
-                description="Соревнуйтесь с разработчиками со всего мира в захватывающих дуэлях программирования."
+                icon={<Timer size={32} />}
+                title="REAL-TIME BATTLES"
+                description="DUELS IN REAL TIME WITH LIVE OPPONENTS FROM AROUND THE WORLD."
               />
               <FeatureCard
                 icon={<Brain size={32} />}
-                title="ИИ-обратная связь"
-                description="Получайте мгновенную, интеллектуальную обратную связь о качестве и производительности вашего кода."
+                title="AI COACHING"
+                description="SMART AI ANALYZES YOUR CODE AND GIVES PERSONAL RECOMMENDATIONS."
               />
               <FeatureCard
                 icon={<Shield size={32} />}
-                title="Валидация навыков"
-                description="Докажите свою экспертизу с помощью верифицированных достижений и рейтингов."
+                title="SKILL VALIDATION"
+                description="GET VERIFIED ACHIEVEMENTS AND PROVE YOUR LEVEL."
               />
               <FeatureCard
                 icon={<Users size={32} />}
-                title="Сообщество"
-                description="Присоединяйтесь к процветающему сообществу увлеченных разработчиков."
+                title="DEV COMMUNITY"
+                description="COMMUNITY OF TALENTED DEVELOPERS AND PROGRAMMERS."
               />
             </div>
           </div>
@@ -319,23 +362,25 @@ const LandingPage = () => {
               viewport={{ once: true }}
               className="text-center mb-16"
             >
-              <h2 className="text-4xl lg:text-5xl font-bold gradient-text mb-6">Как это работает</h2>
-              <p className="text-xl text-arena-text-muted max-w-2xl mx-auto">
-                Начните за несколько простых шагов
+              <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6 font-mono">
+                PARTICIPATION ALGORITHM
+              </h2>
+              <p className="text-xl text-gray-400 max-w-2xl mx-auto font-mono">
+                FOUR STEPS TO PROGRAMMING MASTERY
               </p>
             </motion.div>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <Step icon={<UserPlus size={32} />} title="1. Регистрация" index={0}>
-                Создайте свой профиль за секунды и выберите свой стек технологий.
+              <Step icon={<UserPlus size={32} />} title="SIGN UP" index={0}>
+                CREATE A DEVELOPER PROFILE AND CHOOSE YOUR TECHNOLOGY STACK.
               </Step>
-              <Step icon={<ListChecks size={32} />} title="2. Выберите задачу" index={1}>
-                Выбирайте из множества задач в вашем техническом стеке.
+              <Step icon={<ListChecks size={32} />} title="CHOOSE LEVEL" index={1}>
+                SELECT PROBLEMS APPROPRIATE TO YOUR PROGRAMMING LEVEL.
               </Step>
-              <Step icon={<Code size={32} />} title="3. Соревнуйтесь" index={2}>
-                Решайте реальные задачи в ограниченной по времени среде.
+              <Step icon={<Code size={32} />} title="CODE BATTLE" index={2}>
+                FIGHT IN THE CODING ARENA WITH LIMITED TIME.
               </Step>
-              <Step icon={<Trophy size={32} />} title="4. Получайте фидбек" index={3}>
-                Получайте мгновенную обратную связь от ИИ и поднимайтесь в рейтинге.
+              <Step icon={<Trophy size={32} />} title="WIN & GROW" index={3}>
+                GET FEEDBACK FROM AI AND CLIMB THE RANKINGS.
               </Step>
             </div>
           </div>
@@ -351,79 +396,81 @@ const LandingPage = () => {
               viewport={{ once: true }}
               className="text-center mb-16"
             >
-              <h2 className="text-4xl lg:text-5xl font-bold gradient-text mb-6">Поединок в арене</h2>
-              <p className="text-xl text-arena-text-muted max-w-2xl mx-auto">
-                Почувствуйте адреналин живого программистского дуэля
+              <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6 font-mono">
+                LIVE CODING BATTLE
+              </h2>
+              <p className="text-xl text-gray-400 max-w-2xl mx-auto font-mono">
+                WATCH DEVELOPERS BATTLE IN REAL TIME
               </p>
             </motion.div>
-            <div className="relative max-w-6xl mx-auto">
-              <div className="grid md:grid-cols-2 gap-8 items-start">
-                <CodePanel 
-                  playerName="Игрок 1" 
-                  code={player1Code} 
-                  speed={100} 
-                  isPlaying={!!isVisible}
-                  onFinish={() => handleFinish("Player 1")}
-                  isWinner={winner ? winner === "Player 1" : null}
-                />
-                <CodePanel 
-                  playerName="Игрок 2" 
-                  code={player2Code} 
-                  speed={85} 
-                  isPlaying={!!isVisible}
-                  onFinish={() => handleFinish("Player 2")}
-                  isWinner={winner ? winner === "Player 2" : null}
-                />
-              </div>
-              <motion.div 
-                className="hidden md:flex absolute inset-0 items-center justify-center pointer-events-none"
-                animate={{ scale: winner ? [1, 1.2, 1] : 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <Card variant="glass" className="border-arena-accent/30 shadow-arena-glow">
-                  <CardContent className="p-4">
-                    <p className="text-2xl font-bold gradient-text">VS</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
+
+            <div className="grid lg:grid-cols-2 gap-8 mb-8">
+              <CodePanel
+                playerName="CODE WARRIOR 1"
+                code={player1Code}
+                speed={80}
+                isPlaying={isVisible as boolean}
+                onFinish={() => handleFinish("Player 1")}
+                isWinner={winner === "Player 1" ? true : winner ? false : null}
+                stats={player1Stats}
+              />
+              <CodePanel
+                playerName="AI OPPONENT"
+                code={player2Code}
+                speed={100}
+                isPlaying={isVisible as boolean}
+                onFinish={() => handleFinish("Player 2")}
+                isWinner={winner === "Player 2" ? true : winner ? false : null}
+                stats={player2Stats}
+              />
             </div>
+
+            {winner && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center py-8"
+              >
+                <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 max-w-md mx-auto">
+                  <h3 className="text-2xl font-bold text-white mb-2 font-mono">
+                    {winner === "Player 1" ? "CODE WARRIOR WINS!" : "AI WINS!"}
+                  </h3>
+                  <p className="text-gray-400 font-mono">
+                    BATTLE COMPLETE
+                  </p>
+                </div>
+              </motion.div>
+            )}
           </div>
         </section>
 
-        {/* Call to Action Section */}
+        {/* CTA Section */}
         <section className="py-20 relative">
-          <div className="max-w-4xl mx-auto text-center px-6">
+          <div className="max-w-4xl mx-auto px-6 text-center">
             <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
               viewport={{ once: true }}
+              className="bg-gray-900 border border-gray-800 rounded-lg p-12"
             >
-              <h2 className="text-4xl lg:text-5xl font-bold gradient-text mb-6">
-                Докажите свои навыки кодом, а не резюме
+              <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6 font-mono">
+                READY TO BATTLE?
               </h2>
-              <p className="text-xl text-arena-text-muted mb-10 leading-relaxed">
-                Готовы войти в арену и показать, на что вы способны?
+              <p className="text-xl text-gray-400 mb-8 font-mono">
+                JOIN THOUSANDS OF DEVELOPERS IN THE ULTIMATE CODING ARENA
               </p>
-              <motion.div
+              <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                className="bg-white text-black text-xl font-bold py-4 px-8 rounded-lg font-mono"
               >
-                <Button variant="gradient" className="text-2xl font-bold py-6 px-12 shadow-arena-glow">
-                  <Trophy size={28} className="mr-3" />
-                  Присоединиться бесплатно
-                </Button>
-              </motion.div>
+                START CODING NOW
+              </motion.button>
             </motion.div>
           </div>
         </section>
       </main>
-
-      <footer className="bg-arena-surface/50 backdrop-blur-md border-t border-arena-border py-8 relative z-10">
-        <div className="max-w-7xl mx-auto text-center text-arena-text-muted px-6">
-                      <p>&copy; {new Date().getFullYear()} BattleStack. Все права защищены.</p>
-        </div>
-      </footer>
     </div>
   );
 };

@@ -4,14 +4,14 @@ import { motion } from 'framer-motion';
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
   variant?: 'primary' | 'secondary' | 'ghost' | 'glass' | 'gradient';
-  size?: 'default' | 'sm' | 'lg' | 'icon';
+  size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
 }
 
 export function Button({ 
   children, 
   variant = 'primary', 
-  size = 'default', 
+  size = 'md', 
   className, 
   loading = false,
   disabled,
@@ -48,15 +48,14 @@ export function Button({
     gradient: 'bg-gradient-to-r from-arena-accent to-arena-tertiary text-arena-dark hover:shadow-arena-glow hover:scale-105 animate-gradient',
   };
 
-  const sizes = {
-    default: 'px-6 py-3 text-base',
+  const sizeClasses = {
     sm: 'px-4 py-2 text-sm',
+    md: 'px-4 py-2 text-sm',
     lg: 'px-8 py-4 text-lg',
-    icon: 'h-10 w-10',
   };
 
   const isDisabled = disabled || loading;
-  const combinedClasses = `${baseClasses} ${variants[variant]} ${sizes[size]} ${
+  const combinedClasses = `${baseClasses} ${variants[variant]} ${sizeClasses[size]} ${
     isDisabled ? 'opacity-50 cursor-not-allowed' : ''
   } ${className || ''}`;
 

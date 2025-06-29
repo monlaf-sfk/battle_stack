@@ -17,3 +17,32 @@ httpx
 celery[redis]
 redis
 kombu
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
+
+# 🌍 Universal Code Execution System dependencies
+aiofiles  # For async file operations
+pathlib2  # Enhanced path operations  
+pytest    # For testing
+pytest-asyncio  # Async testing support
+
+# AI Agent Service dependencies
+openai>=1.0.0                 # OpenAI API для LLM
+docker>=6.0.0                 # Docker SDK для sandbox контейнеров
+
+# Additional dependencies for enhanced AI system
+numpy>=1.24.0                 # Numerical operations для статистики
+scipy>=1.10.0                 # Scientific computing для нормального распределения
+
+# Development and monitoring
+psutil>=5.9.0                 # System monitoring
+requests>=2.31.0              # HTTP requests backup
+
+# Add prometheus-fastapi-instrumentator
+prometheus-fastapi-instrumentator
+
+# Test dependencies
+aiosqlite
+pytest-asyncio

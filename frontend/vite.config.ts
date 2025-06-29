@@ -12,6 +12,7 @@ export default defineConfig({
     },
   },
   server: {
+    port: 5173, // 🔐 Fixed port for Google OAuth
     host: true,
     fs: {
       // Allow serving files from monaco-editor

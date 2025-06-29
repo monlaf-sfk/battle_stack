@@ -53,10 +53,15 @@ interface ProblemData {
   code_templates: CodeTemplate[];
 }
 
+interface ProblemDataWithRelations extends Partial<ProblemData> {
+  tags?: Tag[];
+  companies?: Company[];
+}
+
 interface ProblemCreatorProps {
   onSave: (data: ProblemData) => Promise<void>;
   onCancel: () => void;
-  initialData?: Partial<ProblemData>;
+  initialData?: ProblemDataWithRelations;
   availableTags: Tag[];
   availableCompanies: Company[];
 }
@@ -71,6 +76,7 @@ export const ProblemCreator: React.FC<ProblemCreatorProps> = ({
   const [activeTab, setActiveTab] = useState<'examples' | 'basic' | 'description' | 'testcases' | 'templates' | 'editorial'>('examples');
   const [editorTheme, setEditorTheme] = useState<'vs-dark' | 'vs-light'>('vs-dark');
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<ProblemData>(() => {
     const defaultData: ProblemData = {
@@ -118,6 +124,18 @@ export const ProblemCreator: React.FC<ProblemCreatorProps> = ({
   });
 
   const handleSave = async () => {
+    setFormError(null);
+
+    // Validation logic
+    for (const tc of formData.test_cases) {
+      if (tc.is_example && !tc.expected_output.trim()) {
+        const errorMsg = `Example test case (Input: "${tc.input_data}") is missing an expected output.`;
+        setFormError(errorMsg);
+        alert(errorMsg); // Simple alert for immediate feedback
+        return; // Stop saving
+      }
+    }
+
     setSaving(true);
     try {
       await onSave(formData);
@@ -629,83 +647,96 @@ export const ProblemCreator: React.FC<ProblemCreatorProps> = ({
           {activeTab === 'testcases' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Test Cases</h3>
-                <Button onClick={addTestCase} className="bg-arena-accent hover:bg-arena-accent-hover text-arena-dark">
+                <div className="flex items-center gap-3">
+                  <TestTube size={16} className="text-arena-accent" />
+                  Test Cases
+                </div>
+                <Button onClick={addTestCase} variant="gradient">
                   <Plus size={16} className="mr-1" />
                   Add Test Case
                 </Button>
               </div>
 
-              {formData.test_cases.map((testCase, index) => (
-                <Card key={testCase.id}>
-                  <div className="p-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="font-medium">Test Case {index + 1}</h4>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => updateTestCase(testCase.id, { is_example: !testCase.is_example })}
-                          className={testCase.is_example ? 'text-green-400' : 'text-arena-text-dim'}
-                        >
-                          <Eye size={16} />
-                          Example
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => updateTestCase(testCase.id, { is_hidden: !testCase.is_hidden })}
-                          className={testCase.is_hidden ? 'text-red-400' : 'text-arena-text-dim'}
-                        >
-                          <EyeOff size={16} />
-                          Hidden
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeTestCase(testCase.id)}
-                          className="text-red-400 hover:text-red-500"
-                        >
-                          <Trash2 size={16} />
-                        </Button>
+              {formData.test_cases.map((testCase, index) => {
+                const isExampleAndEmpty = testCase.is_example && !testCase.expected_output.trim();
+                return (
+                  <Card key={testCase.id} className={`transition-all duration-300 ${isExampleAndEmpty ? 'border-red-500/50 ring-2 ring-red-500/20' : ''}`}>
+                    <div className="p-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-3">
+                          <h4 className="font-medium">Test Case {index + 1}</h4>
+                          {isExampleAndEmpty && (
+                            <span className="text-xs text-red-400 bg-red-500/10 px-2 py-1 rounded-md">
+                              Output required for examples
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => updateTestCase(testCase.id, { is_example: !testCase.is_example })}
+                            className={testCase.is_example ? 'text-green-400' : 'text-arena-text-dim'}
+                          >
+                            <Eye size={16} />
+                            Example
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => updateTestCase(testCase.id, { is_hidden: !testCase.is_hidden })}
+                            className={testCase.is_hidden ? 'text-red-400' : 'text-arena-text-dim'}
+                          >
+                            <EyeOff size={16} />
+                            Hidden
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeTestCase(testCase.id)}
+                            className="text-red-400 hover:text-red-500"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-arena-text-muted mb-1">Input Data (JSON)</label>
-                        <CodeEditor
-                          value={testCase.input_data}
-                          onChange={(value) => updateTestCase(testCase.id, { input_data: value })}
-                          language="json"
-                          height="150px"
-                          theme={editorTheme}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-arena-text-muted mb-1">Input Data (JSON)</label>
+                          <CodeEditor
+                            value={testCase.input_data}
+                            onChange={(value) => updateTestCase(testCase.id, { input_data: value })}
+                            language="json"
+                            height="150px"
+                            theme={editorTheme}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-arena-text-muted mb-1">Expected Output</label>
+                          <CodeEditor
+                            value={testCase.expected_output}
+                            onChange={(value) => updateTestCase(testCase.id, { expected_output: value })}
+                            language="text"
+                            height="150px"
+                            theme={editorTheme}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-arena-text-muted mb-1">Explanation</label>
+                        <Input
+                          value={testCase.explanation}
+                          onChange={(e) => updateTestCase(testCase.id, { explanation: e.target.value })}
+                          placeholder="Explain this test case..."
                         />
                       </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-arena-text-muted mb-1">Expected Output</label>
-                        <CodeEditor
-                          value={testCase.expected_output}
-                          onChange={(value) => updateTestCase(testCase.id, { expected_output: value })}
-                          language="text"
-                          height="150px"
-                          theme={editorTheme}
-                        />
-                      </div>
                     </div>
-
-                    <div className="mt-4">
-                      <label className="block text-sm font-medium text-arena-text-muted mb-1">Explanation</label>
-                      <Input
-                        value={testCase.explanation}
-                        onChange={(e) => updateTestCase(testCase.id, { explanation: e.target.value })}
-                        placeholder="Explain this test case..."
-                      />
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           )}
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { duelsApiService, type MatchHistoryItem } from '../../services/duelService';
+import { duelsApiService } from '../../services/duelService';
+import type { MatchHistoryItem } from '../../types/duel.types';
 import { 
   Clock, 
   Trophy, 
@@ -36,7 +37,7 @@ const RecentActivity: React.FC = () => {
         setError(null);
 
         // Fetch from public duels endpoint
-        const publicMatches = await duelsApiService.getPublicRecentMatches(5, 0);
+        const publicMatches = await duelsApiService.getPublicRecentMatches(5);
         
         // Transform the data to match RecentDuel interface
         const transformedDuels = publicMatches.map((item: MatchHistoryItem) => ({

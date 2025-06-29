@@ -12,20 +12,27 @@ RUN apt-get update && apt-get install -y \
 # Copy requirements first for better layer caching
 COPY requirements.txt .
 RUN pip install --upgrade pip
-RUN pip install --default-timeout=100 --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy only required application code
-COPY shared/ ./backend/shared/
-COPY duel_service/ ./backend/duel_service/
+# Copy shared library
+COPY ./shared /app/shared
+
+# Copy service-specific code
+COPY ./services/duels_service /app/duels_service
+
+# Install the shared module
+# RUN pip install --no-cache-dir --force-reinstall ./shared
+
+COPY ./services/duels_service/wait_for_db.py /app/wait_for_db.py
+RUN chmod +x /app/wait_for_db.py
+
+COPY ./services/duels_service/entrypoint.sh /app/duels_service/entrypoint.sh
 
 # Set the Python path to include the shared modules
-ENV PYTHONPATH="/app/backend"
-
-# Make entrypoint executable
-RUN chmod +x /app/backend/duel_service/entrypoint.sh
+ENV PYTHONPATH="/app"
 
 # Expose port
 EXPOSE 8004
 
 # Run the entrypoint script
-CMD ["/app/backend/duel_service/entrypoint.sh"] 
+CMD ["uvicorn", "duels_service.main:app", "--host", "0.0.0.0", "--port", "8004"] 

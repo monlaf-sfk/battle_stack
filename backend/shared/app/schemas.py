@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, UUID4, field_validator
-from typing import Optional
+from typing import Optional, List, Any
 from datetime import datetime
 import uuid
 import re
@@ -10,6 +10,8 @@ class UserBase(BaseModel):
     username: str
     email: str
     full_name: str | None = None
+    google_picture: Optional[str] = None
+    oauth_provider: Optional[str] = None
 
     @field_validator('email')
     @classmethod
@@ -96,3 +98,45 @@ class TokenData(BaseModel):
 
 class TokenRefreshRequest(BaseModel):
     refresh_token: str
+
+
+# 🔐 Google OAuth Schemas
+class GoogleAuthRequest(BaseModel):
+    """Request schema for Google OAuth authorization"""
+    credential: str  # Google ID Token (JWT)
+
+
+class GoogleAuthResponse(BaseModel):
+    """Response schema for Google OAuth"""
+    access_token: str
+    refresh_token: str
+    token_type: str
+    user: User
+    is_new_user: bool
+
+
+class GoogleUserInfo(BaseModel):
+    """Google user information from ID token"""
+    sub: str  # Google ID
+    email: str
+    name: str
+    picture: Optional[str] = None
+    email_verified: bool
+    given_name: Optional[str] = None
+    family_name: Optional[str] = None
+
+
+class PaginatedResponse(BaseModel):
+    total: int
+    page: int
+    size: int
+    items: List[Any]
+
+
+class Pagination(BaseModel):
+    page: int = 1
+    size: int = 20
+
+
+class Message(BaseModel):
+    message: str

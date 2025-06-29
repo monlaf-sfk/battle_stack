@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Megaphone, Trophy, Zap, Calendar, X, ChevronRight, Gift } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { dashboardApi, type NewsItem } from '../../services/api';
 import { useToast } from '../ui/Toast';
 import { SkeletonText } from '../ui/Skeleton';
+import { useDashboard } from '../../hooks/useDashboard';
+import type { NewsItem } from '../../services/api';
 
 const iconMap: Record<string, React.ReactNode> = {
     trophy: <Trophy size={28} className="text-white" />,
@@ -14,32 +15,17 @@ const iconMap: Record<string, React.ReactNode> = {
 const NewsBanner: React.FC = () => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isVisible, setIsVisible] = useState(true);
-    const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const { addToast } = useToast();
-    const currentNews = newsItems[currentIndex];
-    const IconNode = iconMap[currentNews.icon] || <Megaphone size={28} className="text-white" />;
-
+    const { data, loading } = useDashboard();
+    const newsItems = data?.newsItems || [];
+    
     useEffect(() => {
-        const fetchNews = async () => {
-            try {
-                const res = await dashboardApi.getNews();
-                setNewsItems(res.data);
-            } catch (e) {
-                addToast({ type:'error', title:'News Error', message:'Failed to load news'});
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchNews();
-    }, []);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setCurrentIndex((prev) => (prev + 1) % newsItems.length);
-        }, 5000);
-        return () => clearInterval(interval);
-    }, []);
+        if (newsItems && newsItems.length > 1) {
+            const interval = setInterval(() => {
+                setCurrentIndex((prev) => (prev + 1) % newsItems.length);
+            }, 5000);
+            return () => clearInterval(interval);
+        }
+    }, [newsItems]);
 
     const getTypeStyles = (type: string) => {
         switch (type) {
@@ -55,9 +41,14 @@ const NewsBanner: React.FC = () => {
     };
 
     if (loading) return <div className="mb-8"><SkeletonText lines={1} /></div>;
-    if (!newsItems.length) return null;
+    if (!newsItems || newsItems.length === 0 || !isVisible) return null;
 
-    if (!isVisible) return null;
+    const currentNews = newsItems[currentIndex];
+    
+    // This check is important in case of faulty data or if the index is out of bounds briefly
+    if (!currentNews) return null; 
+
+    const IconNode = iconMap[currentNews.icon] || <Megaphone size={28} className="text-white" />;
 
     return (
         <AnimatePresence>

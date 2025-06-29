@@ -10,13 +10,17 @@ RUN apt-get update && apt-get install -y \
 
 # Copy requirements
 COPY requirements.txt .
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy shared code
-COPY shared/ shared/
+COPY ./shared /app/shared
+COPY ./services/problems_service /app/problems_service
 
-# Copy problems service
-COPY problems_service/ problems_service/
+RUN pip install --no-cache-dir --force-reinstall ./shared
+
+COPY ./services/problems_service/wait_for_db.py /app/wait_for_db.py
+RUN chmod +x /app/wait_for_db.py
 
 # Set environment variables
 ENV PYTHONPATH=/app
@@ -24,9 +28,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Create entrypoint script
-COPY problems_service/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY ./services/problems_service/entrypoint.sh /app/problems_service/entrypoint.sh
+RUN chmod +x /app/problems_service/entrypoint.sh
 
-EXPOSE 8000
-
-ENTRYPOINT ["/entrypoint.sh"] 
+CMD ["uvicorn", "problems_service.main:app", "--host", "0.0.0.0", "--port", "8003"] 

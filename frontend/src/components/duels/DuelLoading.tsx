@@ -1,65 +1,96 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sword } from 'lucide-react';
+import { Swords, Loader2 } from 'lucide-react';
 
-export const DuelLoading: React.FC = () => {
+interface DuelLoadingProps {
+  message?: string;
+}
+
+export const DuelLoading: React.FC<DuelLoadingProps> = ({ message = "Loading duel..." }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center relative overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(50)].map((_, i) => (
-          <motion.div
-            key={i}
-            className={`absolute w-1 h-1 rounded-full ${
-              i % 3 === 0 ? 'bg-cyan-400' : i % 3 === 1 ? 'bg-green-400' : 'bg-purple-400'
-            }`}
-            initial={{ 
-              x: Math.random() * window.innerWidth,
-              y: Math.random() * window.innerHeight,
-              opacity: 0 
-            }}
-            animate={{ 
-              x: Math.random() * window.innerWidth,
-              y: Math.random() * window.innerHeight,
-              opacity: [0, 1, 0] 
-            }}
-            transition={{
-              duration: 2 + Math.random() * 3,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-        ))}
-      </div>
+    <div className="min-h-screen bg-arena-dark flex items-center justify-center font-mono">
       <motion.div 
-        className="text-center z-10"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="text-center"
       >
-        <motion.div
+        {/* Animated Arena Logo */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
           className="relative mx-auto mb-8"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
         >
-          <div className="w-24 h-24 border-4 border-arena-accent border-t-transparent rounded-full" />
-          <Sword className="absolute inset-0 m-auto w-8 h-8 text-arena-accent" />
+          <div className="relative">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              className="w-16 h-16 border-2 border-arena-accent/30 border-t-arena-accent rounded-full"
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Swords className="w-6 h-6 text-arena-accent" />
+            </div>
+          </div>
         </motion.div>
         
-        <motion.h2 
-          className="text-3xl font-bold text-white mb-4"
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
+        {/* Loading Text */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
         >
-          ⚔️ Preparing Battle Arena ⚔️
-        </motion.h2>
-        
-        <motion.p 
-          className="text-arena-text-muted"
+          <h2 className="text-2xl font-bold text-arena-text mb-3 uppercase tracking-wider">
+            BATTLESTACK
+          </h2>
+          
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="text-arena-text-muted uppercase tracking-wider mb-6"
+          >
+            {message}
+          </motion.p>
+
+          {/* Progress Indicators */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className="flex items-center justify-center gap-2"
+          >
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.5, 1, 0.5]
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  delay: i * 0.2
+                }}
+                className="w-2 h-2 bg-arena-accent rounded-full"
+              />
+            ))}
+          </motion.div>
+        </motion.div>
+
+        {/* Status Messages */}
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 1 }}
+          className="mt-8 text-xs text-arena-text-dim uppercase tracking-wider"
         >
-          Loading epic duel experience...
-        </motion.p>
+          <motion.div
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            INITIALIZING ARENA...
+          </motion.div>
+        </motion.div>
       </motion.div>
     </div>
   );

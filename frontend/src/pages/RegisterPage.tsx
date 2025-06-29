@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Header } from "@/components/layout/Header";
+import { GoogleOAuthButton } from "@/components/auth/GoogleOAuthButton";
 import { Link } from "react-router-dom";
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Lock, CheckCircle, AlertCircle, UserPlus, Swords, Shield } from 'lucide-react';
+import { User, Mail, Lock, CheckCircle, AlertCircle, UserPlus } from 'lucide-react';
 
 interface PasswordStrength {
   score: number;
@@ -61,10 +62,10 @@ const RegisterPage = () => {
 
     const strengths = [
       { score: 0, label: '', color: '' },
-      { score: 1, label: 'Weak', color: 'text-red-400' },
-      { score: 2, label: 'Fair', color: 'text-orange-400' },
-      { score: 3, label: 'Good', color: 'text-yellow-400' },
-      { score: 4, label: 'Strong', color: 'text-green-400' }
+      { score: 1, label: 'WEAK', color: 'text-red-400' },
+      { score: 2, label: 'FAIR', color: 'text-orange-400' },
+      { score: 3, label: 'GOOD', color: 'text-yellow-400' },
+      { score: 4, label: 'STRONG', color: 'text-green-400' }
     ];
 
     return strengths[score];
@@ -131,8 +132,8 @@ const RegisterPage = () => {
       // Show success toast
       addToast({
         type: 'success',
-        title: 'Welcome to the Arena!',
-        message: 'Account created successfully. Entering the battle zone...',
+        title: 'Account Created',
+        message: 'Account created successfully. Logging you in...',
         duration: 3000
       });
 
@@ -144,7 +145,7 @@ const RegisterPage = () => {
       formData.append('username', username.trim());
       formData.append('password', password);
 
-              const response = await authApi.post('/token', formData, {
+      const response = await authApi.post('/token', formData, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -157,12 +158,12 @@ const RegisterPage = () => {
       }, 1500);
       
     } catch (err: any) {
-      let errorMessage = 'Arena registration failed. Please try again.';
+      let errorMessage = 'Registration failed. Please try again.';
       let errorTitle = 'Registration Error';
       
       if (err.response?.status === 409) {
         errorMessage = 'Username or email already in use. Choose different credentials.';
-        errorTitle = 'Arena Conflict';
+        errorTitle = 'Account Conflict';
       } else if (err.response?.status === 422) {
         errorMessage = 'Invalid information provided. Check your details.';
         errorTitle = 'Invalid Data';
@@ -195,33 +196,30 @@ const RegisterPage = () => {
 
   if (showSuccess) {
     return (
-      <div className="min-h-screen bg-arena-dark relative flex items-center justify-center">
-        {/* Background mesh effect */}
-        <div className="fixed inset-0 bg-arena-gradient-mesh opacity-30 pointer-events-none" />
-        
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <motion.div
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="text-center relative z-10"
+          className="text-center"
         >
           <motion.div
-            className="w-28 h-28 mx-auto mb-8 bg-gradient-to-br from-arena-accent to-arena-secondary rounded-2xl flex items-center justify-center shadow-arena-glow"
+            className="w-28 h-28 mx-auto mb-8 bg-white rounded-lg flex items-center justify-center"
             animate={{ scale: [1, 1.1, 1], rotate: [0, 360] }}
             transition={{ duration: 2, repeat: 1 }}
           >
-            <CheckCircle size={56} className="text-arena-dark" />
+            <CheckCircle size={56} className="text-black" />
           </motion.div>
-          <h2 className="text-4xl font-bold gradient-text mb-4">Arena Access Granted!</h2>
-          <p className="text-arena-text-muted text-lg mb-2">Your warrior profile has been created.</p>
-          <p className="text-arena-text-dim">Entering the battle zone...</p>
+          <h2 className="text-4xl font-bold text-white mb-4 font-mono">ACCOUNT CREATED</h2>
+          <p className="text-gray-400 text-lg mb-2 font-mono">YOUR PROFILE HAS BEEN CREATED.</p>
+          <p className="text-gray-500 font-mono">LOGGING YOU IN...</p>
           <motion.div 
-            className="mt-6 w-64 h-1 mx-auto bg-arena-border rounded-full overflow-hidden"
+            className="mt-6 w-64 h-1 mx-auto bg-gray-800 rounded-full overflow-hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
             <motion.div
-              className="h-full bg-gradient-to-r from-arena-accent to-arena-secondary"
+              className="h-full bg-white"
               initial={{ width: 0 }}
               animate={{ width: "100%" }}
               transition={{ duration: 1.5, ease: "easeOut" }}
@@ -233,13 +231,10 @@ const RegisterPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-arena-dark relative overflow-hidden">
-      {/* Background mesh effect */}
-      <div className="fixed inset-0 bg-arena-gradient-mesh opacity-30 pointer-events-none" />
-
+    <div className="min-h-screen bg-black text-white">
       <Header />
       
-      <main className="flex items-center justify-center min-h-screen pt-20 pb-12 px-6 relative z-10">
+      <main className="flex items-center justify-center min-h-screen pt-20 pb-12 px-6">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -247,7 +242,7 @@ const RegisterPage = () => {
           className="w-full max-w-md"
         >
           {/* Register Card */}
-          <Card variant="glass" className="border-arena-secondary/20 shadow-arena-glow">
+          <Card className="bg-gray-900 border border-gray-800">
             <CardContent className="p-8 sm:p-10">
               {/* Logo and Title */}
               <motion.div
@@ -257,20 +252,20 @@ const RegisterPage = () => {
                 className="text-center mb-8"
               >
                 <motion.div
-                  className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-arena-secondary to-arena-accent mb-6 shadow-arena-glow"
+                  className="inline-flex items-center justify-center w-20 h-20 rounded-lg bg-white mb-6"
                   animate={{ 
                     rotate: [0, -5, 5, 0],
                     scale: [1, 1.05, 1]
                   }}
                   transition={{ duration: 6, repeat: Infinity }}
                 >
-                  <Shield size={40} className="text-arena-dark" />
+                  <span className="text-2xl font-bold text-black font-mono">BS</span>
                 </motion.div>
-                <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-3">
-                  Join the Arena
+                <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 font-mono">
+                  CREATE ACCOUNT
                 </h1>
-                <p className="text-arena-text-muted text-lg">
-                  Create your warrior profile and start battling
+                <p className="text-gray-400 text-lg font-mono">
+                  JOIN BATTLESTACK AND START CODING
                 </p>
               </motion.div>
 
@@ -284,17 +279,15 @@ const RegisterPage = () => {
                   <Input
                     ref={usernameRef}
                     type="text"
-                    label="Username"
+                    label="USERNAME"
                     icon={<User size={18} />}
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    variant="glass"
                     success={formValidation.username ? 'Username available' : undefined}
-                    hint="Your arena warrior name (min 3 chars)"
                     autoComplete="username"
                     disabled={isLoading}
-                    className="bg-arena-surface/50 border-arena-border focus:border-arena-accent/50"
+                    className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
                   />
                 </motion.div>
 
@@ -305,17 +298,15 @@ const RegisterPage = () => {
                 >
                   <Input
                     type="email"
-                    label="Email"
+                    label="EMAIL"
                     icon={<Mail size={18} />}
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    variant="glass"
                     success={formValidation.email ? 'Valid email address' : undefined}
-                    hint="Your arena contact email"
                     autoComplete="email"
                     disabled={isLoading}
-                    className="bg-arena-surface/50 border-arena-border focus:border-arena-accent/50"
+                    className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
                   />
                 </motion.div>
 
@@ -326,17 +317,16 @@ const RegisterPage = () => {
                 >
                   <Input
                     type="password"
-                    label="Password"
+                    label="PASSWORD"
                     icon={<Lock size={18} />}
                     required
                     value={password}
                     onChange={handlePasswordChange}
-                    variant="glass"
                     showPasswordToggle
                     autoComplete="new-password"
                     disabled={isLoading}
-                    success={passwordStrength.score >= 3 ? 'Fortress-level security' : undefined}
-                    className="bg-arena-surface/50 border-arena-border focus:border-arena-accent/50"
+                    success={passwordStrength.score >= 3 ? 'Strong password' : undefined}
+                    className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
                   />
                   {/* Password Strength Indicator */}
                   {password && (
@@ -355,7 +345,7 @@ const RegisterPage = () => {
                                 : passwordStrength.score === 2 ? 'bg-orange-400'
                                 : passwordStrength.score === 3 ? 'bg-yellow-400'
                                 : 'bg-green-400'
-                                : 'bg-arena-border'
+                                : 'bg-gray-700'
                             }`}
                             animate={{ scale: level <= passwordStrength.score ? [1, 1.1, 1] : 1 }}
                             transition={{ duration: 0.3 }}
@@ -364,8 +354,8 @@ const RegisterPage = () => {
                       </div>
                       {passwordStrength.label && (
                         <div className="flex items-center gap-2">
-                          <span className={`text-sm font-medium ${passwordStrength.color}`}>
-                            Security Level: {passwordStrength.label}
+                          <span className={`text-sm font-medium font-mono ${passwordStrength.color}`}>
+                            SECURITY LEVEL: {passwordStrength.label}
                           </span>
                           {passwordStrength.score >= 3 && (
                             <CheckCircle size={14} className="text-green-400" />
@@ -383,17 +373,16 @@ const RegisterPage = () => {
                 >
                   <Input
                     type="password"
-                    label="Confirm Password"
+                    label="CONFIRM PASSWORD"
                     icon={<Lock size={18} />}
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    variant="glass"
                     success={formValidation.confirmPassword ? 'Passwords match' : undefined}
                     error={confirmPassword && !formValidation.confirmPassword ? 'Passwords do not match' : undefined}
                     autoComplete="new-password"
                     disabled={isLoading}
-                    className="bg-arena-surface/50 border-arena-border focus:border-arena-accent/50"
+                    className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
                   />
                 </motion.div>
 
@@ -406,11 +395,11 @@ const RegisterPage = () => {
                       exit={{ opacity: 0, y: -10, scale: 0.95 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <Card variant="glass" className="border-red-400/30 bg-red-500/10">
+                      <Card className="border-red-600 bg-red-900/20">
                         <CardContent className="p-4">
                           <div className="flex items-start gap-3">
                             <AlertCircle size={20} className="text-red-400 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-red-400 font-medium">{error}</p>
+                            <p className="text-sm text-red-400 font-medium font-mono">{error}</p>
                           </div>
                         </CardContent>
                       </Card>
@@ -430,17 +419,17 @@ const RegisterPage = () => {
                     required
                     checked={acceptTerms}
                     onChange={(e) => setAcceptTerms(e.target.checked)}
-                    className="mt-1 w-4 h-4 rounded bg-arena-surface border-arena-border text-arena-accent focus:ring-arena-accent/50 transition-all"
+                    className="mt-1 w-4 h-4 rounded bg-gray-800 border-gray-700 text-white focus:ring-gray-600 transition-all"
                     whileTap={{ scale: 0.95 }}
                   />
-                  <label className="text-sm text-arena-text-muted">
-                    I agree to the{' '}
-                    <Link to="/terms" className="text-arena-accent hover:text-arena-accent-hover transition-colors font-medium underline">
-                      Arena Combat Rules
+                  <label className="text-sm text-gray-400 font-mono">
+                    I AGREE TO THE{' '}
+                    <Link to="/terms" className="text-white hover:text-gray-300 transition-colors font-medium underline">
+                      TERMS OF SERVICE
                     </Link>{' '}
-                    and{' '}
-                    <Link to="/privacy" className="text-arena-accent hover:text-arena-accent-hover transition-colors font-medium underline">
-                      Privacy Code
+                    AND{' '}
+                    <Link to="/privacy" className="text-white hover:text-gray-300 transition-colors font-medium underline">
+                      PRIVACY POLICY
                     </Link>
                   </label>
                 </motion.div>
@@ -453,31 +442,86 @@ const RegisterPage = () => {
                 >
                   <Button
                     type="submit"
-                    variant="gradient"
-                    className="w-full text-lg py-4 font-bold shadow-arena-glow"
+                    className="w-full text-lg py-4 font-bold bg-white text-black hover:bg-gray-200 font-mono"
                     loading={isLoading}
                     disabled={isLoading || !Object.values(formValidation).every(v => v)}
                   >
                     <UserPlus size={20} className="mr-3" />
-                    {isLoading ? 'Creating Warrior...' : 'Enter the Arena'}
+                    {isLoading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
                   </Button>
                 </motion.div>
               </form>
+
+              {/* Divider */}
+              <motion.div
+                initial={{ opacity: 0, scaleX: 0 }}
+                animate={{ opacity: 1, scaleX: 1 }}
+                transition={{ delay: 0.9, duration: 0.4 }}
+                className="relative my-8"
+              >
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-800" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-4 bg-gray-900 text-gray-400 font-mono">
+                    OR CONTINUE WITH
+                  </span>
+                </div>
+              </motion.div>
+
+              {/* Social Registration */}
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 1.0, duration: 0.4 }}
+                className="space-y-4"
+              >
+                {/* 🔐 Google OAuth Button */}
+                <GoogleOAuthButton
+                  variant="signup"
+                  onSuccess={() => {
+                    addToast({
+                      type: 'success',
+                      title: 'Google Registration Successful',
+                      message: 'Account created! Redirecting to dashboard...',
+                      duration: 3000
+                    });
+                  }}
+                  onError={(error) => {
+                    addToast({
+                      type: 'error',
+                      title: 'Google Registration Failed',
+                      message: error,
+                      duration: 5000
+                    });
+                  }}
+                />
+                
+                {/* GitHub Button (placeholder for future implementation) */}
+                <Button 
+                  className="w-full bg-gray-800 text-white border border-gray-700 hover:border-gray-600 font-mono text-sm uppercase tracking-wider" 
+                  disabled={true}
+                  type="button"
+                >
+                  <img src="https://www.svgrepo.com/show/512120/github-142.svg" alt="GitHub" className="w-5 h-5 mr-3" />
+                  GITHUB (COMING SOON)
+                </Button>
+              </motion.div>
 
               {/* Sign In Link */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.9, duration: 0.4 }}
+                transition={{ delay: 1.1, duration: 0.4 }}
                 className="mt-8 text-center"
               >
-                <p className="text-arena-text-muted">
-                  Already a warrior?{' '}
+                <p className="text-gray-400 font-mono">
+                  ALREADY HAVE AN ACCOUNT?{' '}
                   <Link
                     to="/login"
-                    className="text-arena-accent hover:text-arena-accent-hover transition-colors font-bold"
+                    className="text-white hover:text-gray-300 transition-colors font-bold"
                   >
-                    Return to battle!
+                    LOGIN
                   </Link>
                 </p>
               </motion.div>

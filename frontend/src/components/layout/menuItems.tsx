@@ -22,6 +22,7 @@ interface MenuItem {
   icon: JSX.Element;
   text: string;
   path: string;
+  locked?: boolean;
 }
 
 interface MenuSection {
@@ -59,14 +60,15 @@ export const getMenuItems = (permissions?: UserPermissions): MenuSection[] => {
           icon: <Gamepad2 size={20} />,
           text: "Tournaments",
           path: "/tournaments",
+          locked: true,
         },
       ],
     },
     {
       section: "LEARNING",
       items: [
-        { icon: <BookOpen size={20} />, text: "Practice", path: "/practice" },
-        { icon: <BrainCircuit size={20} />, text: "AI Tutor", path: "/ai-tutor" },
+        { icon: <BookOpen size={20} />, text: "Practice", path: "/practice", locked: true },
+        { icon: <BrainCircuit size={20} />, text: "AI Tutor", path: "/ai-tutor", locked: true },
       ],
     },
     {

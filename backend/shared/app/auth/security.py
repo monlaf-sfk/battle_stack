@@ -7,12 +7,15 @@ from passlib.context import CryptContext
 from pydantic import UUID4
 from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.app.config import settings
 from .jwt_models import JWTUser
+from .models import User
+from ..database import get_db
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -98,27 +101,7 @@ def verify_refresh_token(token: str) -> dict[str, Any]:
         )
 
 
-async def get_current_user_id(token: str = Depends(oauth2_scheme)) -> UUID4:
-    """Dependency to get user_id from JWT token."""
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
-        )
-        user_id: str | None = payload.get("user_id")
-        if user_id is None:
-            raise credentials_exception
-    except (JWTError, ValueError):
-        raise credentials_exception
-
-    return UUID4(user_id)
-
-
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> JWTUser:
     """Dependency to get current user from JWT token (microservice-friendly)."""
     print(f"🐛 DEBUG: get_current_user called with token: {token[:50]}...")
     
@@ -173,6 +156,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
 
 
+async def get_current_user_id(current_user: User = Depends(get_current_user)) -> UUID4:
+    return current_user.id
+
+
 async def get_current_active_user(
     current_user: JWTUser = Depends(get_current_user),
 ) -> JWTUser:
@@ -197,3 +184,9 @@ async def get_current_active_superuser(
             detail="Not enough permissions"
         )
     return current_user
+
+
+async def is_admin(current_user: User = Depends(get_current_user)) -> bool:
+    if not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
+    return True

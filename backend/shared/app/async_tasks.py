@@ -173,23 +173,9 @@ def generate_ai_problem_task(self, difficulty: str, language: str, topic: Option
             print(f"🔄 Retrying AI generation... (attempt {self.request.retries + 1})")
             raise self.retry(countdown=5)
         
-        # Return fallback problem
-        print("🔄 Using fallback problem")
-        fallback_problems = {
-            "easy": {
-                "title": "Find Maximum",
-                "description": "Find the maximum element in an array.",
-                "function_name": "find_max",
-                "starter_code": "def find_max(arr):\n    # TODO: Find maximum element\n    pass",
-                "test_cases": [
-                    {"input": [[1, 2, 3, 4, 5]], "expected": 5},
-                    {"input": [[-1, -2, -3]], "expected": -1},
-                    {"input": [[42]], "expected": 42}
-                ]
-            }
-        }
-        
-        return fallback_problems.get(difficulty, fallback_problems["easy"])
+        # Fallback problems have been removed. If generation fails, raise an error.
+        print("❌ AI generation failed after all retries. No fallback available.")
+        raise GenerationFailedError("AI problem generation failed after all retries.")
 
 @celery_app.task
 def warm_up_docker_images():
@@ -390,3 +376,16 @@ class AsyncTaskManager:
 
 # Global instance
 task_manager = AsyncTaskManager() 
+
+# ----------------------------------------------------
+#               User-Related Tasks
+# ----------------------------------------------------
+
+class GenerationFailedError(Exception):
+    """Custom exception for when generation fails."""
+    pass
+
+@celery_app.task(bind=True)
+def send_welcome_email(self, user_id: str):
+    """Sends a welcome email to a new user."""
+    # ... existing code ... 

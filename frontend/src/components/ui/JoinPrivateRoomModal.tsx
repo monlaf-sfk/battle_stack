@@ -88,7 +88,7 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
   const handleCreateRoom = async () => {
     setIsCreating(true);
     try {
-      const duel = await createPrivateRoom();
+      const duel = await createPrivateRoom('medium', 'algorithm');
       setCreatedRoomCode(duel.room_code || '');
       
       // Copy to clipboard

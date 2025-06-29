@@ -1,0 +1,38 @@
+[
+  {
+    "name": "First Problem",
+    "description": "Solve your first problem",
+    "icon": "💻",
+    "condition": "tasks_completed >= 1"
+  },
+  {
+    "name": "Problem Solver",
+    "description": "Solve 10 problems",
+    "icon": "🏅",
+    "condition": "tasks_completed >= 10"
+  },
+  {
+    "name": "Duel Master",
+    "description": "Win your first duel",
+    "icon": "⚔️",
+    "condition": "successful_duels >= 1"
+  },
+  {
+    "name": "Streak Master",
+    "description": "7-day solving streak",
+    "icon": "🔥",
+    "condition": "current_streak >= 7"
+  },
+  {
+    "name": "Battle Veteran",
+    "description": "Fight 50 battles",
+    "icon": "🛡️",
+    "condition": "total_duels >= 50"
+  },
+  {
+    "name": "XP Collector",
+    "description": "Earn 1000 XP",
+    "icon": "⭐",
+    "condition": "tasks_completed * 25 >= 1000"
+  }
+] 

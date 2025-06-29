@@ -17,6 +17,14 @@ class UserProfileBase(BaseModel):
     news_feed: List[Dict] = Field(default_factory=list)
     roadmap_events: List[Dict] = Field(default_factory=list)
     recent_duels: List[Dict] = Field(default_factory=list)
+    average_solve_time: Optional[float] = None
+    fastest_solve_time: Optional[float] = None
+    total_attempts: int = 0
+    success_rate: Optional[float] = None
+    ai_duels: int = 0
+    pvp_duels: int = 0
+    best_streak: int = 0
+    tournaments_played: int = 0
 
 class UserProfileCreate(UserProfileBase):
     user_id: uuid.UUID
@@ -43,6 +51,14 @@ class DashboardStats(BaseModel):
     total_duels: int
     tournaments_won: int
     progress_data: List[ProgressData]
+    average_solve_time: Optional[float] = None
+    fastest_solve_time: Optional[float] = None
+    total_attempts: int = 0
+    success_rate: Optional[float] = None
+    ai_duels: int = 0
+    pvp_duels: int = 0
+    best_streak: int = 0
+    tournaments_played: int = 0
 
 class Achievement(BaseModel):
     name: str

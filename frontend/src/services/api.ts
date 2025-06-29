@@ -171,6 +171,26 @@ export const duelsApiService = {
       baseURL: (import.meta.env.VITE_DUELS_API_URL || 'http://127.0.0.1:8004') + '/api/v1/public/duels',
     });
     return await publicDuelsApi.get('/leaderboard');
+  },
+
+  // Join matchmaking
+  joinMatchmaking: async (problemId: string, userId: string) => {
+    return await duelsApi.post('/matchmaking/join', null, {
+      params: {
+        problem_id: problemId,
+        current_user_id: userId,
+      }
+    });
+  },
+
+  // Start AI opponent for a duel
+  startAiOpponent: async (duelId: string) => {
+    return await duelsApi.post(`/${duelId}/start-ai`);
+  },
+
+  // Get duel by ID
+  getDuel: async (duelId: string) => {
+    return await duelsApi.get(`/${duelId}`);
   }
 };
 
@@ -212,7 +232,17 @@ export const authApiService = {
   // Get current user
   getCurrentUser: async () => {
     return await authApi.get('/me');
-  }
+  },
+
+  // Update username
+  updateUsername: async (username: string) => {
+    return await authApi.patch('/me', { username });
+  },
+
+  // Change password
+  changePassword: async (oldPassword: string, newPassword: string) => {
+    return await authApi.post('/change-password', { old_password: oldPassword, new_password: newPassword });
+  },
 };
 
 // Type definitions
@@ -254,6 +284,13 @@ export interface AIRecommendation {
   difficulty: 'Easy' | 'Medium' | 'Hard';
   estimated_time: string;
   improvement: string;
+}
+
+export interface NewsItem {
+  title: string;
+  description: string;
+  type: string;
+  icon: string;
 }
 
 export interface Problem {
@@ -317,5 +354,27 @@ export const profileApi = {
   // Get public user profile
   getPublicProfile: (username: string) => userApi.get(`/profile/${username}`),
 };
+
+export interface Duel {
+  id: string;
+  problem_id: string;
+  status: 'pending' | 'in_progress' | 'finished' | 'cancelled' | 'error';
+  player_one_id: string;
+  player_two_id?: string;
+  player_one_code?: string;
+  player_two_code?: string;
+  results?: any;
+  created_at: string;
+  started_at?: string;
+  finished_at?: string;
+}
+
+export interface Recommendation {
+  title: string;
+  description: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  estimated_time: string;
+  improvement: string;
+}
 
 export { authApi, userApi, problemsApi, duelsApi };

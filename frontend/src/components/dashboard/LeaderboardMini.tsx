@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { duelsApiService, type LeaderboardEntry } from '../../services/duelService';
+import { duelsApiService } from '../../services/duelService';
+import type { LeaderboardEntry } from '../../types/duel.types';
 import { 
   Crown, 
   Trophy, 
@@ -19,23 +20,29 @@ const LeaderboardMini: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [yourRank, setYourRank] = useState<number | null>(null);
 
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const response = await duelsApiService.getLeaderboard(5, 0);
-        setLeaderboard(response.data.entries || []);
-        setYourRank(response.data.your_rank || null);
-      } catch (err: any) {
-        console.error('Failed to fetch leaderboard:', err);
-        setError('Failed to load leaderboard');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchLeaderboard = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
+      const response = await duelsApiService.getLeaderboard(5);
+      setLeaderboard(response || []);
+    } catch (err: any) {
+      let message = 'Failed to load leaderboard';
+      if (err?.response) {
+        const status = err.response.status;
+        const detail = err.response.data?.detail;
+        message = `Error ${status}: ${detail || err.message}`;
+      } else if (err?.message) {
+        message = err.message;
+      }
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchLeaderboard();
   }, []);
 
@@ -103,7 +110,13 @@ const LeaderboardMini: React.FC = () => {
         <CardContent>
           <div className="text-center py-8">
             <Users className="mx-auto mb-3 text-arena-text-muted" size={32} />
-            <p className="text-arena-text-muted text-sm">{error}</p>
+            <p className="text-arena-text-muted text-sm mb-2">{error}</p>
+            <button
+              onClick={fetchLeaderboard}
+              className="text-arena-accent hover:text-arena-accent-hover transition-colors"
+            >
+              Try Again
+            </button>
           </div>
         </CardContent>
       </Card>

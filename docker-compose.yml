@@ -63,6 +63,8 @@ services:
       - auth-db
     ports:
       - "8001:8000"
+ 
+    entrypoint: /app/auth_service/entrypoint.sh
     environment:
       - UVICORN_LOG_LEVEL=info
       - UVICORN_ACCESS_LOG=true
@@ -78,6 +80,7 @@ services:
       - user-db
     ports:
       - "8002:8000"
+    entrypoint: /app/user_service/entrypoint.sh
     environment:
       - UVICORN_LOG_LEVEL=info
       - UVICORN_ACCESS_LOG=true
@@ -93,6 +96,8 @@ services:
       - problems-db
     ports:
       - "8003:8000"
+ 
+    entrypoint: /app/problems_service/entrypoint.sh
     environment:
       - UVICORN_LOG_LEVEL=info
       - UVICORN_ACCESS_LOG=true
@@ -108,11 +113,13 @@ services:
       - duels-db
     ports:
       - "8004:8004"
+ 
+    entrypoint: /app/duels_service/entrypoint.sh
     environment:
+      - JUDGE0_URL=http://104.248.241.191:2358
+      - JUDGE0_API_KEY=
       - UVICORN_LOG_LEVEL=info
       - UVICORN_ACCESS_LOG=true
-      # Uncomment and set your OpenAI API key for AI problem generation
-      # - OPENAI_API_KEY=your-openai-api-key-here
 
 volumes:
   auth_postgres_data:

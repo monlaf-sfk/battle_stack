@@ -4,10 +4,13 @@ import { useLayout } from "@/contexts/LayoutContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { getMenuItems } from "./menuItems.tsx";
 import { motion, AnimatePresence } from "framer-motion";
+import { useDashboard } from "../../hooks/useDashboard";
+import { Flame, Zap, Crown, Lock } from "lucide-react";
 
 const Sidebar = () => {
   const { isSidebarOpen, setSidebarOpen } = useLayout();
   const { permissions } = useAuth();
+  const { data } = useDashboard();
 
   const isDesktopCollapsed = !isSidebarOpen;
   const menuItems = getMenuItems(permissions);
@@ -33,7 +36,7 @@ const Sidebar = () => {
         animate={{ x: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
         className={clsx(
-          "fixed top-0 left-0 z-40 h-screen glass-darker border-r border-arena-border backdrop-blur-xl transition-all duration-300 ease-in-out",
+          "fixed top-0 left-0 z-40 h-screen bg-gray-950 border-r border-gray-800 transition-all duration-300 ease-in-out",
           {
             "translate-x-0": isSidebarOpen,
             "-translate-x-full": !isSidebarOpen,
@@ -49,7 +52,7 @@ const Sidebar = () => {
           {/* Logo Section */}
           <motion.div
             className={clsx(
-              "flex h-[60px] items-center border-b border-arena-border relative overflow-hidden",
+              "flex h-[64px] items-center border-b border-gray-800",
               {
                 "px-6": isSidebarOpen,
                 "justify-center px-2 sm:px-4": !isSidebarOpen,
@@ -58,32 +61,96 @@ const Sidebar = () => {
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="absolute inset-0 bg-arena-gradient-mesh opacity-20" />
-            <a href="/" className="flex items-center gap-3 font-semibold relative z-10">
+            <a href="/" className="flex items-center gap-3 font-semibold">
               <motion.div
-                className="relative"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                className="w-10 h-10 bg-white rounded-lg flex items-center justify-center relative overflow-hidden"
+                animate={{ 
+                  scale: [1, 1.1, 1]
+                }}
+                transition={{ 
+                  scale: { duration: 2, repeat: Infinity }
+                }}
               >
-                <img src="/logo.svg" alt="BattleStack Logo" className="h-8 w-8" />
-                <div className="absolute inset-0 bg-arena-accent/20 blur-xl" />
+                {/* BattleStack Logo adapted for TETR.IO style */}
+                                 <svg 
+                   width="24" 
+                   height="24" 
+                   viewBox="0 0 1024 1024" 
+                   fill="none" 
+                   className="text-black"
+                 >
+                   <g clipPath="url(#clip0_10_2)">
+                     <path d="M512 0L1024 256V768L512 1024L0 768V256L512 0Z" fill="#000000"/>
+                     <path d="M512 448L768 320V640L512 768V448Z" fill="#000000"/>
+                     <path d="M512 448L256 320V640L512 768V448Z" fill="#1a1a1a"/>
+                     <path d="M512 0L256 128V320L512 448L768 320V128L512 0Z" fill="#ffffff"/>
+                     <path d="M512 0L256 128V320L512 448V0Z" fill="#e5e5e5"/>
+                   </g>
+                   <defs>
+                     <clipPath id="clip0_10_2">
+                       <rect width="1024" height="1024" fill="white"/>
+                     </clipPath>
+                   </defs>
+                 </svg>
               </motion.div>
               <motion.span
-                className={clsx("text-lg gradient-text font-bold", {
+                className={clsx("text-lg text-white font-mono font-bold tracking-wider", {
                   "sr-only": isDesktopCollapsed,
                 })}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: isSidebarOpen ? 1 : 0 }}
                 transition={{ duration: 0.3 }}
               >
-                BattleStack
+                BATTLESTACK
               </motion.span>
             </a>
           </motion.div>
 
+          {/* Stats Section - показываем только когда сайдбар открыт */}
+          {isSidebarOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="p-4 border-b border-gray-800"
+            >
+              <div className="grid grid-cols-2 gap-3 text-center">
+                <div className="bg-gray-900 rounded-lg p-3 border border-gray-800">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <Flame size={16} className="text-orange-400" />
+                    <span className="text-white font-mono text-sm font-bold">
+                      {data?.stats?.current_streak || 0}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-400 font-mono">STREAK</div>
+                </div>
+                
+                <div className="bg-gray-900 rounded-lg p-3 border border-gray-800">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <Zap size={16} className="text-yellow-400" />
+                    <span className="text-white font-mono text-sm font-bold">
+                      {data?.stats ? (data.stats.tasks_completed * 25) : 0}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-400 font-mono">XP</div>
+                </div>
+              </div>
+              
+              {/* Rank Badge */}
+              <div className="mt-3 bg-gray-900 rounded-lg p-2 border border-gray-800">
+                <div className="flex items-center justify-center gap-2">
+                  <Crown size={16} className="text-white" />
+                  <span className="text-white font-mono text-sm font-bold">
+                    RANK #{Math.floor(Math.random() * 1000) + 1}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {/* Navigation */}
           <nav
-            className={clsx("flex-1 overflow-y-auto py-4 text-sm font-medium", {
+            className={clsx("flex-1 overflow-y-auto py-4 text-sm font-mono", {
               "px-4": isSidebarOpen,
               "px-2": !isSidebarOpen,
             })}
@@ -91,14 +158,14 @@ const Sidebar = () => {
             {menuItems.map((section, sectionIndex) => (
               <motion.div 
                 key={section.section} 
-                className="mb-6"
+                className="mb-4"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: sectionIndex * 0.1 }}
               >
                 <h3
                   className={clsx(
-                    "mb-3 px-2 text-xs font-semibold uppercase tracking-wider text-arena-text-muted",
+                    "mb-2 px-2 text-xs font-bold uppercase tracking-wider text-gray-400",
                     { "sr-only": !isSidebarOpen }
                   )}
                 >
@@ -112,51 +179,69 @@ const Sidebar = () => {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3, delay: (sectionIndex * 0.1) + (itemIndex * 0.05) }}
                     >
-                      <NavLink
-                        to={item.path}
-                        onClick={() => { if (window.innerWidth < 640) setSidebarOpen(false) }}
-                        className={({ isActive }) =>
-                          clsx(
-                            "flex items-center gap-3 rounded-lg py-3 px-3 transition-all duration-200 relative group",
-                            !isDesktopCollapsed
-                              ? `${
-                                  isActive
-                                    ? "bg-arena-accent/10 text-arena-accent shadow-arena-glow border-l-4 border-arena-accent"
-                                    : "text-arena-text hover:bg-arena-surface/50 hover:text-arena-accent"
-                                }`
-                              : `justify-center ${
-                                  isActive 
-                                    ? "bg-arena-accent/10 text-arena-accent shadow-arena-glow" 
-                                    : "text-arena-text hover:bg-arena-surface/50 hover:text-arena-accent"
-                                }`
-                          )
-                        }
-                      >
-                        {({ isActive }) => (
-                          <>
-                            <motion.div
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.95 }}
-                              className={isActive ? "text-arena-accent" : ""}
-                            >
-                              {item.icon}
-                            </motion.div>
-                            <span className={clsx({ "sr-only": isDesktopCollapsed })}>
-                              {item.text}
-                            </span>
-                            {isActive && !isDesktopCollapsed && (
+                      {item.locked ? (
+                        <div
+                          className={clsx(
+                            "flex items-center gap-3 rounded-lg py-3 px-3 transition-all duration-200 relative group font-mono text-sm cursor-not-allowed opacity-60",
+                            { "justify-center": isDesktopCollapsed }
+                          )}
+                          title="Доступно скоро"
+                        >
+                          <span className="flex-shrink-0">
+                            {item.icon}
+                          </span>
+                          <span className={clsx("font-medium tracking-wide", { "sr-only": isDesktopCollapsed })}>
+                            {item.text.toUpperCase()}
+                          </span>
+                          <Lock size={16} className="ml-2 text-gray-400" />
+                          <span className="absolute right-3 text-xs text-gray-400 hidden group-hover:block bg-gray-900 px-2 py-1 rounded shadow-lg z-10">
+                            Доступно скоро
+                          </span>
+                        </div>
+                      ) : (
+                        <NavLink
+                          to={item.path}
+                          onClick={() => { if (window.innerWidth < 640) setSidebarOpen(false) }}
+                          className={({ isActive }) =>
+                            clsx(
+                              "flex items-center gap-3 rounded-lg py-3 px-3 transition-all duration-200 relative group font-mono text-sm",
+                              !isDesktopCollapsed
+                                ? `${
+                                    isActive
+                                      ? "bg-gray-800 text-white border-l-2 border-white"
+                                      : "text-gray-400 hover:bg-gray-900 hover:text-white"
+                                  }`
+                                : `justify-center ${
+                                    isActive 
+                                      ? "bg-gray-800 text-white" 
+                                      : "text-gray-400 hover:bg-gray-900 hover:text-white"
+                                  }`
+                            )
+                          }
+                        >
+                          {({ isActive }) => (
+                            <>
                               <motion.div
-                                layoutId="activeSidebarIndicator"
-                                className="absolute right-3 w-2 h-2 bg-arena-accent rounded-full"
-                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                              />
-                            )}
-                            {!isDesktopCollapsed && (
-                              <div className="absolute inset-0 bg-arena-accent/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10" />
-                            )}
-                          </>
-                        )}
-                      </NavLink>
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.95 }}
+                                className={clsx("flex-shrink-0", isActive ? "text-white" : "")}
+                              >
+                                {item.icon}
+                              </motion.div>
+                              <span className={clsx("font-medium tracking-wide", { "sr-only": isDesktopCollapsed })}>
+                                {item.text.toUpperCase()}
+                              </span>
+                              {isActive && !isDesktopCollapsed && (
+                                <motion.div
+                                  layoutId="activeSidebarIndicator"
+                                  className="absolute right-3 w-2 h-2 bg-white rounded-full"
+                                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                />
+                              )}
+                            </>
+                          )}
+                        </NavLink>
+                      )}
                     </motion.li>
                   ))}
                 </ul>
@@ -166,18 +251,20 @@ const Sidebar = () => {
 
           {/* Footer */}
           <motion.div
-            className={clsx("border-t border-arena-border p-4", {
+            className={clsx("border-t border-gray-800 p-4", {
               "text-center": isDesktopCollapsed,
             })}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.8 }}
           >
-            <div className={clsx("text-xs text-arena-text-muted", {
+            <div className={clsx("text-xs text-gray-500 font-mono", {
               "sr-only": isDesktopCollapsed,
             })}>
-              <div className="font-medium text-arena-accent mb-1">BattleStack v1.0</div>
-              <div>Coding Battle Platform</div>
+              <div className="font-bold text-gray-400 mb-1">
+                BATTLESTACK v1.0
+              </div>
+              <div>CODING ARENA</div>
             </div>
           </motion.div>
         </div>

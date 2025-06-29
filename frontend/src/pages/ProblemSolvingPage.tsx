@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { CodeEditor, LanguageSelector, ThemeToggle } from '../components/ui/CodeEditor';
+import CodeExecutionPanel from '../components/coding/CodeExecutionPanel';
 import { 
   Play, 
   Send, 
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { problemsApiService, type Problem, type TestResult } from '../services/api';
+import { SolverDispatcher } from '../components/solvers/SolverDispatcher';
 
 const ProblemSolvingPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -29,9 +31,7 @@ const ProblemSolvingPage: React.FC = () => {
   const [problem, setProblem] = useState<Problem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedLanguage, setSelectedLanguage] = useState('python');
-  const [code, setCode] = useState('');
-  const [editorTheme, setEditorTheme] = useState<'vs-dark' | 'vs-light'>('vs-dark');
+  const [solution, setSolution] = useState({ language: 'python', code: '' });
   const [activeTab, setActiveTab] = useState<'description' | 'hints' | 'submissions'>('description');
   const [showHints, setShowHints] = useState(false);
   const [currentHint, setCurrentHint] = useState(0);
@@ -51,14 +51,9 @@ const ProblemSolvingPage: React.FC = () => {
     }
   }, [slug]);
 
-  useEffect(() => {
-    if (problem?.code_templates) {
-      const template = problem.code_templates.find(t => t.language === selectedLanguage);
-      if (template) {
-        setCode(template.template_code);
-      }
-    }
-  }, [selectedLanguage, problem]);
+  const handleCodeChange = (language: string, code: string) => {
+    setSolution({ language, code });
+  };
 
   const fetchProblem = async () => {
     try {
@@ -88,7 +83,7 @@ const ProblemSolvingPage: React.FC = () => {
     setTestResults([]);
 
     try {
-      const response = await problemsApiService.runTests(slug, selectedLanguage, code);
+      const response = await problemsApiService.runTests(slug, solution.language, solution.code);
       setTestResults(response.data.results || []);
       
     } catch (error: any) {
@@ -111,7 +106,7 @@ const ProblemSolvingPage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await problemsApiService.submitSolution(slug, selectedLanguage, code);
+      const response = await problemsApiService.submitSolution(slug, solution.language, solution.code);
       
       if (response.data.all_passed) {
         alert('🎉 Congratulations! All tests passed!\n\nYour solution has been submitted successfully.');
@@ -349,112 +344,17 @@ const ProblemSolvingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Panel - Code Editor */}
+        {/* Right Panel - Professional Code Execution */}
         <div className="w-1/2 flex flex-col">
-          {/* Language Selector */}
-          <div className="border-b border-arena-border p-4 bg-arena-surface/30">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Code size={20} className="text-arena-accent" />
-                <select
-                  value={selectedLanguage}
-                  onChange={(e) => setSelectedLanguage(e.target.value)}
-                  className="bg-arena-dark border border-arena-border rounded-lg px-3 py-2 text-arena-text"
-                >
-                  {problem.code_templates?.map(template => (
-                    <option key={template.language} value={template.language}>
-                      {template.language.charAt(0).toUpperCase() + template.language.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleRunTests}
-                  disabled={isRunning || isSubmitting}
-                  className="flex items-center gap-2"
-                >
-                  <Play size={16} />
-                  {isRunning ? 'Running...' : 'Run Tests'}
-                </Button>
-                <Button
-                  variant="gradient"
-                  onClick={handleSubmit}
-                  disabled={isRunning || isSubmitting}
-                  className="flex items-center gap-2"
-                >
-                  <Send size={16} />
-                  {isSubmitting ? 'Submitting...' : 'Submit'}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Code Editor */}
-          <div className="flex-1 bg-arena-dark">
-            <CodeEditor
-              language={selectedLanguage}
-              value={code}
-              onChange={setCode}
-              height="100%"
-            />
-          </div>
-
-          {/* Test Results */}
-          {testResults.length > 0 && (
-            <div className="border-t border-arena-border bg-arena-surface/30 p-4 max-h-64 overflow-y-auto">
-              <h3 className="text-lg font-semibold text-arena-text mb-3">Test Results</h3>
-              <div className="space-y-2">
-                {testResults.map((result, index) => (
-                  <Card 
-                    key={index} 
-                    className={`${result.passed ? 'border-green-500/30 bg-green-500/5' : 'border-red-500/30 bg-red-500/5'}`}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-sm font-medium ${result.passed ? 'text-green-400' : 'text-red-400'}`}>
-                          Test Case {index + 1}: {result.passed ? 'PASSED' : 'FAILED'}
-                        </span>
-                        {result.runtime_ms && (
-                          <span className="text-xs text-arena-text-muted">
-                            {result.runtime_ms}ms
-                          </span>
-                        )}
-                      </div>
-                      
-                      {!result.passed && (
-                        <div className="space-y-2 text-xs">
-                          {result.error ? (
-                            <div>
-                              <span className="text-red-400 font-medium">Error:</span>
-                              <div className="text-arena-text-muted mt-1">{result.error}</div>
-                            </div>
-                          ) : (
-                            <>
-                              <div>
-                                <span className="text-arena-text-muted">Input:</span>
-                                <div className="text-arena-text font-mono">{result.input_data}</div>
-                              </div>
-                              <div>
-                                <span className="text-arena-text-muted">Expected:</span>
-                                <div className="text-arena-text font-mono">{result.expected_output}</div>
-                              </div>
-                              <div>
-                                <span className="text-arena-text-muted">Got:</span>
-                                <div className="text-arena-text font-mono">{result.actual_output}</div>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
+          <SolverDispatcher
+            problem={problem}
+            onCodeChange={handleCodeChange}
+            onSubmit={handleSubmit}
+            onRunTests={handleRunTests}
+            isRunning={isRunning}
+            isSubmitting={isSubmitting}
+            testResults={testResults}
+          />
         </div>
       </div>
     </div>

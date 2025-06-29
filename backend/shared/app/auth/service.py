@@ -1,8 +1,9 @@
+from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from shared.app.auth.security import hash_password, verify_password
-from shared.app.auth.models import User
+from shared.app.auth.models import User, UserRole
 from shared.app.schemas import UserCreate
 
 
@@ -47,4 +48,58 @@ async def create_user(db: AsyncSession, user: UserCreate) -> User:
     db.add(db_user)
     await db.commit()
     await db.refresh(db_user)
+    return db_user
+
+
+async def create_user_google(
+    db: AsyncSession,
+    google_id: str,
+    username: str,
+    email: str,
+    full_name: str,
+    google_picture: str = None
+) -> User:
+    """
+    🔐 Create new user from Google OAuth information
+    
+    Args:
+        db: Database session
+        google_id: Google user ID (sub claim)
+        username: Generated unique username
+        email: Google email
+        full_name: User's full name from Google
+        google_picture: Google profile picture URL
+    
+    Returns:
+        User: Created user model
+    """
+    
+    db_user = User(
+        username=username,
+        email=email,
+        full_name=full_name,
+        hashed_password="",  # No password for OAuth users
+        role=UserRole.USER.value,
+        
+        # Google OAuth fields
+        google_id=google_id,
+        google_email=email,
+        google_picture=google_picture,
+        oauth_provider="google",
+        
+        # OAuth users are automatically verified
+        is_verified=True,
+        is_active=True,
+        
+        # Set timestamps
+        last_login=datetime.utcnow(),
+        created_at=datetime.utcnow()
+    )
+    
+    db.add(db_user)
+    await db.commit()
+    await db.refresh(db_user)
+    
+    print(f"✅ Created Google OAuth user: {username} ({email})")
+    
     return db_user

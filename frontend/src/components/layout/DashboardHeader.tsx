@@ -1,85 +1,52 @@
-import { NavLink } from "react-router-dom";
-import clsx from "clsx";
-import { UserNav } from "./UserNav";
 import { useLayout } from "@/contexts/LayoutContext";
 import { Button } from "../ui/Button";
-import { Menu, X, Bell, Flame, Swords, Crown } from "lucide-react";
+import { Menu, X, Bell } from "lucide-react";
 import { motion } from "framer-motion";
-import { useDashboard } from "../../hooks/useDashboard";
+import { UserNav } from "./UserNav";
 
-const navLinks = [
-  { name: "Панель", href: "/dashboard" },
-  { name: "Задачи", href: "/problems" },
-  { name: "Рейтинги", href: "/leaderboards" },
-  { name: "Практика", href: "/practice" },
-];
-
-const Topbar = () => {
+const DashboardHeader = () => {
   const { isSidebarOpen, setSidebarOpen } = useLayout();
-  const { data } = useDashboard();
   
   return (
     <motion.header 
-      className="sticky top-0 z-30 glass-darker border-b border-arena-border backdrop-blur-xl"
+      className="sticky top-0 z-30 bg-black border-b border-gray-800"
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
     >
       <div className="flex h-16 items-center justify-between px-4 sm:px-6">
+        {/* Left side - Sidebar toggle */}
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setSidebarOpen(!isSidebarOpen)}
-            className="text-arena-text hover:text-arena-accent hover:bg-arena-accent/10 transition-all duration-200"
+            className="text-white hover:text-gray-300 hover:bg-gray-800 transition-all duration-200 w-10 h-10"
           >
             <motion.div
               animate={{ rotate: isSidebarOpen ? 180 : 0 }}
               transition={{ duration: 0.3 }}
             >
-              {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+              {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </motion.div>
-            <span className="sr-only">Переключить боковую панель</span>
+            <span className="sr-only">Переключить навигацию</span>
           </Button>
+          
+          {/* Simple title */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="hidden sm:block"
+          >
+            <h1 className="text-xl font-bold text-white font-mono tracking-wider">
+              BATTLESTACK
+            </h1>
+          </motion.div>
         </div>
 
-        <nav className="hidden items-center gap-1 text-sm font-medium md:flex">
-          {navLinks.map((link, index) => (
-            <motion.div
-              key={link.name}
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-            >
-              <NavLink
-                to={link.href}
-                className={({ isActive }) =>
-                  clsx(
-                    "relative px-4 py-2 rounded-lg transition-all duration-300 hover:bg-arena-surface/50",
-                    isActive
-                      ? "text-arena-accent bg-arena-accent/10 shadow-arena-glow"
-                      : "text-arena-text hover:text-arena-accent"
-                  )
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    {link.name}
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeTab"
-                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-arena-accent rounded-full"
-                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                      />
-                    )}
-                  </>
-                )}
-              </NavLink>
-            </motion.div>
-          ))}
-        </nav>
-
+        {/* Right side - Notifications and User */}
         <div className="flex items-center gap-3">
+          {/* Notification Bell */}
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -87,37 +54,19 @@ const Topbar = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="text-arena-text-muted hover:text-arena-accent hover:bg-arena-accent/10 relative"
+              className="text-white hover:text-gray-300 hover:bg-gray-800 relative w-10 h-10"
             >
-              <Bell size={20} />
+              <Bell size={18} />
               <motion.div
-                className="absolute -top-1 -right-1 w-3 h-3 bg-arena-accent rounded-full"
-                animate={{ scale: [1, 1.2, 1] }}
+                className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full"
+                animate={{ scale: [1, 1.3, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
               />
               <span className="sr-only">Уведомления</span>
             </Button>
           </motion.div>
           
-          <div className="flex items-center gap-2 px-3 py-1 bg-arena-surface/50 rounded-lg border border-arena-border">
-            <Flame size={18} className="text-orange-400" />
-            <span className="text-arena-text font-medium">{data.stats?.current_streak || 0}</span>
-            <span className="text-arena-text-muted text-sm">стрик</span>
-          </div>
-          
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Button 
-              variant="gradient" 
-              className="hidden sm:flex items-center gap-2 shadow-arena-glow"
-            >
-              <Crown size={16} />
-              Премиум
-            </Button>
-          </motion.div>
-          
+          {/* User Navigation */}
           <UserNav />
         </div>
       </div>
@@ -125,4 +74,4 @@ const Topbar = () => {
   );
 };
 
-export default Topbar; 
+export default DashboardHeader; 

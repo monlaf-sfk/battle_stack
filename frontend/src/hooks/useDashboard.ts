@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { dashboardApi, type DashboardStats, type Achievement, type AIRecommendation } from '../services/api';
+import { dashboardApi, type DashboardStats, type Achievement, type AIRecommendation, type NewsItem } from '../services/api';
 import { useToast } from '../components/ui/Toast';
 
 interface DashboardData {
   stats: DashboardStats | null;
   achievements: Achievement[];
   recommendations: AIRecommendation[];
+  newsItems: NewsItem[];
 }
 
 interface UseDashboardReturn {
@@ -22,6 +23,7 @@ export const useDashboard = (): UseDashboardReturn => {
     stats: null,
     achievements: [],
     recommendations: [],
+    newsItems: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,16 +35,18 @@ export const useDashboard = (): UseDashboardReturn => {
       setError(null);
       
       // Fetch all dashboard data in parallel
-      const [statsResponse, achievementsResponse, recommendationsResponse] = await Promise.all([
+      const [statsResponse, achievementsResponse, recommendationsResponse, newsResponse] = await Promise.all([
         dashboardApi.getStats(),
         dashboardApi.getAchievements(),
         dashboardApi.getRecommendations(),
+        dashboardApi.getNews(),
       ]);
 
       setData({
         stats: statsResponse.data,
         achievements: achievementsResponse.data,
         recommendations: recommendationsResponse.data,
+        newsItems: newsResponse.data,
       });
     } catch (err: any) {
       console.error('Failed to fetch dashboard data:', err);

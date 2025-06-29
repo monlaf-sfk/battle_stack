@@ -1,19 +1,63 @@
 import React from 'react';
-import { Shield, User, Wifi, Star, Trophy, Zap } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
+import { Shield, User, Crown, Star } from 'lucide-react';
+import { Card, CardContent, CardFooter } from '../ui/Card';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { useDashboard } from '../../hooks/useDashboard';
+import { useAuth } from '../../contexts/AuthContext';
+import { Skeleton } from '../ui/Skeleton';
 
 const UserProfile: React.FC = () => {
-    const xpPercentage = (150 / 200) * 100;
-    const level = 7;
-    const rank = 'Gold League';
+    const navigate = useNavigate();
+    const { user, loading: authLoading } = useAuth();
+    const { data, loading: dashboardLoading } = useDashboard();
+
+    const loading = authLoading || dashboardLoading;
+
+    if (loading) {
+        return (
+            <Card>
+                <CardContent className="p-6">
+                    <div className="flex items-center space-x-4 mb-4">
+                        <Skeleton variant="circular" width={64} height={64} />
+                        <div className="flex-1 space-y-2">
+                            <Skeleton variant="text" width="70%" height={24} />
+                            <Skeleton variant="text" width="50%" height={20} />
+                        </div>
+                    </div>
+                    <Skeleton variant="text" width="90%" height={20} className="mb-2" />
+                    <Skeleton variant="rectangular" width="100%" height={8} className="rounded-full" />
+                </CardContent>
+            </Card>
+        );
+    }
+    
+    const totalXP = data?.stats?.tasks_completed ? (data.stats.tasks_completed * 25) : 0;
+    const level = Math.floor(totalXP / 200) + 1;
+    const xpInCurrentLevel = totalXP % 200;
+    const xpPercentage = (xpInCurrentLevel / 200) * 100;
+    
+    const getRoleInfo = (role: string) => {
+        switch(role) {
+            case 'admin':
+            case 'super_admin':
+                return { name: 'Admin', icon: <Crown size={14} />, color: 'text-yellow-400' };
+            case 'moderator':
+                return { name: 'Moderator', icon: <Shield size={14} />, color: 'text-blue-400' };
+            default:
+                return { name: 'Code Warrior', icon: <User size={14} />, color: 'text-green-400' };
+        }
+    };
+    
+    const roleInfo = getRoleInfo(user?.role || 'user');
 
     return (
-        <Card variant="glass" hover="glow" className="relative overflow-hidden">
-            {/* Background Gradient */}
-            <div className="absolute inset-0 bg-gradient-to-br from-arena-accent/10 to-arena-secondary/10 opacity-50" />
-            
-            <CardContent className="relative z-10">
+        <Card 
+            className="bg-gray-900 border border-gray-800 hover:border-gray-700 transition-all duration-300 overflow-hidden"
+            onClick={() => navigate('/profile')}
+        >
+            <div className="h-2 bg-gradient-to-r from-green-400 to-blue-500" />
+            <CardContent className="p-6">
                 {/* User Avatar and Info */}
                 <div className="flex items-center space-x-4 mb-6">
                     <motion.div 
@@ -21,132 +65,96 @@ const UserProfile: React.FC = () => {
                         whileHover={{ scale: 1.05 }}
                         transition={{ type: "spring", stiffness: 300 }}
                     >
-                        <div className="absolute inset-0 bg-gradient-to-r from-arena-accent to-arena-secondary rounded-full blur-md opacity-50 group-hover:opacity-75 transition-opacity" />
-                        <img
-                            className="relative w-24 h-24 rounded-full border-2 border-arena-accent/50"
-                            src="/default-avatar.png"
-                            alt="User Avatar"
-                        />
-                        <motion.button 
-                            className="absolute bottom-0 right-0 bg-gradient-to-r from-arena-accent to-arena-tertiary hover:shadow-lg rounded-full p-1.5 shadow-md"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.95 }}
-                        >
-                            <User size={16} className="text-arena-dark" />
-                        </motion.button>
+                        <div className="relative w-16 h-16 rounded-full bg-gray-800 border-2 border-gray-700 flex items-center justify-center">
+                            {user?.google_picture ? (
+                                <img src={user.google_picture} alt={user.username} className="w-full h-full rounded-full object-cover"/>
+                            ) : (
+                                <User size={32} className="text-gray-400" />
+                            )}
+                        </div>
                     </motion.div>
                     
                     <div className="flex-1">
-                        <h2 className="text-2xl font-bold text-white flex items-center">
-                            ShadowDev 
-                            <motion.span 
-                                className="text-arena-text-muted ml-2 text-lg"
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.2 }}
-                            >
-                                • Lvl {level}
-                            </motion.span>
+                        <h2 className="text-xl font-bold text-white flex items-center font-mono truncate">
+                            {user?.username || 'Guest'}
                         </h2>
                         <motion.div 
-                            className="flex items-center gap-2 mt-2"
+                            className="flex items-center gap-2 mt-1"
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.3 }}
                         >
-                            <div className="flex items-center bg-gradient-to-r from-yellow-500/20 to-orange-500/20 px-3 py-1 rounded-lg border border-yellow-500/30">
-                                <Shield size={18} className="text-yellow-400 mr-1.5" />
-                                <span className="font-semibold text-yellow-400">{rank}</span>
+                            <div className={`flex items-center ${roleInfo.color} gap-1`}>
+                                {roleInfo.icon}
+                                <span className="font-semibold text-sm font-mono">{roleInfo.name}</span>
                             </div>
                         </motion.div>
                     </div>
                 </div>
 
-                {/* XP Progress Bar */}
+                {/* Level and XP Progress */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
                     className="mb-6"
                 >
-                    <div className="flex justify-between items-center mb-2 text-sm">
-                        <span className="font-semibold text-white flex items-center">
-                            <Star size={16} className="text-arena-accent mr-1" />
-                            Experience Points
+                    <div className="flex justify-between items-center mb-1 text-sm">
+                        <span className="font-semibold text-white flex items-center font-mono text-sm gap-1.5">
+                            <Crown size={14} className="text-yellow-400" />
+                            Level {level}
                         </span>
-                        <span className="text-arena-text-muted">150 / 200 XP</span>
+                        <span className="text-gray-400 font-mono text-xs">{xpInCurrentLevel} / 200 XP</span>
                     </div>
                     <div className="relative">
-                        <div className="w-full bg-arena-light rounded-full h-3 overflow-hidden">
+                        <div className="w-full bg-gray-800 rounded-full h-2.5 overflow-hidden border border-gray-700">
                             <motion.div 
-                                className="h-full bg-gradient-to-r from-arena-accent to-arena-tertiary rounded-full relative"
+                                className="h-full bg-gradient-to-r from-green-400 to-blue-500 rounded-full"
                                 initial={{ width: 0 }}
                                 animate={{ width: `${xpPercentage}%` }}
                                 transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
-                            >
-                                <div className="absolute inset-0 bg-white/20 animate-shimmer" />
-                            </motion.div>
+                            />
                         </div>
-                        <motion.div
-                            className="absolute -top-8 text-xs text-arena-accent font-bold"
-                            initial={{ opacity: 0 }}
-                            animate={{ 
-                                opacity: 1,
-                                left: `${xpPercentage}%`
-                            }}
-                            transition={{ duration: 1, delay: 0.7 }}
-                        >
-                            {Math.floor(xpPercentage)}%
-                        </motion.div>
                     </div>
                 </motion.div>
 
-                {/* Stats Grid */}
+                {/* Quick Stats */}
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.6 }}
-                    className="grid grid-cols-3 gap-3 mb-6"
+                    transition={{ delay: 0.6, staggerChildren: 0.1 }}
+                    className="grid grid-cols-3 gap-4"
                 >
-                    <div className="text-center p-3 glass rounded-lg">
-                        <Trophy size={20} className="text-arena-accent mx-auto mb-1" />
-                        <div className="text-xl font-bold text-white">42</div>
-                        <div className="text-xs text-arena-text-muted">Wins</div>
-                    </div>
-                    <div className="text-center p-3 glass rounded-lg">
-                        <Zap size={20} className="text-arena-secondary mx-auto mb-1" />
-                        <div className="text-xl font-bold text-white">89%</div>
-                        <div className="text-xs text-arena-text-muted">Win Rate</div>
-                    </div>
-                    <div className="text-center p-3 glass rounded-lg">
-                        <Star size={20} className="text-arena-tertiary mx-auto mb-1" />
-                        <div className="text-xl font-bold text-white">15</div>
-                        <div className="text-xs text-arena-text-muted">Streak</div>
-                    </div>
-                </motion.div>
-
-                {/* Status */}
-                <motion.div 
-                    className="flex items-center justify-between"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.7 }}
-                >
-                    <span className="text-sm font-semibold text-arena-text-muted">Status:</span>
-                    <motion.div
-                        className="flex items-center space-x-2"
-                        animate={{ scale: [1, 1.05, 1] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                    >
-                        <span className="flex items-center bg-green-500/20 text-green-400 px-3 py-1.5 rounded-lg border border-green-500/30">
-                            <Wifi size={16} className="mr-1.5" />
-                            Online
-                        </span>
-                    </motion.div>
+                    <StatItem value={data?.stats?.total_duels || 0} label="Duels" />
+                    <StatItem value={data?.stats?.current_streak || 0} label="Streak" highlightColor="text-orange-400" />
+                    <StatItem value={data?.stats?.successful_duels || 0} label="Wins" highlightColor="text-green-400" />
                 </motion.div>
             </CardContent>
+            <CardFooter className="p-4 bg-gray-900/50 border-t border-gray-800">
+                 <motion.div 
+                    className="text-center w-full"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.7 }}
+                >
+                    <div className="text-gray-400 text-sm font-mono hover:text-white transition-colors">
+                        View Full Profile →
+                    </div>
+                </motion.div>
+            </CardFooter>
         </Card>
     );
 };
+
+const StatItem = ({ value, label, highlightColor = 'text-white' }: { value: number, label: string, highlightColor?: string }) => (
+    <motion.div
+        className="text-center p-3 bg-gray-800/50 rounded-lg border border-gray-700/80"
+        variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }}
+        whileHover={{ scale: 1.05, backgroundColor: 'rgba(31, 41, 55, 0.7)'}}
+    >
+        <div className={`text-2xl font-bold ${highlightColor} font-mono`}>{value}</div>
+        <div className="text-xs text-gray-400 font-mono tracking-wider">{label}</div>
+    </motion.div>
+);
 
 export default UserProfile; 

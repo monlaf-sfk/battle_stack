@@ -1,22 +1,30 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useAuth, AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import AdminProblemsPage from './pages/AdminProblemsPage';
-import MainLayout from './components/layout/MainLayout';
+import { MainLayout } from './components/layout/MainLayout';
 import { LayoutProvider } from './contexts/LayoutContext';
 import QuickDuelPage from './pages/QuickDuelPage';
 import ProblemsPage from './pages/ProblemsPage';
 import ProblemSolvingPage from './pages/ProblemSolvingPage';
-import { RealTimeDuel } from './components/duels/RealTimeDuel';
+import ProfilePage from './pages/ProfilePage';
+import PvEDuelPage from './pages/PvEDuelPage';
+import { DuelProvider } from './contexts/DuelContext';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { PublicRoute } from './components/auth/PublicRoute';
+import LeaderboardsPage from "./pages/LeaderboardsPage";
+import SettingsPage from './pages/SettingsPage';
 
-function App() {
-  const { isAuthenticated, loading } = useAuth();
+const queryClient = new QueryClient();
 
-  // Show loading screen while checking authentication
+const AppRoutes = () => {
+  const { loading } = useAuth();
+
   if (loading) {
     return (
       <div className="min-h-screen bg-arena-dark flex items-center justify-center">
@@ -29,31 +37,39 @@ function App() {
   }
 
   return (
-    <Router>
-      <ToastProvider>
-        <LayoutProvider>
-          <Routes>
-            <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />} />
-            <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" /> : <RegisterPage />} />
-            <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <LandingPage />} />
+    <LayoutProvider>
+      <DuelProvider>
+        <Routes>
+          <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
+          <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+          <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+          
+          <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/problems" element={<ProblemsPage />} />
+            <Route path="/problems/:problemId" element={<ProblemSolvingPage />} />
+            <Route path="/admin/problems" element={<AdminProblemsPage />} />
+            <Route path="/quick-duel" element={<QuickDuelPage />} />
+            <Route path="/pve-duel" element={<PvEDuelPage />} />
+            <Route path="/leaderboards" element={<LeaderboardsPage />} />
+          </Route>
+        </Routes>
+      </DuelProvider>
+    </LayoutProvider>
+  );
+};
 
-            {/* Problem solving page without sidebar */}
-            <Route path="/problems/:slug" element={isAuthenticated ? <ProblemSolvingPage /> : <Navigate to="/login" />} />
-
-            <Route element={isAuthenticated ? <MainLayout /> : <Navigate to="/login" />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/problems" element={<ProblemsPage />} />
-              <Route path="/quick-duel" element={<QuickDuelPage />} />
-              <Route path="/admin" element={<AdminProblemsPage />} />
-              {/* Add other authenticated routes here, they will have the sidebar */}
-            </Route>
-            
-            {/* Duel page without sidebar for full-screen experience */}
-            <Route path="/duels/:duelId" element={isAuthenticated ? <RealTimeDuel /> : <Navigate to="/login" />} />
-          </Routes>
-        </LayoutProvider>
-      </ToastProvider>
-    </Router>
+function App() {
+  return (
+    <ToastProvider>
+      <Router>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </Router>
+    </ToastProvider>
   );
 }
 

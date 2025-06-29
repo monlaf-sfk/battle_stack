@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+import os
 
 
 class Settings(BaseSettings):
@@ -8,6 +9,13 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     ENVIRONMENT: str = "development"
     OPENAI_API_KEY: str = ""
+    JUDGE0_API_KEY: str = ""
+    
+    # 🔐 Google OAuth Configuration
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_OAUTH_REDIRECT_URI: str = "http://localhost:3000/auth/google/callback"
+    
     CORS_ORIGINS: list[str] = [
         "http://localhost:3000", 
         "http://127.0.0.1:3000",
@@ -16,8 +24,8 @@ class Settings(BaseSettings):
     ]
 
     class Config:
-        # Docker sets environment variables from env_file, so we don't need to specify file paths
-        env_file = None
+        # Load env file for local testing if specified
+        env_file = os.getenv("ENV_FILE_FOR_TESTS")
 
 
 settings = Settings()

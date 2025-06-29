@@ -168,9 +168,9 @@ class ProblemCreate(ProblemBase):
 
 
 class ProblemUpdate(BaseModel):
-    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    title: Optional[str] = None
     slug: Optional[str] = None
-    description: Optional[str] = Field(None, min_length=1)
+    description: Optional[str] = None
     difficulty: Optional[DifficultyLevel] = None
     problem_type: Optional[ProblemType] = None
     status: Optional[ProblemStatus] = None
@@ -181,6 +181,8 @@ class ProblemUpdate(BaseModel):
     is_premium: Optional[bool] = None
     tag_ids: Optional[List[UUID4]] = None
     company_ids: Optional[List[UUID4]] = None
+    category: Optional[str] = None
+    test_cases: Optional[dict] = None
 
     @field_validator('title')
     @classmethod
@@ -326,3 +328,14 @@ class AdminDashboardResponse(BaseModel):
     stats: ProblemStats
     recent_submissions: List[SubmissionResponse]
     pending_reviews: List[ProblemResponse]  # Problems in review status 
+
+
+class ProblemGenerationRequest(BaseModel):
+    category: str = Field(..., description="The category of the problem (e.g., 'sql', 'algorithms').")
+    difficulty: str = Field(..., description="The difficulty level (e.g., 'easy', 'medium', 'hard').")
+    topic: str = Field(..., description="A specific topic for the problem (e.g., 'JOINs', 'dynamic programming').")
+
+
+class Submission(BaseModel):
+    problem_id: UUID4
+    user_id: UUID4 
