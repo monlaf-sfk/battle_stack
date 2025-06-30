@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Megaphone, Trophy, Zap, Calendar, X, ChevronRight, Gift } from 'lucide-react';
+import { Megaphone, Trophy, Zap, X, ChevronRight, Gift } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useToast } from '../ui/Toast';
 import { SkeletonText } from '../ui/Skeleton';
 import { useDashboard } from '../../hooks/useDashboard';
-import type { NewsItem } from '../../services/api';
 
 const iconMap: Record<string, React.ReactNode> = {
     trophy: <Trophy size={28} className="text-white" />,

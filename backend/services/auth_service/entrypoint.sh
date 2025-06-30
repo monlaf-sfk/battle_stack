@@ -3,6 +3,9 @@ set -e
 
 cd /app/auth_service
 
+echo "=== Waiting for database ==="
+python3 /app/wait_for_db.py
+
 echo "=== Running Alembic migrations ==="
 alembic -c alembic.ini upgrade head
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import type { DuelProblem } from '../../types/duel.types';
 
 export interface ProblemDescriptionProps {

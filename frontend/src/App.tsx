@@ -63,13 +63,15 @@ const AppRoutes = () => {
 
 function App() {
   return (
-    <ToastProvider>
-      <Router>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
-      </Router>
-    </ToastProvider>
+    <QueryClientProvider client={queryClient}>
+      <ToastProvider>
+        <Router>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </Router>
+      </ToastProvider>
+    </QueryClientProvider>
   );
 }
 

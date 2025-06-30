@@ -18,6 +18,7 @@ export default defineConfig({
       // Allow serving files from monaco-editor
       allow: ['..', './node_modules/monaco-editor'],
     },
+    allowedHosts: ['battlestack.me', 'www.battlestack.me'],
   },
   optimizeDeps: {
     include: ['@monaco-editor/react', 'monaco-editor'],

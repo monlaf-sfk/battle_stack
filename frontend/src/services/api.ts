@@ -137,6 +137,12 @@ export const problemsApiService = {
       language,
       code
     });
+  },
+
+  // Get random problem
+  getRandomProblem: async () => {
+    const response = await problemsApi.get('/problems/random');
+    return response.data;
   }
 };
 
@@ -300,11 +306,13 @@ export interface Problem {
   description?: string;
   difficulty: 'easy' | 'medium' | 'hard';
   problem_type: string;
+  category?: string;
   time_limit_ms?: number;
   memory_limit_mb?: number;
   hints?: string[];
   test_cases?: TestCase[];
   code_templates?: CodeTemplate[];
+  starter_code?: Record<string, string>;
   tags: Tag[];
   companies: Company[];
   submission_stats?: {

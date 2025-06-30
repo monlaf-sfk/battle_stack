@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, Target, Clock, Code, RotateCcw, Home, Eye } from 'lucide-react';
+import { Target, RotateCcw, Home, Eye } from 'lucide-react';
 
 interface AIDuelResultsProps {
   duelResult: {

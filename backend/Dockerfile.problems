@@ -10,14 +10,14 @@ RUN apt-get update && apt-get install -y \
 
 # Copy requirements
 COPY requirements.txt .
-RUN pip install --upgrade pip
+RUN pip install --upgrade pip setuptools wheel -i https://pypi.tuna.tsinghua.edu.cn/simple
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy shared code
 COPY ./shared /app/shared
 COPY ./services/problems_service /app/problems_service
 
-RUN pip install --no-cache-dir --force-reinstall ./shared
+RUN pip install --no-cache-dir --force-reinstall --retries 5 --timeout 30 -i https://pypi.tuna.tsinghua.edu.cn/simple ./shared
 
 COPY ./services/problems_service/wait_for_db.py /app/wait_for_db.py
 RUN chmod +x /app/wait_for_db.py
@@ -31,4 +31,4 @@ ENV PYTHONUNBUFFERED=1
 COPY ./services/problems_service/entrypoint.sh /app/problems_service/entrypoint.sh
 RUN chmod +x /app/problems_service/entrypoint.sh
 
-CMD ["uvicorn", "problems_service.main:app", "--host", "0.0.0.0", "--port", "8003"] 
+ENTRYPOINT ["/app/problems_service/entrypoint.sh"] 

@@ -85,7 +85,7 @@ export const AntiCopyBlurOverlay: React.FC<AntiCopyBlurOverlayProps> = ({
 export const useAntiCopyProtection = () => {
   const [isBlurred, setIsBlurred] = useState(false);
 
-  const triggerBlur = (duration = 30) => {
+  const triggerBlur = () => {
     setIsBlurred(true);
     console.log('🛡️ Anti-copy protection triggered');
   };

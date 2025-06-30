@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { type ReactNode } from 'react';
 import { authApiService } from '../services/api';
 import { userService } from '../services/userService';
@@ -9,6 +9,7 @@ interface User {
   username: string;
   email: string;
   full_name?: string;
+  google_picture?: string;
   role: string;
   is_active: boolean;
   is_verified: boolean;

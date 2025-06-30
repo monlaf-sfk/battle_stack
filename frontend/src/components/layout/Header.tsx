@@ -1,14 +1,11 @@
-import { Button } from "@/components/ui/Button";
-import { Link, useLocation } from "react-router-dom";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const location = useLocation();
-  const { scrollY } = useScroll();
 
   useEffect(() => {
     const handleScroll = () => {

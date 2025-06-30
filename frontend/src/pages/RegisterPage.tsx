@@ -1,16 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/components/ui/Toast';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/api';
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Card, CardContent } from "@/components/ui/Card";
+import { CardContent } from "@/components/ui/Card";
 import { Header } from "@/components/layout/Header";
 import { GoogleOAuthButton } from "@/components/auth/GoogleOAuthButton";
 import { Link } from "react-router-dom";
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Mail, Lock, CheckCircle, AlertCircle, UserPlus } from 'lucide-react';
+import { Card } from '../components/ui/Card';
 
 interface PasswordStrength {
   score: number;
@@ -25,9 +26,15 @@ const RegisterPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>({ score: 0, label: '', color: '' });
+  const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>({ score: 0, label: 'Very Weak', color: 'text-red-500' });
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [formValidation, setFormValidation] = useState({
+    username: false,
+    email: false,
+    password: false,
+    confirmPassword: false
+  });
   const navigate = useNavigate();
   const { login } = useAuth();
   const { addToast } = useToast();
@@ -52,6 +59,16 @@ const RegisterPage = () => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // Update validation when form fields change
+  useEffect(() => {
+    setFormValidation({
+      username: username.trim().length >= 3,
+      email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+      password: passwordStrength.score >= 2,
+      confirmPassword: password === confirmPassword && confirmPassword.length > 0
+    });
+  }, [username, email, password, confirmPassword, passwordStrength]);
 
   const calculatePasswordStrength = (pass: string): PasswordStrength => {
     let score = 0;
@@ -186,14 +203,6 @@ const RegisterPage = () => {
     }
   };
 
-  const formValidation = {
-    username: username.length >= 3,
-    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
-    password: passwordStrength.score >= 2,
-    confirmPassword: password === confirmPassword && confirmPassword.length > 0,
-    terms: acceptTerms
-  };
-
   if (showSuccess) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -242,7 +251,7 @@ const RegisterPage = () => {
           className="w-full max-w-md"
         >
           {/* Register Card */}
-          <Card className="bg-gray-900 border border-gray-800">
+          <div className="bg-gray-900 border border-gray-800">
             <CardContent className="p-8 sm:p-10">
               {/* Logo and Title */}
               <motion.div
@@ -526,7 +535,7 @@ const RegisterPage = () => {
                 </p>
               </motion.div>
             </CardContent>
-          </Card>
+          </div>
         </motion.div>
       </main>
     </div>

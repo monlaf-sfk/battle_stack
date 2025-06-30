@@ -1,7 +1,7 @@
 export type DuelMode = 'random_player' | 'private_room' | 'ai_opponent';
 export type DuelDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
 export type ProblemType = 'algorithm' | 'data_structure' | 'dynamic_programming' | 'graph' | 'string' | 'array' | 'tree' | 'math' | 'hash_table' | 'stack_queue' | 'heap' | 'linked_list' | 'binary_search' | 'recursion' | 'backtracking' | 'bit_manipulation' | 'sliding_window' | 'two_pointers' | 'sorting' | 'searching' | 'design' | 'simulation' | 'geometry' | 'combinatorics';
-export type DuelStatus = 'waiting' | 'in_progress' | 'completed' | 'cancelled';
+export type DuelStatus = 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'pending' | 'generating_problem' | 'timed_out';
 export type ParticipantStatus = 'joined' | 'ready' | 'coding' | 'finished' | 'disconnected';
 export type Language = 'python' | 'javascript' | 'java' | 'cpp';
 
@@ -107,6 +107,7 @@ export interface DuelResult {
     player_one_result: PlayerResult | null;
     player_two_result: PlayerResult | null;
     finished_at: string;
+    ai_problem_data?: any;
 }
 
 // New WebSocket message for duel end
@@ -319,13 +320,13 @@ export interface Duel {
   problem_id: string;
   status: DuelStatus;
   player_one_id: string;
-  player_two_id?: string;
+  player_two_id?: string | null;
   player_one_code?: string;
   player_two_code?: string;
-  results?: { [key: string]: any }; 
+  results?: DuelResult | null; 
   time_limit_seconds?: number;
   created_at: string;
   started_at?: string;
-  finished_at?: string;
+  finished_at?: string | null;
   problem?: DuelProblem;
 } 

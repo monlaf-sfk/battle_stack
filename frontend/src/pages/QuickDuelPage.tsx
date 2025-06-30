@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import * as duelService from "../services/duelService";
-import type { DuelResponse } from "../types/duel.types";
 import { useNotifications } from "../hooks/useNotifications";
 import {
   AIDuelSettingsModal,
@@ -14,7 +13,6 @@ const QuickDuelPage = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const { showNotification } = useNotifications();
-  const [activeDuel, setActiveDuel] = useState<DuelResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showAISettingsModal, setShowAISettingsModal] = useState(false);
 
@@ -51,7 +49,7 @@ const QuickDuelPage = () => {
     }
   }, [user, loading, navigate]);
 
-  const handleStartAIDuel = async (settings: Omit<AIDuelSettings, "userId">) => {
+  const handleStartAIDuel = async (settings: Omit<AIDuelSettings, "user_id">) => {
     if (!user || !user.id) {
         showNotification(
             "error",

@@ -1,11 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   User, 
-  Trophy, 
-  Target,
-  Clock,
-  Code,
   Star,
   Crown,
   Settings
@@ -18,23 +14,17 @@ const ProfilePage: React.FC = () => {
   const { data } = useDashboard();
   const { user } = useAuth();
   const [rank, setRank] = useState<number | null>(null);
-  const [loadingRank, setLoadingRank] = useState(true);
-  const [rankError, setRankError] = useState<string | null>(null);
 
   useEffect(() => {
     // Получаем реальный rank пользователя по user.id
     const fetchRank = async () => {
       try {
-        setLoadingRank(true);
-        setRankError(null);
         if (user?.id) {
           const res = await duelsApiService.getMyRank(user.id);
           setRank(res.rank);
         }
       } catch (e: any) {
-        setRankError('Rank unavailable');
-      } finally {
-        setLoadingRank(false);
+        // rankError is not used, so we can ignore it
       }
     };
     fetchRank();
@@ -198,18 +188,24 @@ const ProfilePage: React.FC = () => {
           transition={{ delay: 1.9 }}
           className="mt-16 text-center"
         >
-          <h3 className="text-lg font-bold mb-6 tracking-wider text-gray-300">RECENT ACHIEVEMENTS</h3>
+          <h2 className="text-2xl font-bold mb-6 tracking-wider">RECENT ACHIEVEMENTS</h2>
           <div className="flex flex-wrap justify-center gap-4">
-            {data?.achievements?.map((achievement, index) => (
-              <motion.div
-                key={achievement.name || index}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 2.1 + index * 0.1 }}
-                className="bg-gray-900 border border-gray-800 rounded-lg px-4 py-3 min-w-[120px]"
+            {data?.achievements?.slice(0, 5).map((ach, index) => (
+              <motion.div 
+                key={index}
+                className="bg-gray-800 rounded-lg p-4 w-56 text-left border border-gray-700"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 2 + index * 0.1 }}
               >
-                <div className="text-2xl mb-1">{achievement.emoji}</div>
-                <div className="text-xs text-gray-400 tracking-wider">{achievement.name?.toUpperCase() || ""}</div>
+                <div className="flex items-center mb-2">
+                  <div className="text-2xl mr-3">{ach.icon}</div>
+                  <div>
+                    <div className="font-bold text-sm">{ach.name}</div>
+                    <div className="text-xs text-gray-400">{new Date(ach.earned_at || 0).toLocaleDateString()}</div>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400">{ach.details}</p>
               </motion.div>
             ))}
           </div>

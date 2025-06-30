@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Users, Lock, Loader2, Copy, Plus } from 'lucide-react';
+import { X, Lock, Loader2, Plus, Users } from 'lucide-react';
 import { Button } from './Button';
 import { useToast } from './Toast';
 import { joinPrivateRoom, createPrivateRoom } from '../../services/duelService';
@@ -18,7 +18,6 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
   const [roomCode, setRoomCode] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [createdRoomCode, setCreatedRoomCode] = useState('');
   const { addToast } = useToast();
   const navigate = useNavigate();
 
@@ -89,7 +88,6 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
     setIsCreating(true);
     try {
       const duel = await createPrivateRoom('medium', 'algorithm');
-      setCreatedRoomCode(duel.room_code || '');
       
       // Copy to clipboard
       if (duel.room_code) {
@@ -119,7 +117,6 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
   const handleClose = () => {
     if (!isJoining && !isCreating) {
       setRoomCode('');
-      setCreatedRoomCode('');
       onClose();
     }
   };
@@ -230,7 +227,7 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
               
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={handleCreateRoom}
                 disabled={isJoining || isCreating}
                 className="w-full border-green-500/30 hover:border-green-400 bg-green-500/10 hover:bg-green-500/20 text-green-400 hover:text-green-300"

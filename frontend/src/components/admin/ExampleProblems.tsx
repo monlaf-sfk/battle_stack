@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Clipboard, FileCode, Hash, Database, Terminal } from 'lucide-react';

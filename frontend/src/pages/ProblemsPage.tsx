@@ -2,19 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
-  Code, 
   Hash,
-  BookOpen,
-  Target,
-  Trophy,
-  ArrowLeft,
-  Star,
   Brain,
   Network,
   Binary,
   GitBranch,
   Layers,
-  Shuffle
+  Shuffle,
+  Star,
+  Target,
+  Trophy,
+  ArrowLeft,
+  BookOpen
 } from 'lucide-react';
 import { problemsApiService, type Problem } from '../services/api';
 import { useToast } from '../components/ui/Toast';
@@ -74,14 +73,13 @@ const ProblemsPage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const [problems, setProblems] = useState<Problem[]>([]);
-  const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
     const loadProblems = async () => {
       try {
-        setLoading(true);
-        const result = await problemsApiService.getProblems({}, 1, 100);
-        setProblems(result.problems || []);
+        const result = await problemsApiService.getProblems({});
+        setProblems(result.data.problems || []);
       } catch (error: any) {
         console.error('Error loading problems:', error);
         addToast({
@@ -90,8 +88,6 @@ const ProblemsPage: React.FC = () => {
           message: error?.message || 'Unable to fetch problems',
           duration: 5000,
         });
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -102,24 +98,22 @@ const ProblemsPage: React.FC = () => {
     try {
       const problem = await problemsApiService.getRandomProblem();
       navigate(`/problems/${problem.id}`);
-    } catch (error: any) {
-      addToast({
-        type: 'error',
-        title: 'Failed to get random problem',
-        message: error?.message || 'Unable to fetch random problem',
-        duration: 5000,
-      });
+    } catch (error) {
+      console.error('Failed to get random problem:', error);
     }
   };
 
   const handleCategoryClick = (category: string) => {
-    // Navigate to problems with category filter
-    navigate(`/problems/list?category=${category}`);
+    navigate(`/problems?category=${category}`);
   };
 
   const handleDifficultyClick = (difficulty: string) => {
-    // Navigate to problems with difficulty filter
-    navigate(`/problems/list?difficulty=${difficulty}`);
+    navigate(`/problems?difficulty=${difficulty}`);
+  };
+
+  // Get category from problem
+  const getProblemCategory = (problem: Problem) => {
+    return problem.category || 'algorithm';
   };
 
   // Calculate stats from problems
@@ -133,7 +127,7 @@ const ProblemsPage: React.FC = () => {
     else if (problem.difficulty === 'hard') acc.hard++;
     
     // Count by category (simplified)
-    const category = problem.type || 'algorithm';
+    const category = getProblemCategory(problem);
     acc.categories[category] = (acc.categories[category] || 0) + 1;
     
     return acc;

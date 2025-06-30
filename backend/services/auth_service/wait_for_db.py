@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 async def wait_for_db(max_retries=30, retry_interval=2):
     """Wait for database to be ready."""
-    database_url = os.getenv('DATABASE_URL', 'postgresql+asyncpg://problems_user:problems_password@problems-db:5432/problems_db')
+    database_url = os.getenv('DATABASE_URL', 'postgresql+asyncpg://auth_user:auth_password@auth-db:5432/auth_db')
     
     # Convert DATABASE_URL to asyncpg format if needed
     if '+asyncpg' in database_url:

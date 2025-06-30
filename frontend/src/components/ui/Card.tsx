@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, type MotionProps } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -48,8 +48,6 @@ export function Card({
     className
   );
 
-  const Component = animate ? motion.div : 'div';
-  
   if (animate) {
     return (
       <motion.div

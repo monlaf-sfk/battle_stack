@@ -18,7 +18,7 @@ const LeaderboardMini: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [yourRank, setYourRank] = useState<number | null>(null);
+  const [yourRank] = useState<number | null>(null);
 
   const fetchLeaderboard = async () => {
     try {

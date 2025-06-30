@@ -19,7 +19,7 @@ interface UserPermissions {
 }
 
 interface MenuItem {
-  icon: JSX.Element;
+  icon: React.JSX.Element;
   text: string;
   path: string;
   locked?: boolean;

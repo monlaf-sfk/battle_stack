@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { CodeEditor, LanguageSelector, ThemeToggle } from '../ui/CodeEditor';
+import { CodeEditor, LanguageSelector } from '../ui/CodeEditor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, Eye, EyeOff, Save, FileText, Code, TestTube, Building, Tag, Lightbulb, Settings, BookOpen, Puzzle } from 'lucide-react';
 import { ExampleProblems } from './ExampleProblems';
@@ -74,9 +74,8 @@ export const ProblemCreator: React.FC<ProblemCreatorProps> = ({
   availableCompanies = []
 }) => {
   const [activeTab, setActiveTab] = useState<'examples' | 'basic' | 'description' | 'testcases' | 'templates' | 'editorial'>('examples');
-  const [editorTheme, setEditorTheme] = useState<'vs-dark' | 'vs-light'>('vs-dark');
+  const [editorTheme] = useState<'vs-dark' | 'vs-light'>('vs-dark');
   const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<ProblemData>(() => {
     const defaultData: ProblemData = {
@@ -124,13 +123,10 @@ export const ProblemCreator: React.FC<ProblemCreatorProps> = ({
   });
 
   const handleSave = async () => {
-    setFormError(null);
-
     // Validation logic
     for (const tc of formData.test_cases) {
       if (tc.is_example && !tc.expected_output.trim()) {
         const errorMsg = `Example test case (Input: "${tc.input_data}") is missing an expected output.`;
-        setFormError(errorMsg);
         alert(errorMsg); // Simple alert for immediate feedback
         return; // Stop saving
       }
@@ -757,8 +753,9 @@ export const ProblemCreator: React.FC<ProblemCreatorProps> = ({
                       <h4 className="font-medium">Template {index + 1}</h4>
                       <div className="flex items-center gap-2">
                         <LanguageSelector
-                          value={template.language}
-                          onChange={(lang) => updateCodeTemplate(template.id, { language: lang })}
+                          selectedLanguage={template.language}
+                          onSelectLanguage={(lang: string) => updateCodeTemplate(template.id, { language: lang })}
+                          languages={['python', 'javascript', 'typescript', 'java', 'csharp', 'golang', 'rust']}
                         />
                         <Button
                           variant="ghost"

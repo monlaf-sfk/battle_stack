@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { duelsApiService } from '../services/duelService';
@@ -33,7 +33,7 @@ const DuelSocketManager: React.FC = () => {
         userId: user?.id || '',
         onMessage: handleMessage,
         onStatusChange: handleStatusChange,
-        enabled: !!duel && (duel.status !== 'COMPLETED' && duel.status !== 'TIMED_OUT'),
+        enabled: !!duel && (duel.status !== 'completed' && duel.status !== 'timed_out'),
     });
 
     return null; // This component does not render anything
@@ -71,9 +71,9 @@ const PvEDuelPage: React.FC = () => {
     };
     
     const isModalOpen = !duel && !error;
-    const isLoading = socketStatus === 'connecting' || (duel?.status === 'PENDING' || duel?.status === 'GENERATING_PROBLEM');
+    const isLoading = socketStatus === 'connecting' || (duel?.status === 'pending' || duel?.status === 'generating_problem');
 
-    if (duel && duel.status === 'IN_PROGRESS') {
+    if (duel && duel.status === 'in_progress') {
         return (
             <>
                 <DuelSocketManager />
@@ -82,7 +82,7 @@ const PvEDuelPage: React.FC = () => {
         );
     }
     
-    if (duel && duel.status === 'COMPLETED') {
+    if (duel && duel.status === 'completed') {
          return (
             <>
                 <DuelSocketManager />
@@ -96,7 +96,7 @@ const PvEDuelPage: React.FC = () => {
     }
 
     if (error) {
-        return <DuelError message={error} onRetry={() => { dispatch({ type: 'RESET_STATE' }); navigate('/pve-duel', {replace: true}) }} />;
+        return <DuelError message={error} />;
     }
 
     return (

@@ -59,9 +59,13 @@ export function UserNav() {
           className="relative h-8 w-8 rounded-full border border-green-500/30 hover:border-green-400 transition-all duration-300 bg-black/50 hover:bg-green-500/10"
           onClick={() => setIsOpen(!isOpen)}
         >
-          <div className="h-8 w-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-300 font-mono font-bold border border-green-500/40">
-            {user.username?.charAt(0).toUpperCase() || 'U'}
-          </div>
+          {user.google_picture ? (
+            <img src={user.google_picture} alt={user.username || "User"} className="h-8 w-8 rounded-full" />
+          ) : (
+            <div className="h-8 w-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-300 font-mono font-bold border border-green-500/40">
+              {user.username?.charAt(0).toUpperCase() || 'U'}
+            </div>
+          )}
         </Button>
       </motion.div>
       

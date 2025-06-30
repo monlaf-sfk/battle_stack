@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import type { WSMessage } from '../types/duel.types';
 
 const DUELS_WS_URL = (import.meta.env.VITE_DUELS_WS_URL || 'ws://127.0.0.1:8004') + '/api/v1/duels/ws';

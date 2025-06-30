@@ -17,7 +17,6 @@ export function Button({
   disabled,
   onClick,
   type,
-  ...restProps 
 }: ButtonProps) {
   const [ripples, setRipples] = useState<{ x: number; y: number; id: number }[]>([]);
 

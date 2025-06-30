@@ -1,20 +1,15 @@
 import axios from 'axios';
-import type { 
-    DuelDifficulty, 
-    DuelResponse, 
-    DuelMode, 
-    ProblemType, 
-    DuelJoinRequest, 
-    DuelCreateRequest, 
-    CodeSubmission,
-    DuelSubmission,
-    SubmissionResponse, 
-    TestResultResponse, 
-    WebSocketMessage, 
-    LeaderboardEntry,
-    MatchHistoryItem, 
-    PlayerStats, 
-    DuelStatus 
+import type {
+  DuelCreateRequest,
+  DuelResponse,
+  DuelSubmission,
+  CodeSubmission,
+  SubmissionResponse,
+  DuelJoinRequest,
+  LeaderboardEntry,
+  MatchHistoryItem,
+  DuelDifficulty,
+  ProblemType
 } from '../types/duel.types';
 
 const apiClient = axios.create({
@@ -24,6 +19,7 @@ const apiClient = axios.create({
   },
 });
 
+// Add auth token to requests
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -39,13 +35,13 @@ export const duelsApiService = {
   },
 
   async joinDuel(request?: DuelJoinRequest): Promise<DuelResponse> {
-    const response = await apiClient.post('/duels/matchmaking/join', request);
+    const response = await apiClient.post('/duels/join', request || {});
     return response.data;
   },
 
   async getActiveOrWaitingDuel(userId: string): Promise<DuelResponse | null> {
     try {
-      const response = await apiClient.get(`/duels/user/${userId}/active-or-waiting`);
+      const response = await apiClient.get(`/duels/active?user_id=${userId}`);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 404) {
@@ -54,39 +50,43 @@ export const duelsApiService = {
       throw error;
     }
   },
-  
+
   async getDuel(duelId: string): Promise<DuelResponse> {
-      const response = await apiClient.get(`/duels/${duelId}`);
-      return response.data;
+    const response = await apiClient.get(`/duels/${duelId}`);
+    return response.data;
   },
 
   async submitCode(duelId: string, submission: DuelSubmission): Promise<SubmissionResponse> {
-      const response = await apiClient.post(`/duels/${duelId}/submit`, submission);
-      return response.data;
+    const response = await apiClient.post(`/duels/${duelId}/submit`, submission);
+    return response.data;
   },
 
   async testCode(duelId: string, submission: CodeSubmission): Promise<{ message: string }> {
-      const response = await apiClient.post(`/duels/${duelId}/test`, submission);
-      return response.data;
+    const response = await apiClient.post(`/duels/${duelId}/test`, submission);
+    return response.data;
   },
 
   async getLeaderboard(limit: number = 10): Promise<LeaderboardEntry[]> {
-    const response = await apiClient.get('/duels/leaderboard', { params: { limit } });
+    const response = await apiClient.get(`/leaderboard?limit=${limit}`);
     return response.data;
   },
 
   async getMyRank(userId: string): Promise<{rank: number}> {
-    const response = await apiClient.get('/duels/leaderboard', { params: { user_id: userId, limit: 1 } });
-    if (Array.isArray(response.data) && response.data.length > 0) {
-      return { rank: response.data[0].rank };
-    }
-    throw new Error('Rank not found');
-  },
-
-  async getPublicRecentMatches(limit: number = 10): Promise<MatchHistoryItem[]> {
-    const response = await apiClient.get('/duels/matches/recent', { params: { limit } });
+    const response = await apiClient.get(`/leaderboard/rank/${userId}`);
     return response.data;
   },
+
+  // Get recent matches (public endpoint)
+  async getPublicRecentMatches(limit: number = 10): Promise<MatchHistoryItem[]> {
+    const response = await apiClient.get(`/public/recent-matches?limit=${limit}`);
+    return response.data;
+  },
+
+  // Create custom AI duel
+  async createCustomAIDuel(settings: any): Promise<DuelResponse> {
+    const response = await apiClient.post('/duels/ai', settings);
+    return response.data;
+  }
 };
 
 export interface AIDuelCreateRequest {
@@ -120,11 +120,11 @@ export const createPrivateRoom = async (difficulty: DuelDifficulty = 'medium', p
     problem_type: problemType,
   };
   
-  const response = await duelsApiService.createDuel(duelData);
+  const response = await apiClient.post('/duels', duelData);
   // The backend would need to generate and return a room_code here.
   // We'll simulate this part on the frontend for now.
   const simulatedResponse = {
-    ...response,
+    ...response.data,
     room_code: Math.random().toString(36).substring(2, 8).toUpperCase(),
   };
 
@@ -145,7 +145,7 @@ export const quickDuel = async (difficulty: DuelDifficulty = 'medium'): Promise<
   const duelData: DuelJoinRequest = {
     difficulty,
   };
-  return await duelsApiService.joinDuel(duelData);
+  return await apiClient.post('/duels/join', duelData);
 };
 
 export const aiDuel = async (difficulty: DuelDifficulty = 'medium'): Promise<DuelResponse> => {

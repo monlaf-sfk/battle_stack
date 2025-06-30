@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '@/components/ui/Toast';
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Card, CardContent } from "@/components/ui/Card";
+import { CardContent } from "@/components/ui/Card";
 import { Header } from "@/components/layout/Header";
 import { GoogleOAuthButton } from "@/components/auth/GoogleOAuthButton";
 import { Link, useNavigate } from "react-router-dom";
@@ -190,214 +190,210 @@ const LoginPage = () => {
           className="w-full max-w-md"
         >
           {/* Login Card */}
-          <Card className="bg-gray-900 border border-gray-800">
-            <CardContent className="p-8 sm:p-10">
-              {/* Logo and Title */}
+          <CardContent className="p-8 sm:p-10">
+            {/* Logo and Title */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="text-center mb-8"
+            >
               <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-                className="text-center mb-8"
+                className="inline-flex items-center justify-center w-20 h-20 rounded-lg bg-white mb-6"
+                animate={{ 
+                  rotate: [0, 5, -5, 0],
+                  scale: [1, 1.05, 1]
+                }}
+                transition={{ duration: 6, repeat: Infinity }}
               >
-                <motion.div
-                  className="inline-flex items-center justify-center w-20 h-20 rounded-lg bg-white mb-6"
-                  animate={{ 
-                    rotate: [0, 5, -5, 0],
-                    scale: [1, 1.05, 1]
-                  }}
-                  transition={{ duration: 6, repeat: Infinity }}
-                >
-                  <span className="text-2xl font-bold text-black font-mono">BS</span>
-                </motion.div>
-                <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 font-mono">
-                  WELCOME BACK
-                </h1>
-                <p className="text-gray-400 text-lg font-mono">
-                  ENTER YOUR CREDENTIALS TO CONTINUE
-                </p>
+                <span className="text-2xl font-bold text-black font-mono">BS</span>
               </motion.div>
+              <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 font-mono">
+                WELCOME BACK
+              </h1>
+              <p className="text-gray-400 text-lg font-mono">
+                ENTER YOUR CREDENTIALS TO CONTINUE
+              </p>
+            </motion.div>
 
-              {/* Login Form */}
-              <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-                <motion.div
-                  initial={{ x: -30, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: 0.3, duration: 0.4 }}
-                >
-                  <Input
-                    ref={usernameRef}
-                    type="text"
-                    label="USERNAME OR EMAIL"
-                    icon={<User size={18} />}
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    autoComplete="username"
-                    disabled={isLoading}
-                    className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
-                  />
-                </motion.div>
-
-                <motion.div
-                  initial={{ x: -30, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: 0.4, duration: 0.4 }}
-                >
-                  <Input
-                    type="password"
-                    label="PASSWORD"
-                    icon={<Lock size={18} />}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    showPasswordToggle
-                    autoComplete="current-password"
-                    disabled={isLoading}
-                    className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
-                  />
-                </motion.div>
-
-                {/* Error Message */}
-                <AnimatePresence>
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <Card className="border-red-600 bg-red-900/20">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <AlertTriangle size={20} className="text-red-400 flex-shrink-0" />
-                            <p className="text-sm text-red-400 font-medium font-mono">{error}</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Remember Me & Forgot Password */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5, duration: 0.4 }}
-                  className="flex items-center justify-between"
-                >
-                  <label className="flex items-center cursor-pointer group">
-                    <motion.input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="w-4 h-4 rounded bg-gray-800 border-gray-700 text-white focus:ring-gray-600 transition-all"
-                      whileTap={{ scale: 0.95 }}
-                    />
-                    <span className="ml-3 text-sm text-gray-400 group-hover:text-white transition-colors font-mono">
-                      REMEMBER ME
-                    </span>
-                  </label>
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm text-gray-400 hover:text-white transition-colors font-medium font-mono"
-                  >
-                    FORGOT PASSWORD?
-                  </Link>
-                </motion.div>
-
-                {/* Submit Button */}
-                <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.6, duration: 0.4 }}
-                >
-                  <Button
-                    type="submit"
-                    className="w-full text-lg py-4 font-bold bg-white text-black hover:bg-gray-200 font-mono"
-                    loading={isLoading}
-                    disabled={isLoading}
-                  >
-                    <LogIn size={20} className="mr-3" />
-                    {isLoading ? 'LOGGING IN...' : 'LOGIN'}
-                  </Button>
-                </motion.div>
-              </form>
-
-              {/* Divider */}
+            {/* Login Form */}
+            <form onSubmit={handleSubmit} className="space-y-6" noValidate>
               <motion.div
-                initial={{ opacity: 0, scaleX: 0 }}
-                animate={{ opacity: 1, scaleX: 1 }}
-                transition={{ delay: 0.7, duration: 0.4 }}
-                className="relative my-8"
+                initial={{ x: -30, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.4 }}
               >
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-800" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-gray-900 text-gray-400 font-mono">
-                    OR CONTINUE WITH
-                  </span>
-                </div>
-              </motion.div>
-
-              {/* Social Login */}
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.8, duration: 0.4 }}
-                className="space-y-4"
-              >
-                {/* 🔐 Google OAuth Button */}
-                <GoogleOAuthButton
-                  variant="signin"
-                  onSuccess={() => {
-                    addToast({
-                      type: 'success',
-                      title: 'Google Login Successful',
-                      message: 'Redirecting to dashboard...',
-                      duration: 3000
-                    });
-                  }}
-                  onError={(error) => {
-                    addToast({
-                      type: 'error',
-                      title: 'Google Login Failed',
-                      message: error,
-                      duration: 5000
-                    });
-                  }}
+                <Input
+                  ref={usernameRef}
+                  type="text"
+                  label="USERNAME OR EMAIL"
+                  icon={<User size={18} />}
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  disabled={isLoading}
+                  className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
                 />
-                
-                {/* GitHub Button (placeholder for future implementation) */}
-                <Button 
-                  className="w-full bg-gray-800 text-white border border-gray-700 hover:border-gray-600 font-mono text-sm uppercase tracking-wider" 
-                  disabled={true}
-                  type="button"
-                >
-                  <img src="https://www.svgrepo.com/show/512120/github-142.svg" alt="GitHub" className="w-5 h-5 mr-3" />
-                  GITHUB (COMING SOON)
-                </Button>
               </motion.div>
 
-              {/* Sign Up Link */}
+              <motion.div
+                initial={{ x: -30, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.4, duration: 0.4 }}
+              >
+                <Input
+                  type="password"
+                  label="PASSWORD"
+                  icon={<Lock size={18} />}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  showPasswordToggle
+                  autoComplete="current-password"
+                  disabled={isLoading}
+                  className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
+                />
+              </motion.div>
+
+              {/* Error Message */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <CardContent className="p-4 border-red-600 bg-red-900/20">
+                      <div className="flex items-center gap-3">
+                        <AlertTriangle size={20} className="text-red-400 flex-shrink-0" />
+                        <p className="text-sm text-red-400 font-medium font-mono">{error}</p>
+                      </div>
+                    </CardContent>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Remember Me & Forgot Password */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.9, duration: 0.4 }}
-                className="mt-8 text-center"
+                transition={{ delay: 0.5, duration: 0.4 }}
+                className="flex items-center justify-between"
               >
-                <p className="text-gray-400 font-mono">
-                  NEW TO BATTLESTACK?{' '}
-                  <Link
-                    to="/register"
-                    className="text-white hover:text-gray-300 transition-colors font-bold"
-                  >
-                    CREATE ACCOUNT
-                  </Link>
-                </p>
+                <label className="flex items-center cursor-pointer group">
+                  <motion.input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded bg-gray-800 border-gray-700 text-white focus:ring-gray-600 transition-all"
+                    whileTap={{ scale: 0.95 }}
+                  />
+                  <span className="ml-3 text-sm text-gray-400 group-hover:text-white transition-colors font-mono">
+                    REMEMBER ME
+                  </span>
+                </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-gray-400 hover:text-white transition-colors font-medium font-mono"
+                >
+                  FORGOT PASSWORD?
+                </Link>
               </motion.div>
-            </CardContent>
-          </Card>
+
+              {/* Submit Button */}
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.6, duration: 0.4 }}
+              >
+                <Button
+                  type="submit"
+                  className="w-full text-lg py-4 font-bold bg-white text-black hover:bg-gray-200 font-mono"
+                  loading={isLoading}
+                  disabled={isLoading}
+                >
+                  <LogIn size={20} className="mr-3" />
+                  {isLoading ? 'LOGGING IN...' : 'LOGIN'}
+                </Button>
+              </motion.div>
+            </form>
+
+            {/* Divider */}
+            <motion.div
+              initial={{ opacity: 0, scaleX: 0 }}
+              animate={{ opacity: 1, scaleX: 1 }}
+              transition={{ delay: 0.7, duration: 0.4 }}
+              className="relative my-8"
+            >
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-800" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-gray-900 text-gray-400 font-mono">
+                  OR CONTINUE WITH
+                </span>
+              </div>
+            </motion.div>
+
+            {/* Social Login */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.8, duration: 0.4 }}
+              className="space-y-4"
+            >
+              {/* 🔐 Google OAuth Button */}
+              <GoogleOAuthButton
+                variant="signin"
+                onSuccess={() => {
+                  addToast({
+                    type: 'success',
+                    title: 'Google Login Successful',
+                    message: 'Redirecting to dashboard...',
+                    duration: 3000
+                  });
+                }}
+                onError={(error) => {
+                  addToast({
+                    type: 'error',
+                    title: 'Google Login Failed',
+                    message: error,
+                    duration: 5000
+                  });
+                }}
+              />
+              
+              {/* GitHub Button (placeholder for future implementation) */}
+              <Button 
+                className="w-full bg-gray-800 text-white border border-gray-700 hover:border-gray-600 font-mono text-sm uppercase tracking-wider" 
+                disabled={true}
+                type="button"
+              >
+                <img src="https://www.svgrepo.com/show/512120/github-142.svg" alt="GitHub" className="w-5 h-5 mr-3" />
+                GITHUB (COMING SOON)
+              </Button>
+            </motion.div>
+
+            {/* Sign Up Link */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.9, duration: 0.4 }}
+              className="mt-8 text-center"
+            >
+              <p className="text-gray-400 font-mono">
+                NEW TO BATTLESTACK?{' '}
+                <Link
+                  to="/register"
+                  className="text-white hover:text-gray-300 transition-colors font-bold"
+                >
+                  CREATE ACCOUNT
+                </Link>
+              </p>
+            </motion.div>
+          </CardContent>
         </motion.div>
       </main>
     </div>

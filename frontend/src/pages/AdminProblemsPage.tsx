@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -9,27 +9,17 @@ import { TagManager } from '../components/admin/TagManager';
 import { CompanyManager } from '../components/admin/CompanyManager';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Plus as PlusIcon, 
-  Search, 
-  Filter, 
-  Eye, 
-  EyeOff,
-  Edit,
-  Trash2,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Clock,
-  Archive,
-  TrendingUp,
-  Settings,
-  BarChart3,
-  Users,
-  Tag as TagIcon,
-  Building,
-  Calendar,
+  Plus,
+  Search,
   FileText,
-  Hash
+  Tag,
+  Building,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+  TrendingUp,
+  Edit,
+  Trash2
 } from 'lucide-react';
 
 interface Problem {
@@ -339,7 +329,7 @@ const AdminProblemsPage: React.FC = () => {
           <div className="flex space-x-1 bg-gray-900/50 p-1 rounded-lg backdrop-blur-sm border border-gray-700/50">
             {[
               { id: 'problems' as const, label: 'Problems', icon: FileText },
-              { id: 'tags' as const, label: 'Tags', icon: TagIcon },
+              { id: 'tags' as const, label: 'Tags', icon: Tag },
               { id: 'companies' as const, label: 'Companies', icon: Building }
             ].map(({ id, label, icon: Icon }) => (
               <button
@@ -443,7 +433,7 @@ const AdminProblemsPage: React.FC = () => {
                         onClick={() => setShowCreateForm(true)}
                         className="bg-arena-accent text-black hover:bg-arena-accent/80 font-medium"
                       >
-                        <PlusIcon className="w-4 h-4 mr-2" />
+                        <Plus className="w-4 h-4 mr-2" />
                         Create Problem
                       </Button>
 

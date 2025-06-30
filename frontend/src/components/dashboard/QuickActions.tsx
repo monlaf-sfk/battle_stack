@@ -9,16 +9,11 @@ import {
     CardDescription 
 } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { useToast } from '../ui/Toast';
-import { createPrivateRoom, quickDuel, createAIDuel } from '../../services/duelService';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
   Zap, 
   Code, 
   Crown, 
-  Users, 
-  Bot, 
-  Lock,
   Sword,
   Key,
   ChevronRight
@@ -27,63 +22,8 @@ import JoinPrivateRoomModal from '../ui/JoinPrivateRoomModal';
 
 const QuickActions: React.FC = () => {
   const navigate = useNavigate();
-  const { addToast } = useToast();
-  const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const { permissions } = useAuth();
   const [showJoinModal, setShowJoinModal] = useState(false);
-  const { user, permissions } = useAuth();
-
-  const handleQuickDuel = async (type: 'random' | 'ai' | 'private') => {
-    if (!user) {
-      addToast({
-        type: 'error',
-        title: 'Authentication Required',
-        message: 'You must be logged in to perform this action.',
-      });
-      return;
-    }
-
-    try {
-      setLoadingAction(type);
-      
-      let response;
-      switch (type) {
-        case 'random':
-          response = await quickDuel('medium');
-          break;
-        case 'ai':
-          response = await createAIDuel({
-            user_id: user.id,
-            theme: 'algorithms',
-            difficulty: 'medium',
-            language: 'python'
-          });
-          break;
-        case 'private':
-          response = await createPrivateRoom('medium', 'algorithm');
-          addToast({
-            type: 'success',
-            title: 'Private Room Created!',
-            message: `Room code: ${response.room_code}`,
-            duration: 5000,
-          });
-          break;
-      }
-      
-      if (response?.id) {
-        navigate(`/duels/${response.id}`);
-      }
-    } catch (error: any) {
-      console.error(`Failed to start ${type} duel:`, error);
-      addToast({
-        type: 'error',
-        title: 'Duel Creation Failed',
-        message: error?.response?.data?.detail || 'Unable to start duel. Please try again.',
-        duration: 5000,
-      });
-    } finally {
-      setLoadingAction(null);
-    }
-  };
 
   const mainActions = [
     {
@@ -136,7 +76,6 @@ const QuickActions: React.FC = () => {
                   onClick={action.onClick}
                   variant={action.variant}
                   className="w-full justify-between h-auto py-4 px-5 group"
-                  disabled={!!loadingAction}
                 >
                   <div className="flex items-center gap-4">
                     <div className="p-3 rounded-lg bg-gray-800/60 group-hover:bg-gray-700/80 transition-colors">

@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Code, 
   Timer, 
-  Trophy,
   Zap,
   Activity,
   CheckCircle,
@@ -14,14 +12,13 @@ import {
   AlertCircle,
   Book,
   X,
-  FileText,
   TestTube
 } from 'lucide-react';
 
 import { CodeEditor } from '../ui/CodeEditor';
 import { useUniversalDuelSocket } from '../../hooks/useUniversalDuelSocket';
 import { DuelComplete } from './DuelComplete';
-import type { Duel, WSMessage, DuelResult, Language, TestCase, DuelProblem, DuelSubmission } from '../../types/duel.types';
+import type { Duel, WSMessage, DuelResult, Language, DuelProblem, DuelSubmission } from '../../types/duel.types';
 import { duelsApiService } from '../../services/duelService';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useAuth } from '../../contexts/AuthContext';
@@ -63,7 +60,7 @@ export const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ duel }) => {
   
   // State management
   const [code, setCode] = useState(getInitialCode());
-  const [language, setLanguage] = useState<Language>('python');
+  const [language] = useState<Language>('python');
   const [opponentCode, setOpponentCode] = useState('');
   const [testResults, setTestResults] = useState<any>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
@@ -121,12 +118,12 @@ export const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ duel }) => {
         if (message.user_id !== userId) setOpponentCode(message.code || '');
         break;
       case 'ai_progress':
-        if (message.data?.code_chunk) {
+        if (message.data?.code) {
           if (!aiStartedTyping) {
-            setOpponentCode(message.data.code_chunk);
+            setOpponentCode(message.data.code);
             setAiStartedTyping(true);
           } else {
-            setOpponentCode(prev => prev + message.data.code_chunk);
+            setOpponentCode(prev => prev + message.data.code);
           }
         }
         break;

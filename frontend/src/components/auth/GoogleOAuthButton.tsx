@@ -64,7 +64,7 @@ export const GoogleOAuthButton: React.FC<GoogleOAuthButtonProps> = ({
       const authData: GoogleOAuthResponse = await response.json();
       
       // Store tokens using our auth context
-      login(authData.access_token, authData.refresh_token, authData.user);
+      login(authData.access_token, authData.refresh_token);
       
       console.log(`✅ Google OAuth success: ${authData.user.username} (${authData.is_new_user ? 'new user' : 'existing user'})`);
       
@@ -84,11 +84,6 @@ export const GoogleOAuthButton: React.FC<GoogleOAuthButtonProps> = ({
       onError?.(errorMessage);
     }
   }, [login, navigate, onSuccess, onError]);
-
-  const handleGoogleError = useCallback((error: any) => {
-    console.error('❌ Google OAuth error:', error);
-    onError?.('Google authentication failed');
-  }, [onError]);
 
   useEffect(() => {
     // Use globally loaded Google Identity Services script

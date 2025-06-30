@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { BookOpen, Zap, Award, Flame, TrendingUp } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { motion } from 'framer-motion';
@@ -29,7 +29,7 @@ const MetricCard = ({ icon, label, value, delay }: { icon: React.ReactNode, labe
     </motion.div>
 );
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
         return (
             <div className="glass p-3 rounded-lg shadow-lg border border-arena-border">
@@ -234,7 +234,7 @@ const ProgressSummary: React.FC = () => {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.7 }}
                 >
-                    {dashboardData.progress_data.map((item, index) => (
+                    {dashboardData.progress_data.map((item) => (
                         <motion.div 
                             key={item.name}
                             className="flex items-center space-x-2"

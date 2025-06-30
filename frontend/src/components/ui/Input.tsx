@@ -26,12 +26,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     showPasswordToggle = false,
     ...props 
   }, ref) => {
-    const [isFocused, setIsFocused] = useState(false);
+    const [isFocused] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [isTouched, setIsTouched] = useState(false);
     const hasValue = props.value || props.defaultValue;
     const isPasswordType = type === 'password';
-    const inputType = isPasswordType && showPassword ? 'text' : type;
 
     // Handle auto-fill detection
     useEffect(() => {
@@ -43,15 +42,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       return () => clearTimeout(timer);
     }, [hasValue, isTouched]);
 
-    const variants = {
-      default: 'bg-arena-surface border border-arena-border',
-      glass: 'glass border border-arena-border/50',
-    };
+
 
     const getStatusColor = () => {
-      if (error) return 'border-red-500 focus:ring-red-500/50';
-      if (success) return 'border-green-500 focus:ring-green-500/50';
-      return 'border-arena-border focus:ring-arena-accent/50 hover:border-arena-accent/50';
+      if (error) return 'border-red-500 focus:ring-red-500';
+      if (success) return 'border-green-500 focus:ring-green-500';
+      if (error || success) return 'border-arena-accent focus:ring-arena-accent';
+      return isFocused ? 'border-arena-accent focus:ring-arena-accent' : 'border-arena-border';
     };
 
     const getLabelColor = () => {
@@ -100,28 +97,18 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           )}
           
           {/* Input Field */}
-          <motion.input
-            type={inputType}
+          <input
+            ref={ref}
             className={cn(
-              'w-full px-3 py-3 rounded-xl transition-all duration-300',
-              'text-white placeholder:text-arena-text-dim text-smooth',
-              'focus:outline-none focus:ring-2',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-              'autofill:bg-arena-surface autofill:text-white',
-              variants[variant],
+              'w-full px-4 py-3 rounded-lg border transition-all duration-200',
+              'focus:outline-none focus:ring-2 focus:ring-arena-accent focus:border-arena-accent',
+              'placeholder:text-arena-text-muted',
+              variant === 'glass' 
+                ? 'bg-arena-surface/50 border-arena-border backdrop-blur-sm' 
+                : 'bg-arena-surface border-arena-border',
               getStatusColor(),
-              icon && 'pl-10',
-              (isPasswordType || showPasswordToggle) && 'pr-10',
               className
             )}
-            ref={ref}
-            onFocus={() => {
-              setIsFocused(true);
-              setIsTouched(true);
-            }}
-            onBlur={() => setIsFocused(false)}
-            whileFocus={{ scale: 1.01 }}
-            transition={{ duration: 0.2 }}
             {...props}
           />
 

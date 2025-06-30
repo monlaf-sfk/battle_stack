@@ -1,32 +1,7 @@
 import { Header } from "@/components/layout/Header";
-import { Button } from "@/components/ui/Button";
-import { Card, CardContent } from "@/components/ui/Card";
 import { UserPlus, ListChecks, Code, Trophy, Timer, Shield, Users, Brain, Play } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
-import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
-
-const useOnScreen = (options: IntersectionObserverInit) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [isIntersecting, setIntersecting] = useState(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => {
-      setIntersecting(entry.isIntersecting);
-    }, options);
-
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
-
-    return () => {
-      if (ref.current) {
-        observer.unobserve(ref.current);
-      }
-    };
-  }, [ref, options]);
-
-  return [ref, isIntersecting];
-};
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 
 const useTypingEffect = (text: string, speed: number, isPlaying: boolean) => {
   const [displayedText, setDisplayedText] = useState("");
@@ -230,16 +205,12 @@ const CodePanel = ({ playerName, code, speed, isPlaying, onFinish, isWinner, sta
 
 const LandingPage = () => {
   const [winner, setWinner] = useState<string | null>(null);
-  const [ref, isVisible] = useOnScreen({ threshold: 0.5 });
-  const { scrollY } = useScroll();
-  const heroY = useTransform(scrollY, [0, 300], [0, 100]);
-  const heroOpacity = useTransform(scrollY, [0, 300], [1, 0]);
 
   useEffect(() => {
-    if (!isVisible) {
+    if (!winner) {
       setWinner(null);
     }
-  }, [isVisible]);
+  }, [winner]);
 
   const handleFinish = (playerName: string) => {
     if (!winner) {
@@ -258,7 +229,6 @@ const LandingPage = () => {
         {/* Hero Section */}
         <motion.section 
           className="text-center py-20 lg:py-32 px-6 relative"
-          style={{ y: heroY, opacity: heroOpacity }}
         >
           <div className="max-w-6xl mx-auto">
             <motion.div
@@ -387,7 +357,7 @@ const LandingPage = () => {
         </section>
 
         {/* Live Coding Battle Section */}
-        <section ref={ref as React.RefObject<HTMLDivElement>} id="live-battle" className="py-20 relative">
+        <section id="live-battle" className="py-20 relative">
           <div className="max-w-7xl mx-auto px-6">
             <motion.div
               initial={{ opacity: 0 }}
@@ -409,7 +379,7 @@ const LandingPage = () => {
                 playerName="CODE WARRIOR 1"
                 code={player1Code}
                 speed={80}
-                isPlaying={isVisible as boolean}
+                isPlaying={winner === null}
                 onFinish={() => handleFinish("Player 1")}
                 isWinner={winner === "Player 1" ? true : winner ? false : null}
                 stats={player1Stats}
@@ -418,7 +388,7 @@ const LandingPage = () => {
                 playerName="AI OPPONENT"
                 code={player2Code}
                 speed={100}
-                isPlaying={isVisible as boolean}
+                isPlaying={winner === null}
                 onFinish={() => handleFinish("Player 2")}
                 isWinner={winner === "Player 2" ? true : winner ? false : null}
                 stats={player2Stats}

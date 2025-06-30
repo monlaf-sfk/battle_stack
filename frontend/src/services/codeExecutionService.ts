@@ -307,8 +307,8 @@ export class CodeExecutionService {
   /**
    * 🎨 Получить тему для языка программирования
    */
-  getLanguageTheme(languageId: string): string {
-    // Можно настроить разные темы для разных языков
+  getLanguageTheme(): string {
+    // Return a default theme since we're not using language-specific themes
     return 'vs-dark';
   }
 }

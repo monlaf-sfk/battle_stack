@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import type { DuelProblem } from '../../types/duel.types';
 import { CodeEditor, ThemeToggle } from '../ui/CodeEditor';
 import { Button } from '../ui/Button';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Swords, Loader2 } from 'lucide-react';
+import { Swords } from 'lucide-react';
 
 interface DuelLoadingProps {
   message?: string;

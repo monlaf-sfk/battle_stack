@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Building, Star, Sparkles, Check } from 'lucide-react';
+import { Plus, Trash2, Building, Sparkles, Check } from 'lucide-react';
 
 interface Company {
   id: string;

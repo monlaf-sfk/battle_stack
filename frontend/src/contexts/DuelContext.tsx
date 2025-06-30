@@ -1,4 +1,5 @@
-import React, { createContext, useReducer, useContext, ReactNode } from 'react';
+import { createContext, useReducer, useContext } from 'react';
+import type { ReactNode } from 'react';
 import type { Duel, WSMessage } from '../types/duel.types';
 
 // 1. Define State and Action Types
@@ -26,42 +27,42 @@ const initialState: DuelState = {
 const duelReducer = (state: DuelState, action: DuelAction): DuelState => {
   switch (action.type) {
     case 'SET_DUEL':
-      return { ...state, duel: action.payload };
+      return { ...state, duel: action.payload, error: null };
     
     case 'SOCKET_MESSAGE_RECEIVED':
       const message = action.payload;
+      
       if (!state.duel) return state;
-
+      
       switch (message.type) {
-        case 'duel_start':
-          return { ...state, duel: message.data as Duel };
-        case 'player_progress':
-          return { 
+        case 'code_update':
+          return {
             ...state,
             duel: {
               ...state.duel,
-              player_one_code: message.data.player_id === state.duel.player_one_id ? message.data.code : state.duel.player_one_code,
-              player_two_code: message.data.player_id === state.duel.player_two_id ? message.data.code : state.duel.player_two_code,
+              player_one_code: message.user_id === state.duel.player_one_id ? message.code : state.duel.player_one_code,
+              player_two_code: message.user_id === state.duel.player_two_id ? message.code : state.duel.player_two_code,
             }
           };
-        case 'ai_progress':
-             return {
-                ...state,
-                duel: {
-                    ...state.duel,
-                    player_two_code: message.data.code,
-                }
-             }
-        case 'duel_end':
-            return {
-                ...state,
-                duel: {
-                    ...state.duel,
-                    status: 'COMPLETED',
-                    results: message.data,
-                    finished_at: message.data.finished_at,
-                }
+          
+        case 'duel_complete':
+          // Convert the message result to DuelResult format
+          const duelResult = {
+            winner_id: message.result.winner_id,
+            player_one_result: null,
+            player_two_result: null,
+            finished_at: new Date().toISOString()
+          };
+          
+          return {
+            ...state,
+            duel: {
+              ...state.duel,
+              status: 'completed',
+              results: duelResult
             }
+          };
+          
         default:
           return state;
       }
@@ -70,10 +71,10 @@ const duelReducer = (state: DuelState, action: DuelAction): DuelState => {
       return { ...state, socketStatus: action.payload };
       
     case 'SET_ERROR':
-        return { ...state, error: action.payload };
+      return { ...state, error: action.payload };
 
     case 'RESET_STATE':
-        return initialState;
+      return { duel: null, error: null, socketStatus: 'disconnected' };
 
     default:
       return state;

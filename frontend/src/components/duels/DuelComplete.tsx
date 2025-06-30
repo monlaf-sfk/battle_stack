@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { Trophy, ShieldOff, Swords, BarChart, Code, Home, Repeat } from 'lucide-react';
+import { Trophy, ShieldOff, BarChart, Home, Repeat } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { DuelResult } from '../../types/duel.types';
 
@@ -98,7 +98,7 @@ export const DuelComplete: React.FC<DuelCompleteProps> = ({ result, currentUserI
           <CardFooter className="flex flex-col sm:flex-row gap-4 pt-6">
             <Button
               onClick={() => navigate('/dashboard')}
-              variant="outline"
+              variant="ghost"
               className="w-full"
             >
               <Home size={16} className="mr-2" />

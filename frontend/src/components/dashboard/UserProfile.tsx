@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, User, Crown, Star } from 'lucide-react';
+import { Shield, User, Crown } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '../ui/Card';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';

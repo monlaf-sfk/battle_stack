@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, Code } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { codeExecutionService, type SupportedLanguage } from '../../services/codeExecutionService';
 
 interface LanguageSelectorProps {

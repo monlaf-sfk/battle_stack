@@ -1,4 +1,3 @@
-import React from 'react';
 import { TetrisDuelArena } from './TetrisDuelArena';
 import type { Duel } from '../../types/duel.types';
 

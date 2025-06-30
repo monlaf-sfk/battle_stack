@@ -241,7 +241,7 @@ const AiRecommendation: React.FC = () => {
                             </Button>
                             <Button 
                                 variant="glass" 
-                                size="icon"
+                                size="sm"
                                 onClick={() => {
                                     addToast({
                                         type: 'info',

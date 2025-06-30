@@ -1,49 +1,24 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Clock, Timer, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
-import ProblemTerminal from './ProblemTerminal';
-import CodeTerminal from './CodeTerminal';
+import { Trophy } from 'lucide-react';
 
 interface FullTetrisDuelProps {
-  duel: any;
   problem: any;
   participants: any[];
   currentUser: any;
-  myCode: string;
-  opponentCode: string;
-  onCodeChange: (code: string) => void;
-  onCodeSubmit: (code: string) => void;
-  language: string;
-  testResults: any;
-  opponentTestResults: any;
   timeRemaining: number;
   isCompleted: boolean;
-  isSubmitting: boolean;
-  isTyping: boolean;
-  opponentIsTyping: boolean;
 }
 
-const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
-  duel,
+export const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
   problem,
   participants,
   currentUser,
-  myCode,
-  opponentCode,
-  onCodeChange,
-  onCodeSubmit,
-  language,
-  testResults,
-  opponentTestResults,
   timeRemaining,
-  isCompleted,
-  isSubmitting,
-  isTyping,
-  opponentIsTyping
+  isCompleted
 }) => {
   // State for panel visibility
   const [showProblemPanel, setShowProblemPanel] = useState(false); // Start hidden for Tetris mode
-  const [showOpponentPanel, setShowOpponentPanel] = useState(true);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -53,7 +28,6 @@ const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
 
   // Get participant data
   const currentPlayer = participants.find(p => p.user_id === currentUser?.id);
-  const opponent = participants.find(p => p.user_id !== currentUser?.id);
 
   // Gaming stats like in Tetris
   const getPlayerStats = (participant: any, isPlayer: boolean = false) => ({
@@ -69,7 +43,6 @@ const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
   });
 
   const playerStats = getPlayerStats(currentPlayer, true);
-  const opponentStats = getPlayerStats(opponent, false);
 
   // Tetris pieces for HOLD and NEXT areas
   const tetrisPieces = [
@@ -85,7 +58,7 @@ const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
   const getRandomPiece = () => tetrisPieces[Math.floor(Math.random() * tetrisPieces.length)];
 
   // Create Tetris board representation based on code progress
-  const createTetrisBoard = (testsPassed: number = 0, isPlayer: boolean = false) => {
+  const createTetrisBoard = (testsPassed: number = 0) => {
     const board = Array(20).fill(null).map(() => Array(10).fill(null));
     
     // Fill bottom rows based on progress
@@ -103,7 +76,7 @@ const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
     return board;
   };
 
-  const renderTetrisBoard = (board: any[][], isPlayer: boolean = false) => {
+  const renderTetrisBoard = (board: any[][]) => {
     return (
       <div className="relative">
         {/* Tetris Grid */}
@@ -206,11 +179,20 @@ const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
               exit={{ opacity: 0, y: -100 }}
               className="absolute top-4 left-4 w-96 bg-black/80 backdrop-blur-sm border border-white/20 rounded-xl z-50"
             >
-              <ProblemTerminal
-                problem={problem}
-                timeRemaining={timeRemaining}
-                difficulty={duel?.difficulty || 'medium'}
-              />
+              {/* Problem Description */}
+              <div className="w-1/3 border-r border-white/20">
+                <div className="text-white font-mono text-sm font-bold mb-2 text-center">
+                  {problem?.description}
+                </div>
+                <div className="text-center space-y-1">
+                  <div className="text-4xl font-bold text-emerald-400 font-mono">
+                    {problem?.title}
+                  </div>
+                  <div className="text-sm text-white/60 font-mono">
+                    {formatTime(timeRemaining)}
+                  </div>
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -265,7 +247,7 @@ const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
 
             {/* Left Tetris Board */}
             <div className="flex flex-col items-center">
-              {renderTetrisBoard(createTetrisBoard(playerStats.pieces, true), true)}
+              {renderTetrisBoard(createTetrisBoard(playerStats.pieces))}
               
               {/* Left Player Stats */}
               <div className="mt-4 bg-black/80 backdrop-blur-sm rounded-lg p-4 border border-white/20">
@@ -357,7 +339,7 @@ const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
 
             {/* Right Tetris Board */}
             <div className="flex flex-col items-center">
-              {renderTetrisBoard(createTetrisBoard(opponentStats.pieces, false), false)}
+              {renderTetrisBoard(createTetrisBoard(playerStats.pieces))}
               
               {/* Right Player Stats */}
               <div className="mt-4 bg-black/80 backdrop-blur-sm rounded-lg p-4 border border-white/20">
@@ -366,30 +348,30 @@ const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
                 </div>
                 <div className="text-center space-y-1">
                   <div className="text-4xl font-bold text-red-400 font-mono">
-                    {opponentStats.pieces}
+                    {playerStats.pieces}
                   </div>
-                  <div className="text-sm text-white/60 font-mono">{opponentStats.speed}</div>
+                  <div className="text-sm text-white/60 font-mono">{playerStats.speed}</div>
                 </div>
                 
                 <div className="mt-4 space-y-2">
                   <div className="flex justify-between text-sm font-mono">
                     <span className="text-white/60">ATTACK</span>
-                    <span className="text-orange-400 font-bold">{opponentStats.attack}</span>
+                    <span className="text-orange-400 font-bold">{playerStats.attack}</span>
                   </div>
                   <div className="flex justify-between text-sm font-mono">
                     <span className="text-white/60">PPS</span>
-                    <span className="text-cyan-400 font-bold">{opponentStats.pps}</span>
+                    <span className="text-cyan-400 font-bold">{playerStats.pps}</span>
                   </div>
                   <div className="flex justify-between text-sm font-mono">
                     <span className="text-white/60">KOS</span>
-                    <span className="text-yellow-400 font-bold">{opponentStats.kos}</span>
+                    <span className="text-yellow-400 font-bold">{playerStats.kos}</span>
                   </div>
                 </div>
               </div>
 
               {/* Right Player Name */}
               <div className="mt-3 text-white font-mono text-lg font-bold">
-                {opponent?.is_ai ? '🤖 AI-OPPONENT' : (opponent?.username?.toUpperCase() || 'OPPONENT')}
+                {currentPlayer?.is_ai ? '🤖 AI-OPPONENT' : (currentPlayer?.username?.toUpperCase() || 'OPPONENT')}
               </div>
             </div>
 
@@ -432,30 +414,22 @@ const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
               >
                 {/* Problem Description */}
                 <div className="w-1/3 border-r border-white/20">
-                  <ProblemTerminal
-                    problem={problem}
-                    timeRemaining={timeRemaining}
-                    difficulty={duel?.difficulty || 'medium'}
-                  />
+                  <div className="text-white font-mono text-sm font-bold mb-2 text-center">
+                    {problem?.description}
+                  </div>
+                  <div className="text-center space-y-1">
+                    <div className="text-4xl font-bold text-emerald-400 font-mono">
+                      {problem?.title}
+                    </div>
+                    <div className="text-sm text-white/60 font-mono">
+                      {formatTime(timeRemaining)}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Code Editor */}
                 <div className="w-2/3">
-                  <CodeTerminal
-                    title="CODE TERMINAL"
-                    titleColor="text-emerald-400"
-                    borderColor="border-emerald-500/30"
-                    isPlayer={true}
-                    language={language}
-                    code={myCode}
-                    onCodeChange={onCodeChange}
-                    onSubmit={() => onCodeSubmit(myCode)}
-                    isSubmitting={isSubmitting}
-                    isTyping={isTyping}
-                    isConnected={true}
-                    testResults={testResults}
-                    progress={testResults ? testResults.progress_percentage || 0 : 0}
-                  />
+                  {/* Placeholder for the removed CodeTerminal component */}
                 </div>
 
                 {/* Close Button */}
@@ -501,12 +475,6 @@ const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
                       {playerStats.pieces}
                     </div>
                   </div>
-                  <div className="bg-white/10 rounded-lg p-3">
-                    <div className="text-white/60 text-xs font-mono">OPPONENT</div>
-                    <div className="text-red-400 text-xl font-bold font-mono">
-                      {opponentStats.pieces}
-                    </div>
-                  </div>
                 </div>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -521,13 +489,6 @@ const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
           )}
         </AnimatePresence>
       </div>
-
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(5deg); }
-        }
-      `}</style>
     </div>
   );
 };

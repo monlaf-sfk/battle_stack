@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { CheckCircle, Target, Trophy, Zap, Plus, X } from 'lucide-react';
+import { Target, Trophy, Zap, Plus } from 'lucide-react';
 import { 
     Card, 
     CardContent, 
@@ -22,7 +22,7 @@ interface Goal {
     category: 'tasks' | 'duels' | 'streak';
 }
 
-const GoalItem: React.FC<{ goal: Goal, onUpdate: (id: string, current: number) => void }> = ({ goal, onUpdate }) => {
+const GoalItem: React.FC<{ goal: Goal }> = ({ goal }) => {
     const progress = Math.min((goal.current / goal.target) * 100, 100);
     
     return (
@@ -52,8 +52,8 @@ const AddGoalModal: React.FC<{
 }> = ({ isOpen, onClose, onAdd }) => {
     const [text, setText] = useState('');
     const [target, setTarget] = useState(1);
-    const [type, setType] = useState<'daily' | 'weekly'>('daily');
-    const [category, setCategory] = useState<'tasks' | 'duels' | 'streak'>('tasks');
+    const [type] = useState<'daily' | 'weekly'>('daily');
+    const [category] = useState<'tasks' | 'duels' | 'streak'>('tasks');
 
     const handleAdd = () => {
         if (text && target > 0) {
@@ -109,10 +109,6 @@ const Goals: React.FC = () => {
       setGoals(prev => [...prev, { ...newGoal, id, current: 0 }]);
   };
   
-  const handleUpdateGoal = (id: string, current: number) => {
-    setGoals(prev => prev.map(g => g.id === id ? { ...g, current } : g));
-  };
-
   const staticGoals: Goal[] = useMemo(() => {
     if (!stats) return [];
     return [
@@ -153,7 +149,7 @@ const Goals: React.FC = () => {
                     <div className="space-y-4">
                         <AnimatePresence>
                             {dailyGoals.map(goal => (
-                                <GoalItem key={goal.id} goal={goal} onUpdate={handleUpdateGoal} />
+                                <GoalItem key={goal.id} goal={goal} />
                             ))}
                         </AnimatePresence>
                     </div>
@@ -166,7 +162,7 @@ const Goals: React.FC = () => {
                     <div className="space-y-4">
                          <AnimatePresence>
                             {weeklyGoals.map(goal => (
-                                <GoalItem key={goal.id} goal={goal} onUpdate={handleUpdateGoal} />
+                                <GoalItem key={goal.id} goal={goal} />
                             ))}
                         </AnimatePresence>
                     </div>

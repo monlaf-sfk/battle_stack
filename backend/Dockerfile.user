@@ -6,12 +6,17 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip setuptools wheel -i https://pypi.tuna.tsinghua.edu.cn/simple
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY ./shared /app/shared
 COPY ./services/user_service /app/user_service
 
-RUN pip install --no-cache-dir --force-reinstall ./shared
+# Copy wait_for_db script
+COPY ./services/user_service/wait_for_db.py /app/wait_for_db.py
+RUN chmod +x /app/wait_for_db.py
+
+RUN pip install --no-cache-dir --force-reinstall --retries 5 --timeout 30 -i https://pypi.tuna.tsinghua.edu.cn/simple ./shared
 
 # Copy entrypoint and make it executable
 COPY ./services/user_service/entrypoint.sh /app/user_service/entrypoint.sh
@@ -20,4 +25,4 @@ RUN chmod +x /app/user_service/entrypoint.sh
 # Set environment variables
 ENV PYTHONPATH=/app
 
-CMD ["uvicorn", "user_service.main:app", "--host", "0.0.0.0", "--port", "8000"] 
+ENTRYPOINT ["/app/user_service/entrypoint.sh"] 

@@ -10,7 +10,7 @@ import axios from 'axios';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { duelsApiService } from '../../services/duelService';
-import type { CodeSubmission } from '../../types/duel.types';
+import type { CodeSubmission, DuelSubmission, Language } from '../../types/duel.types';
 import LanguageSelector from './LanguageSelector';
 import SubmissionResult from './SubmissionResult';
 
@@ -46,7 +46,7 @@ const CodeExecutionPanel: React.FC<CodeExecutionPanelProps> = ({
     setSelectedLanguage(languageId);
   };
 
-  const executeCode = async (apiCall: (duelId: string, submission: CodeSubmission) => Promise<any>, title: string) => {
+  const performApiCall = async (apiCall: () => Promise<any>, title: string) => {
     if (!isAuthenticated || !code.trim()) return;
 
     setIsLoading(true);
@@ -54,8 +54,7 @@ const CodeExecutionPanel: React.FC<CodeExecutionPanelProps> = ({
     setResultTitle(title);
 
     try {
-      const submission: CodeSubmission = { code: code.trim(), language: selectedLanguage };
-      const apiResponse = await apiCall(duelId, submission);
+      const apiResponse = await apiCall();
       // В реальном сценарии результат придет по WebSocket, 
       // но для обработки ошибок мы можем показать что-то здесь.
       console.log(`${title} initiated:`, apiResponse);
@@ -80,11 +79,14 @@ const CodeExecutionPanel: React.FC<CodeExecutionPanelProps> = ({
   };
 
   const handleRunCode = () => {
-    executeCode(duelsApiService.testCode, 'Test Run');
+    const submission: CodeSubmission = { code: code.trim(), language: selectedLanguage as Language };
+    performApiCall(() => duelsApiService.testCode(duelId, submission), 'Test Run');
   };
 
   const handleSubmitSolution = () => {
-    executeCode(duelsApiService.submitCode, 'Submission');
+    if (!user) return;
+    const submission: DuelSubmission = { player_id: user.id, code: code.trim(), language: selectedLanguage as Language };
+    performApiCall(() => duelsApiService.submitCode(duelId, submission), 'Submission');
   };
 
   const handleEditorDidMount = (editor: any) => {

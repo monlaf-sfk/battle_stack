@@ -61,7 +61,7 @@ const Sidebar = () => {
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
-            <a href="/" className="flex items-center gap-3 font-semibold">
+            <NavLink to="/" className="flex items-center gap-3 font-semibold">
               <motion.div
                 className="w-10 h-10 bg-white rounded-lg flex items-center justify-center relative overflow-hidden"
                 animate={{ 
@@ -80,8 +80,8 @@ const Sidebar = () => {
                    className="text-black"
                  >
                    <g clipPath="url(#clip0_10_2)">
-                     <path d="M512 0L1024 256V768L512 1024L0 768V256L512 0Z" fill="#000000"/>
-                     <path d="M512 448L768 320V640L512 768V448Z" fill="#000000"/>
+                     <path d="M512 0L1024 256V768L512 1024L0 768V256L512 0Z" fill="currentColor"/>
+                     <path d="M512 448L768 320V640L512 768V448Z" fill="currentColor"/>
                      <path d="M512 448L256 320V640L512 768V448Z" fill="#1a1a1a"/>
                      <path d="M512 0L256 128V320L512 448L768 320V128L512 0Z" fill="#ffffff"/>
                      <path d="M512 0L256 128V320L512 448V0Z" fill="#e5e5e5"/>
@@ -103,7 +103,7 @@ const Sidebar = () => {
               >
                 BATTLESTACK
               </motion.span>
-            </a>
+            </NavLink>
           </motion.div>
 
           {/* Stats Section - показываем только когда сайдбар открыт */}
@@ -185,60 +185,39 @@ const Sidebar = () => {
                             "flex items-center gap-3 rounded-lg py-3 px-3 transition-all duration-200 relative group font-mono text-sm cursor-not-allowed opacity-60",
                             { "justify-center": isDesktopCollapsed }
                           )}
-                          title="Доступно скоро"
+                          title="Coming soon"
                         >
-                          <span className="flex-shrink-0">
-                            {item.icon}
-                          </span>
+                          {item.icon}
                           <span className={clsx("font-medium tracking-wide", { "sr-only": isDesktopCollapsed })}>
                             {item.text.toUpperCase()}
                           </span>
                           <Lock size={16} className="ml-2 text-gray-400" />
                           <span className="absolute right-3 text-xs text-gray-400 hidden group-hover:block bg-gray-900 px-2 py-1 rounded shadow-lg z-10">
-                            Доступно скоро
+                            Coming soon
                           </span>
                         </div>
                       ) : (
                         <NavLink
                           to={item.path}
-                          onClick={() => { if (window.innerWidth < 640) setSidebarOpen(false) }}
                           className={({ isActive }) =>
                             clsx(
                               "flex items-center gap-3 rounded-lg py-3 px-3 transition-all duration-200 relative group font-mono text-sm",
-                              !isDesktopCollapsed
-                                ? `${
-                                    isActive
-                                      ? "bg-gray-800 text-white border-l-2 border-white"
-                                      : "text-gray-400 hover:bg-gray-900 hover:text-white"
-                                  }`
-                                : `justify-center ${
-                                    isActive 
-                                      ? "bg-gray-800 text-white" 
-                                      : "text-gray-400 hover:bg-gray-900 hover:text-white"
-                                  }`
+                              {
+                                "bg-green-500/10 text-white hover:bg-green-500/20": isActive,
+                                "text-gray-400 hover:text-white hover:bg-gray-800": !isActive,
+                                "justify-center": isDesktopCollapsed,
+                              }
                             )
                           }
                         >
-                          {({ isActive }) => (
-                            <>
-                              <motion.div
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.95 }}
-                                className={clsx("flex-shrink-0", isActive ? "text-white" : "")}
-                              >
-                                {item.icon}
-                              </motion.div>
-                              <span className={clsx("font-medium tracking-wide", { "sr-only": isDesktopCollapsed })}>
-                                {item.text.toUpperCase()}
-                              </span>
-                              {isActive && !isDesktopCollapsed && (
-                                <motion.div
-                                  layoutId="activeSidebarIndicator"
-                                  className="absolute right-3 w-2 h-2 bg-white rounded-full"
-                                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                />
-                              )}
-                            </>
+                          {item.icon}
+                          <span className={clsx("font-medium tracking-wide", { "sr-only": isDesktopCollapsed })}>
+                            {item.text.toUpperCase()}
+                          </span>
+                          {!isDesktopCollapsed && (
+                            <span className="absolute left-full ml-4 hidden group-hover:block bg-gray-900 px-2 py-1 text-xs rounded-md shadow-lg z-20 whitespace-nowrap">
+                              {item.text}
+                            </span>
                           )}
                         </NavLink>
                       )}

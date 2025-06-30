@@ -6,23 +6,8 @@
 
 import React from 'react';
 import { 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  Cpu, 
-  Trophy,
-  AlertTriangle,
-  TrendingUp,
-  Target,
-  Zap,
-  Award,
-  Star,
-  Medal,
-  BarChart3,
-  Sparkles,
   ServerCrash
 } from 'lucide-react';
-import { codeExecutionService, type SubmissionResponse } from '../../services/codeExecutionService';
 
 // Упрощенный интерфейс, который может содержать либо ошибку, либо успешные данные
 interface UniversalResult {

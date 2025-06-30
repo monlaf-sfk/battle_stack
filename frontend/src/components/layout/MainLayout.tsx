@@ -109,5 +109,9 @@ function MainLayoutContent() {
 }
 
 export function MainLayout() {
-  return <MainLayoutContent />;
+  return (
+    <LayoutProvider>
+      <MainLayoutContent />
+    </LayoutProvider>
+  );
 } 

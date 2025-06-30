@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
+import { Sun, Moon, Languages, Check, ChevronDown } from "lucide-react";
 
 interface CodeEditorProps {
   value: string;
@@ -27,7 +28,6 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   language = 'python',
   height = '400px',
   width = '100%',
-  theme = 'vs-dark',
   readOnly = false,
   className = '',
   loading,
@@ -256,81 +256,77 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
 // Language selector component
 interface LanguageSelectorProps {
-  value: string;
-  onChange: (language: string) => void;
-  languages?: Array<{ value: string; label: string; }>;
-  className?: string;
+  selectedLanguage: string;
+  onSelectLanguage: (language: string) => void;
+  languages: string[];
 }
 
 export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
-  value,
-  onChange,
-  languages = [
-    { value: 'python', label: 'Python' },
-    { value: 'javascript', label: 'JavaScript' },
-    { value: 'typescript', label: 'TypeScript' },
-    { value: 'java', label: 'Java' },
-    { value: 'cpp', label: 'C++' },
-    { value: 'c', label: 'C' },
-    { value: 'csharp', label: 'C#' },
-    { value: 'go', label: 'Go' },
-    { value: 'rust', label: 'Rust' },
-    { value: 'kotlin', label: 'Kotlin' },
-    { value: 'swift', label: 'Swift' },
-    { value: 'php', label: 'PHP' },
-    { value: 'ruby', label: 'Ruby' },
-    { value: 'sql', label: 'SQL' },
-    { value: 'shell', label: 'Shell' },
-  ],
-  className = ''
+  selectedLanguage,
+  onSelectLanguage,
+  languages,
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleSelect = (language: string) => {
+    onSelectLanguage(language);
+    setIsOpen(false);
+  };
+  
+  // Close dropdown when clicking outside
+  // ... (useOnClickOutside hook can be used here)
+
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className={`bg-arena-surface border border-arena-border rounded-md px-3 py-2 text-arena-text text-sm focus:outline-none focus:ring-2 focus:ring-arena-accent focus:border-arena-accent hover:border-arena-accent/60 transition-colors ${className}`}
-    >
-      {languages.map((lang) => (
-        <option key={lang.value} value={lang.value} className="bg-arena-surface text-arena-text">
-          {lang.label}
-        </option>
-      ))}
-    </select>
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-3 py-2 text-sm font-mono rounded-md bg-arena-surface/50 text-arena-text hover:bg-arena-surface transition-colors"
+      >
+        <Languages size={16} />
+        <span className="capitalize">{selectedLanguage}</span>
+        <ChevronDown size={16} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-2 w-48 bg-arena-surface rounded-md shadow-lg z-10 border border-arena-border">
+          <ul className="py-1">
+            {languages.map((lang) => (
+              <li key={lang}>
+                <button
+                  onClick={() => handleSelect(lang)}
+                  className="w-full text-left px-3 py-2 text-sm font-mono text-arena-text hover:bg-arena-accent/20 flex items-center justify-between"
+                >
+                  <span className="capitalize">{lang}</span>
+                  {selectedLanguage === lang && <Check size={16} className="text-arena-accent" />}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 };
 
 // Theme toggle component
 interface ThemeToggleProps {
   theme: 'vs-dark' | 'vs-light';
-  onChange: (theme: 'vs-dark' | 'vs-light') => void;
-  className?: string;
+  onToggleTheme: (theme: 'vs-dark' | 'vs-light') => void;
 }
 
-export const ThemeToggle: React.FC<ThemeToggleProps> = ({
-  theme,
-  onChange,
-  className = ''
-}) => {
+export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onToggleTheme }) => {
+  const toggle = () => {
+    onToggleTheme(theme === 'vs-dark' ? 'vs-light' : 'vs-dark');
+  };
+
   return (
     <button
-      onClick={() => onChange(theme === 'vs-dark' ? 'vs-light' : 'vs-dark')}
-      className={`flex items-center gap-2 px-3 py-2 bg-arena-surface border border-arena-border rounded-md text-arena-text text-sm hover:border-arena-accent/60 focus:outline-none focus:ring-2 focus:ring-arena-accent focus:border-arena-accent transition-colors ${className}`}
+      onClick={toggle}
+      className="p-2 rounded-md bg-arena-surface/50 text-arena-text hover:bg-arena-surface transition-colors"
+      aria-label="Toggle theme"
     >
-      {theme === 'vs-dark' ? (
-        <>
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
-          </svg>
-          Light
-        </>
-      ) : (
-        <>
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-          </svg>
-          Dark
-        </>
-      )}
+      {theme === 'vs-dark' ? <Sun size={16} /> : <Moon size={16} />}
     </button>
   );
 }; 

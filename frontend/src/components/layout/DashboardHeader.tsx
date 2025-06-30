@@ -18,10 +18,10 @@ const DashboardHeader = () => {
         {/* Left side - Sidebar toggle */}
         <div className="flex items-center gap-4">
           <Button
+            size="sm"
             variant="ghost"
-            size="icon"
+            className="text-white hover:text-gray-300 hover:bg-gray-800 transition-all duration-200 w-10 h-10 rounded-full"
             onClick={() => setSidebarOpen(!isSidebarOpen)}
-            className="text-white hover:text-gray-300 hover:bg-gray-800 transition-all duration-200 w-10 h-10"
           >
             <motion.div
               animate={{ rotate: isSidebarOpen ? 180 : 0 }}
@@ -52,9 +52,9 @@ const DashboardHeader = () => {
             whileTap={{ scale: 0.95 }}
           >
             <Button 
+              size="sm"
               variant="ghost" 
-              size="icon" 
-              className="text-white hover:text-gray-300 hover:bg-gray-800 relative w-10 h-10"
+              className="text-white hover:text-gray-300 hover:bg-gray-800 relative w-10 h-10 rounded-full"
             >
               <Bell size={18} />
               <motion.div
