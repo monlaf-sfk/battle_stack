@@ -116,14 +116,14 @@ const ProblemSolvingPage: React.FC = () => {
 
   const handleRunTests = async () => {
     if (!problemId || !solution.code.trim()) return;
-
+    
     try {
-      setIsRunning(true);
+    setIsRunning(true);
       const submission: ProblemSubmission = {
         code: solution.code,
         language: solution.language
       };
-      
+
       const response = await problemsApiService.testSolution(problemId, submission);
       const convertedResults = convertTestResults(response.test_results);
       setTestResults(convertedResults);
@@ -137,9 +137,9 @@ const ProblemSolvingPage: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!problemId || !solution.code.trim()) return;
-
+    
     try {
-      setIsSubmitting(true);
+    setIsSubmitting(true);
       const submission: ProblemSubmission = {
         code: solution.code,
         language: solution.language
@@ -219,7 +219,7 @@ const ProblemSolvingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-arena-dark">
       <div className="container mx-auto px-4 py-6">
-        {/* Header */}
+      {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <Button
@@ -230,7 +230,7 @@ const ProblemSolvingPage: React.FC = () => {
               ← Back to Problems
             </Button>
           </div>
-
+          
           <div className="flex items-center gap-4 mb-4">
             <h1 className="text-3xl font-bold gradient-text">
               {problem.title}
@@ -238,14 +238,14 @@ const ProblemSolvingPage: React.FC = () => {
             <span className={`px-3 py-1 text-sm font-medium rounded-full border ${getDifficultyBg(problem.difficulty)} ${getDifficultyColor(problem.difficulty)}`}>
               {problem.difficulty.charAt(0).toUpperCase() + problem.difficulty.slice(1)}
             </span>
-          </div>
+      </div>
 
           {/* Problem Stats */}
           <div className="flex items-center gap-6 text-sm text-arena-text-muted">
             <div className="flex items-center gap-2">
               <Clock size={16} />
               <span>{problem.time_limit}ms</span>
-            </div>
+              </div>
             <div className="flex items-center gap-2">
               <MemoryStick size={16} />
               <span>{problem.memory_limit}MB</span>
@@ -319,15 +319,15 @@ const ProblemSolvingPage: React.FC = () => {
 
           {/* Code Editor and Results */}
           <div className="space-y-6">
-            <SolverDispatcher
+          <SolverDispatcher
               problem={convertToDuelProblem(problem)}
-              onCodeChange={handleCodeChange}
-              onSubmit={handleSubmit}
-              onRunTests={handleRunTests}
-              isRunning={isRunning}
-              isSubmitting={isSubmitting}
-              testResults={testResults}
-            />
+            onCodeChange={handleCodeChange}
+            onSubmit={handleSubmit}
+            onRunTests={handleRunTests}
+            isRunning={isRunning}
+            isSubmitting={isSubmitting}
+            testResults={testResults}
+          />
           </div>
         </div>
       </div>
