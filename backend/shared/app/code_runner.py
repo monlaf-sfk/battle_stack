@@ -109,27 +109,69 @@ except Exception as e:
         "memory_limit": params.memory_limit,
     }
 
-    async with httpx.AsyncClient() as client:
+    # Create timeout configuration with reasonable defaults
+    timeout_config = httpx.Timeout(
+        connect=10.0,  # 10 seconds to establish connection
+        read=30.0,     # 30 seconds to read response
+        write=10.0,    # 10 seconds to write request
+        pool=10.0      # 10 seconds to get connection from pool
+    )
+
+    async with httpx.AsyncClient(timeout=timeout_config) as client:
         try:
             logger.info(f"Sending request to Judge0: {payload}")
             response = await client.post(
                 f"{judge0_url}/submissions",
                 params={"base64_encoded": "false", "wait": "true"},
                 json=payload,
-                headers=headers,
-                timeout=30.0
+                headers=headers
             )
             response.raise_for_status()
             result_data = response.json()
             logger.info(f"Judge0 execution finished. Full result: {result_data}")
             return SubmissionResult.model_validate(result_data)
 
+        except httpx.ConnectTimeout:
+            logger.error(f"Connection timeout while connecting to Judge0 at {judge0_url}")
+            # Return a result indicating the service is unavailable
+            return SubmissionResult(
+                stdout=None,
+                stderr="Judge0 service connection timeout",
+                status={"id": 14, "description": "Exec Format Error"},  # Use existing status for service issues
+                message="Could not connect to Judge0 service"
+            )
+        except httpx.ReadTimeout:
+            logger.error(f"Read timeout while waiting for Judge0 response")
+            return SubmissionResult(
+                stdout=None,
+                stderr="Judge0 service read timeout",
+                status={"id": 14, "description": "Exec Format Error"},
+                message="Judge0 service took too long to respond"
+            )
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error occurred with Judge0: {e.response.status_code} - {e.response.text}")
-            raise
+            return SubmissionResult(
+                stdout=None,
+                stderr=f"Judge0 HTTP error: {e.response.status_code}",
+                status={"id": 14, "description": "Exec Format Error"},
+                message=f"Judge0 service error: {e.response.text}"
+            )
+        except httpx.RequestError as e:
+            logger.error(f"Request error occurred while connecting to Judge0: {e}")
+            return SubmissionResult(
+                stdout=None,
+                stderr="Judge0 service unavailable",
+                status={"id": 14, "description": "Exec Format Error"},
+                message=f"Judge0 service request failed: {str(e)}"
+            )
         except Exception as e:
-            logger.error(f"An error occurred while executing code with Judge0: {e}")
-            raise
+            logger.error(f"Unexpected error occurred while executing code with Judge0: {e}")
+            return SubmissionResult(
+                stdout=None,
+                stderr="Unexpected error",
+                status={"id": 14, "description": "Exec Format Error"},
+                message=f"Unexpected error: {str(e)}"
+            )
 
 # Example of how to use it
 # async def main():

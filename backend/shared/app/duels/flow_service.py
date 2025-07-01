@@ -210,13 +210,17 @@ class DuelFlowService:
         execution_result = await _execute_code_against_tests(code_submission, problem_data)
         logger.info(f"Execution result for user {user_id} in duel {duel_id}: is_correct={execution_result.is_correct}, error='{execution_result.error}', details='{execution_result.details}'")
 
-        # 2. Update submission count
+        # 2. Update submission count and test results
         is_player_one = duel.player_one_id == user_id
         
         results_data = duel.results or {}
-        player_key = "p1_subs" if is_player_one else "p2_subs"
-        submission_count = results_data.get(player_key, 0) + 1
-        results_data[player_key] = submission_count
+        player_subs_key = "p1_subs" if is_player_one else "p2_subs"
+        player_passed_key = "p1_passed_tests" if is_player_one else "p2_passed_tests"
+        player_total_key = "p1_total_tests" if is_player_one else "p2_total_tests"
+
+        results_data[player_subs_key] = results_data.get(player_subs_key, 0) + 1
+        results_data[player_passed_key] = execution_result.passed
+        results_data[player_total_key] = execution_result.total
         
         await service.update_duel_results(db, duel, results_data)
 
@@ -281,6 +285,122 @@ class DuelFlowService:
 
         logger.info(f"Broadcasting duel_end event for duel {duel_id}.")
         await manager.broadcast_to_all(str(duel_id), json.dumps(end_message.model_dump(mode='json'), default=str))
+
+    async def _determine_winner(self, db: AsyncSession, duel: models.Duel) -> tuple[UUID | str | None, schemas.DuelResult]:
+        player_one_solved_at_str = duel.results.get("p1_solved_at")
+        player_two_solved_at_str = duel.results.get("p2_solved_at")
+
+        player_one_solved_at = datetime.fromisoformat(player_one_solved_at_str) if player_one_solved_at_str else None
+        player_two_solved_at = datetime.fromisoformat(player_two_solved_at_str) if player_two_solved_at_str else None
+
+        duel_start_time = duel.started_at
+
+        player_one_score = 0
+        player_two_score = 0
+        player_one_time_taken = 0.0
+        player_two_time_taken = 0.0
+        
+        is_player_one_winner = False
+        is_player_two_winner = False
+        winner_id = None
+
+        if player_one_solved_at and duel_start_time:
+            was_first_to_solve_p1 = duel.results.get('first_solver') == 'p1'
+            player_one_score, player_one_time_taken = scoring_service.calculate_score(
+                duel_start_time, player_one_solved_at, duel.results.get('p1_subs', 0), was_first_to_solve_p1
+            )
+
+        if player_two_solved_at and duel_start_time:
+            was_first_to_solve_p2 = duel.results.get('first_solver') == 'p2'
+            player_two_score, player_two_time_taken = scoring_service.calculate_score(
+                duel_start_time, player_two_solved_at, duel.results.get('p2_subs', 0), was_first_to_solve_p2
+            )
+
+        # Determine winner based on scores or first to solve
+        if player_one_solved_at and player_two_solved_at:
+            if player_one_score > player_two_score:
+                is_player_one_winner = True
+                winner_id = duel.player_one_id
+            elif player_two_score > player_one_score:
+                is_player_two_winner = True
+                winner_id = duel.player_two_id
+            else: # Tie-breaker: whoever submitted first wins
+                if player_one_time_taken < player_two_time_taken:
+                    is_player_one_winner = True
+                    winner_id = duel.player_one_id
+                elif player_two_time_taken < player_one_time_taken:
+                    is_player_two_winner = True
+                    winner_id = duel.player_two_id
+        elif player_one_solved_at:
+            is_player_one_winner = True
+            winner_id = duel.player_one_id
+        elif player_two_solved_at:
+            is_player_two_winner = True
+            winner_id = duel.player_two_id
+        else:
+            # If neither player solved, determine winner by most passed tests
+            p1_passed = duel.results.get("p1_passed_tests", 0)
+            p2_passed = duel.results.get("p2_passed_tests", 0)
+
+            if p1_passed > p2_passed:
+                is_player_one_winner = True
+                winner_id = duel.player_one_id
+            elif p2_passed > p1_passed:
+                is_player_two_winner = True
+                winner_id = duel.player_two_id
+            # If still tied (same tests passed, or 0 tests passed), it's a draw/no winner
+
+        player_one_result = schemas.PlayerResult(
+            player_id=str(duel.player_one_id),
+            score=player_one_score,
+            time_taken_seconds=player_one_time_taken,
+            submission_count=duel.results.get('p1_subs', 0),
+            is_winner=is_player_one_winner
+        )
+
+        player_two_result = None
+        if duel.player_two_id:
+            player_two_result = schemas.PlayerResult(
+                player_id=str(duel.player_two_id),
+                score=player_two_score,
+                time_taken_seconds=player_two_time_taken,
+                submission_count=duel.results.get('p2_subs', 0),
+                is_winner=is_player_two_winner
+            )
+        else: # Always create a PlayerResult for AI if player_two_id is None
+            ai_solve_time = duel.results.get("ai_solved_at")
+            ai_time_taken = 0.0
+            ai_submission_count = duel.results.get('ai_subs', 0)
+            ai_score = duel.results.get('ai_passed_tests', 0)
+
+            if ai_solve_time and duel_start_time:
+                ai_solve_datetime = datetime.fromisoformat(ai_solve_time)
+                was_first_to_solve_ai = duel.results.get('first_solver') == 'ai'
+                ai_score, ai_time_taken = scoring_service.calculate_score(
+                    duel_start_time, ai_solve_datetime, ai_submission_count, was_first_to_solve_ai
+                )
+            
+            # Ensure is_player_two_winner is correctly determined for AI
+            is_ai_winner = False
+            if winner_id and str(winner_id) == "ai": # Check if the determined winner is 'ai'
+                is_ai_winner = True
+
+            player_two_result = schemas.PlayerResult(
+                player_id="ai", # AI's ID should always be a string literal
+                score=ai_score,
+                time_taken_seconds=ai_time_taken,
+                submission_count=ai_submission_count,
+                is_winner=is_ai_winner
+            )
+
+        final_results = schemas.DuelResult(
+            winner_id=winner_id,
+            player_one_result=player_one_result,
+            player_two_result=player_two_result,
+            finished_at=datetime.now(timezone.utc),
+            is_ai_duel=duel.player_two_id is None
+        )
+        return winner_id, final_results
 
 
 duel_flow_service = DuelFlowService()

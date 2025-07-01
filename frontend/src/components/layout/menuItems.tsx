@@ -45,6 +45,7 @@ export const getMenuItems = (permissions?: UserPermissions): MenuSection[] => {
           icon: <Target size={20} />,
           text: "Problems",
           path: "/problems",
+          locked: true,
         },
       ],
     },
@@ -75,7 +76,7 @@ export const getMenuItems = (permissions?: UserPermissions): MenuSection[] => {
       section: "PERSONAL",
       items: [
         { icon: <User size={20} />, text: "Profile", path: "/profile" },
-        { icon: <Settings size={20} />, text: "Settings", path: "/settings" },
+        { icon: <Settings size={20} />, text: "Settings", path: "/settings", locked: true },
       ],
     },
   ];

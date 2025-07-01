@@ -17,7 +17,7 @@ from .models import DuelStatus
 from .flow_service import duel_flow_service, _execute_code_against_tests, _execute_code_against_public_tests, CodeExecutionResult
 from shared.app.database import get_db, SessionLocal
 from shared.app.auth.security import get_current_user_id
-from shared.app.ai_opponent.core import generate_ai_coding_process, CodeTypingAction, PauseAction, DeleteAction
+from shared.app.ai_opponent.core import generate_ai_coding_process, CodeTypingAction, PauseAction, DeleteAction, CodingStep
 from .problem_provider import get_problem_from_service, generate_ai_problem
 from shared.app.ai.generator import generate_algorithm_problem, GeneratedProblem
 from . import flow_service
@@ -77,6 +77,16 @@ async def get_my_stats(
         "average_rating": 1200
     }
 
+# New helper function to recursively convert UUIDs to strings
+def convert_uuids_to_str(obj):
+    if isinstance(obj, UUID):
+        return str(obj)
+    if isinstance(obj, dict):
+        return {k: convert_uuids_to_str(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [convert_uuids_to_str(elem) for elem in obj]
+    return obj
+
 async def generate_problem_and_run_ai(duel_id: UUID, settings: schemas.AIDuelCreateRequest):
     """
     A background task to generate a problem for a duel and run the AI.
@@ -130,12 +140,20 @@ async def generate_problem_and_run_ai(duel_id: UUID, settings: schemas.AIDuelCre
         if not db_duel:
             raise Exception(f"Duel {duel_id} not found after problem generation.")
 
-        db_duel.problem_id = UUID(generated_problem.id)
+        db_duel.problem_id = generated_problem.id
         db_duel.status = DuelStatus.IN_PROGRESS
         db_duel.started_at = datetime.now(timezone.utc)
         db_duel.time_limit_seconds = time_limit
+        
+        # Use the generated_problem directly instead of fetching from problems-service
+        # Convert its UUIDs to strings for proper JSON serialization if needed later
+        db_duel.problem = convert_uuids_to_str(generated_problem.model_dump())
+        
+        # Apply the UUID conversion here to ensure all nested UUIDs are strings
+        problem_data_for_db = db_duel.problem # Already converted above
+        
         db_duel.results = {
-            "ai_problem_data": generated_problem.model_dump(),
+            "ai_problem_data": problem_data_for_db,
             "duel_type": "ai_generated",
         }
         await db.commit()
@@ -301,12 +319,20 @@ async def websocket_endpoint(websocket: WebSocket, duel_id: str, user_id: str):
 async def run_ai_opponent(duel_id: str, solution: str, template: str, steps: list = None):
     """A background task that simulates an AI opponent typing out a solution."""
     try:
+        # Check duel status right at the start with a fresh session
+        async with SessionLocal() as db_session_start:
+            duel = await service.get_duel(db_session_start, UUID(duel_id))
+            if not duel or duel.status != models.DuelStatus.IN_PROGRESS:
+                logger.info(f"[AI Opponent] Duel {duel_id}: Already ended or not in progress (status: {duel.status if duel else 'None'}). AI will not proceed.")
+                return
+
+        # Initialize ai_process
+        ai_process = []
         if steps:
             logger.info(f"[AI Opponent] Duel {duel_id}: Using pre-generated steps.")
             ai_process = [CodingStep.model_validate(step) for step in steps]
         else:
             logger.info(f"[AI Opponent] Duel {duel_id}: Generating new steps.")
-            # The language parameter is kept for compatibility but not used in the new implementation.
             ai_process = await generate_ai_coding_process(solution=solution, template=template, language="python")
 
         if not ai_process:
@@ -317,27 +343,34 @@ async def run_ai_opponent(duel_id: str, solution: str, template: str, steps: lis
         await asyncio.sleep(3) # Initial delay to simulate thinking
 
         for step_model in ai_process:
-            step = step_model.root
+            # Re-check duel status before each significant step (typing/pause)
+            async with SessionLocal() as db_session_step:
+                duel = await service.get_duel(db_session_step, UUID(duel_id))
+                if not duel or duel.status != models.DuelStatus.IN_PROGRESS:
+                    logger.info(f"[AI Opponent] Duel {duel_id}: Duel ended during AI typing. Aborting AI process.")
+                    return
 
-            if isinstance(step, CodeTypingAction):
-                # Typing delay based on speed and content length
-                delay = max(0.05, len(step.content) * 0.1 / step.speed)
-                await asyncio.sleep(delay)
-                
-                payload = {"type": "ai_progress", "data": {"code_chunk": step.content}}
-                logger.info(f"[AI Opponent] Duel {duel_id}: Broadcasting chunk: {step.content[:40]}...")
-                await manager.broadcast_to_all(duel_id, json.dumps(payload))
-            
-            elif isinstance(step, PauseAction):
-                await asyncio.sleep(step.duration)
-                logger.info(f"[AI Opponent] Duel {duel_id}: Paused for {step.duration}s.")
-            
-            elif isinstance(step, DeleteAction):
-                # Send a special message for deletion; frontend can implement this later
-                await asyncio.sleep(0.5) # Short delay for effect
-                payload = {"type": "ai_delete", "data": {"char_count": step.char_count}}
-                logger.info(f"[AI Opponent] Duel {duel_id}: Deleting {step.char_count} characters.")
-                await manager.broadcast_to_all(duel_id, json.dumps(payload))
+                step = step_model.root
+
+                if isinstance(step, CodeTypingAction):
+                    # Typing delay based on speed and content length
+                    delay = max(0.05, len(step.content) * 0.1 / step.speed)
+                    await asyncio.sleep(delay)
+
+                    payload = {"type": "ai_progress", "data": {"code_chunk": step.content}}
+                    logger.info(f"[AI Opponent] Duel {duel_id}: Broadcasting chunk: {step.content[:40]}...")
+                    await manager.broadcast_to_all(duel_id, json.dumps(payload))
+
+                elif isinstance(step, PauseAction):
+                    await asyncio.sleep(step.duration)
+                    logger.info(f"[AI Opponent] Duel {duel_id}: Paused for {step.duration}s.")
+
+                elif isinstance(step, DeleteAction):
+                    # Send a special message for deletion; frontend can implement this later
+                    await asyncio.sleep(0.5) # Short delay for effect
+                    payload = {"type": "ai_delete", "data": {"char_count": step.char_count}}
+                    logger.info(f"[AI Opponent] Duel {duel_id}: Deleting {step.char_count} characters.")
+                    await manager.broadcast_to_all(duel_id, json.dumps(payload))
 
         logger.info(f"[AI Opponent] Duel {duel_id}: Finished typing.")
 
@@ -345,32 +378,27 @@ async def run_ai_opponent(duel_id: str, solution: str, template: str, steps: lis
         await asyncio.sleep(random.uniform(1.0, 3.0)) # Simulate a final check before submitting
         logger.info(f"[AI Opponent] Duel {duel_id}: Submitting solution.")
 
-        db = SessionLocal()
-        try:
-            duel = await service.get_duel(db, UUID(duel_id))
-            if not duel:
-                logger.error(f"[AI Opponent] Duel {duel_id}: Could not find duel to submit.")
+        # Crucial final check before AI attempts to submit
+        async with SessionLocal() as db_session_final:
+            duel = await service.get_duel(db_session_final, UUID(duel_id))
+            if not duel or duel.status != models.DuelStatus.IN_PROGRESS:
+                logger.info(f"[AI Opponent] Duel {duel_id}: Duel already completed before AI submission. AI will not submit.")
                 return
 
-            # Check if player one has already solved it
+            # Check if player one has already solved it (secondary check, duel.status is primary)
             if duel.results and duel.results.get("p1_solved_at"):
                 logger.info(f"[AI Opponent] Duel {duel_id}: Player 1 already solved. AI will not submit.")
                 return
 
-            # Record AI's solve time. Since there's no player_two, we use a special key.
+            # Record AI's solve time.
             results_data = duel.results or {}
             results_data["ai_solved_at"] = datetime.now(timezone.utc).isoformat()
-            
-            # The AI is always the first (and only) solver in this context
             results_data["first_solver"] = "ai"
 
-            await service.update_duel_results(db, duel, results_data)
+            await service.update_duel_results(db_session_final, duel, results_data)
             
             # End the duel and broadcast the results
-            await duel_flow_service.end_duel_and_broadcast(db, duel.id, for_ai=True)
-
-        finally:
-            await db.close()
+            await duel_flow_service.end_duel_and_broadcast(db_session_final, duel.id, for_ai=True)
 
     except Exception as e:
         logger.error(f"[AI Opponent] Duel {duel_id}: An error occurred: {e}", exc_info=True)

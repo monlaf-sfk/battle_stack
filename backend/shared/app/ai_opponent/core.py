@@ -2,6 +2,9 @@ import difflib
 import random
 from pydantic import BaseModel, Field, RootModel
 from typing import List, Literal, Union
+import logging
+
+logger = logging.getLogger(__name__)
 
 class CodeTypingAction(BaseModel):
     action: Literal["type"] = "type"

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from uuid import UUID
 from datetime import datetime
 from .models import DuelStatus
@@ -130,3 +130,7 @@ class MatchHistoryItem(BaseModel):
     rating_change: Optional[int] = None
     problem_title: str
     played_at: datetime
+
+class DuelEndMessage(BaseModel):
+    type: Literal["duel_end"] = "duel_end"
+    data: DuelResult

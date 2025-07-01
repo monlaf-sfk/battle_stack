@@ -8,12 +8,16 @@ from .models import Duel, DuelStatus, PlayerRating
 from .elo import update_elo_ratings
 from datetime import datetime, timezone, timedelta
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 async def get_duel(db: AsyncSession, duel_id: UUID) -> models.Duel | None:
     """
     Retrieves a specific duel by its ID.
     """
-    return await db.scalar(select(models.Duel).where(models.Duel.id == duel_id))
+    result = await db.execute(select(models.Duel).where(models.Duel.id == duel_id))
+    return result.scalar_one_or_none()
 
 async def get_active_or_waiting_duel(db: AsyncSession, user_id: UUID):
     """
@@ -85,25 +89,17 @@ async def find_or_create_duel(db: AsyncSession, player_id: UUID, problem_id: UUI
 
 async def end_duel(db: AsyncSession, duel_id: UUID, final_results: schemas.DuelResult, status: DuelStatus = DuelStatus.COMPLETED):
     """Ends the duel and records the final results."""
-    duel = await db.get(models.Duel, duel_id)
+    duel = await get_duel(db, duel_id)
     if duel:
         duel.status = status
-        
-        # Convert the results to dict and ensure UUIDs are strings for JSON serialization
-        results_dict = final_results.model_dump(mode='json')
-        
-        # Manually convert UUID fields to strings
-        if 'winner_id' in results_dict and results_dict['winner_id']:
-            results_dict['winner_id'] = str(results_dict['winner_id'])
-        if results_dict.get('player_one_result') and 'player_id' in results_dict['player_one_result']:
-            results_dict['player_one_result']['player_id'] = str(results_dict['player_one_result']['player_id'])
-        if results_dict.get('player_two_result') and 'player_id' in results_dict['player_two_result']:
-            results_dict['player_two_result']['player_id'] = str(results_dict['player_two_result']['player_id'])
-        
-        duel.results = results_dict
+        duel.results = final_results.model_dump(mode='json')
         duel.finished_at = datetime.now(timezone.utc)
-        await db.flush()
-    return duel
+        db.add(duel)
+        await db.commit()
+        await db.refresh(duel) # Ensure the object is refreshed after commit
+        logger.info(f"Duel {duel_id} marked as {status} in DB.")
+        return duel
+    return None
 
 async def end_timed_out_duels(db: AsyncSession, time_limit_seconds: int):
     """Marks duels as timed out if they've been in progress for too long."""

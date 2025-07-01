@@ -118,14 +118,43 @@ export const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ duel }) => {
         if (message.user_id !== userId) setOpponentCode(message.code || '');
         break;
       case 'ai_progress':
-        if (message.data?.code) {
-          if (!aiStartedTyping) {
-            setOpponentCode(message.data.code);
-            setAiStartedTyping(true);
-          } else {
-            setOpponentCode(prev => prev + message.data.code);
-          }
-        }
+        // This is AI typing progress
+        const aiCodeChunk = message.data.code_chunk;
+        setAiStartedTyping(true);
+        setOpponentCode(prev => prev + aiCodeChunk);
+
+        // Update AI's code in the duel state (optional for rendering AI's code)
+        // if (aiCodeChunk !== undefined) {
+        //   // Assuming you have a dispatch function to update the duel state
+        //   // dispatch({
+        //   //   type: 'SOCKET_MESSAGE_RECEIVED',
+        //   //   payload: {
+        //   //     type: 'code_update',
+        //   //     user_id: aiOpponentId,
+        //   //     code: (duel.player_two_code || '') + aiCodeChunk,
+        //   //     language: selectedLanguage, // Assume AI uses the same language as player for now
+        //   //     timestamp: Date.now(),
+        //   //   },
+        //   // });
+        // }
+        break;
+      case 'ai_delete':
+        // Handle AI deleting characters
+        const charCount = message.data.char_count;
+        setOpponentCode(prev => prev.slice(0, -charCount));
+        setAiStartedTyping(true);
+
+        // Update AI's code in the duel state (optional for rendering AI's code)
+        // dispatch({
+        //   type: 'SOCKET_MESSAGE_RECEIVED',
+        //   payload: {
+        //   //     type: 'code_update',
+        //   //     user_id: aiOpponentId,
+        //   //     code: (duel.player_two_code || '').slice(0, -charCount),
+        //   //     language: selectedLanguage, // Assume AI uses the same language as player for now
+        //   //     timestamp: Date.now(),
+        //   },
+        // });
         break;
       case 'test_result':
         if (message.user_id === userId) {
@@ -135,8 +164,13 @@ export const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ duel }) => {
         }
         break;
       case 'duel_end':
-        setDuelComplete(true);
-        setDuelResult(message.data);
+        try {
+          const duelEndMessageData = message.data; // Now directly an object
+          setDuelComplete(true);
+          setDuelResult(duelEndMessageData);
+        } catch (error) {
+          console.error('Error processing duel_end message in TetrisDuelArena:', error, message.data);
+        }
         break;
       default:
         console.log('Unknown message type', (message as any).type);

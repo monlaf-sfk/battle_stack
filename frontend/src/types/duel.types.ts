@@ -118,7 +118,7 @@ export interface DuelEndMessage {
 
 export interface DuelStartMessage {
     type: 'duel_start';
-    data: Duel;
+    data: DuelResponse;
 }
 
 export interface TestResultMessage {
@@ -134,7 +134,14 @@ export interface TestResultMessage {
 export interface AIProgressMessage {
     type: 'ai_progress';
     data: {
-        code: string;
+        code_chunk: string;
+    };
+}
+
+export interface AIDeleteMessage {
+    type: 'ai_delete';
+    data: {
+        char_count: number;
     };
 }
 
@@ -146,7 +153,8 @@ export type WSMessage =
     | DuelStartMessage 
     | DuelEndMessage 
     | TestResultMessage 
-    | AIProgressMessage;
+    | AIProgressMessage
+    | AIDeleteMessage;
 
 export interface Notification {
   id: number;
@@ -329,6 +337,9 @@ export interface Duel {
   started_at?: string;
   finished_at?: string | null;
   problem?: DuelProblem;
+  difficulty: DuelDifficulty;
+  player_one_code_language?: Language;
+  rating_changes?: Record<string, number>;
 }
 
 export interface AIDuelCreateRequest {

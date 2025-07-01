@@ -10,7 +10,7 @@ import AdminProblemsPage from './pages/AdminProblemsPage';
 import { MainLayout } from './components/layout/MainLayout';
 import { LayoutProvider } from './contexts/LayoutContext';
 import QuickDuelPage from './pages/QuickDuelPage';
-import ProblemsPage from './pages/ProblemsPage';
+// import ProblemsPage from './pages/ProblemsPage';
 import ProblemSolvingPage from './pages/ProblemSolvingPage';
 import ProfilePage from './pages/ProfilePage';
 import PvEDuelPage from './pages/PvEDuelPage';
@@ -48,7 +48,7 @@ const AppRoutes = () => {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/problems" element={<ProblemsPage />} />
+            {/* <Route path="/problems" element={<ProblemsPage />} /> */}
             <Route path="/problems/:problemId" element={<ProblemSolvingPage />} />
             <Route path="/admin/problems" element={<AdminProblemsPage />} />
             <Route path="/quick-duel" element={<QuickDuelPage />} />
