@@ -1,7 +1,10 @@
 import { useEffect, useRef, useCallback } from 'react';
 import type { WSMessage } from '../types/duel.types';
 
-const DUELS_WS_BASE_URL = `ws://${window.location.host}/ws`;
+const getWebSocketBaseUrl = () => {
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${protocol}://${window.location.host}/ws`;
+};
 
 export interface UniversalDuelSocketProps {
   duelId: string;
@@ -41,6 +44,7 @@ export const useUniversalDuelSocket = ({
       return;
     }
 
+    const DUELS_WS_BASE_URL = getWebSocketBaseUrl();
     console.log(`WebSocket: Attempting to connect to ${DUELS_WS_BASE_URL}/${duelId}/${userId}`);
     const ws = new WebSocket(`${DUELS_WS_BASE_URL}/${duelId}/${userId}`);
     wsRef.current = ws;
@@ -93,4 +97,4 @@ export const useUniversalDuelSocket = ({
   }, []);
 
   return { sendMessage };
-}; 
+};
