@@ -51,7 +51,7 @@ async def generate_ai_problem(theme: str, difficulty: str, language: str) -> Gen
         raise HTTPException(status_code=500, detail=f"Failed to generate AI problem: {str(e)}")
 
 
-router = APIRouter(prefix="/duels")
+router = APIRouter()
 
 @router.get("/test-debug")
 async def test_debug():

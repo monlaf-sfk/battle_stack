@@ -24,10 +24,9 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
+# Import models for AUTH SERVICE ONLY
 from shared.app.database import Base
-from shared.app.auth import models
+from shared.app.auth.models import User, AdminAuditLog
 
 target_metadata = Base.metadata
 
@@ -39,7 +38,7 @@ def get_url():
         return url
     
     # Fallback to environment variable
-    url = os.getenv('DATABASE_URL')
+    url = os.getenv('DATABASE_URL', 'postgresql://auth_user:auth_password@auth-db:5432/auth_db')
     if url:
         # Convert async URL to sync for Alembic
         if '+asyncpg' in url:

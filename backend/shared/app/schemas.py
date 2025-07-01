@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, UUID4, field_validator
+from pydantic import BaseModel, EmailStr, UUID4, field_validator, constr
 from typing import Optional, List, Any
 from datetime import datetime
 import uuid
@@ -43,17 +43,19 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    password: str
+    password: constr(min_length=6, max_length=128)
 
 
 class User(UserBase):
-    id: str
-    role: str
-    is_active: bool
-    is_verified: bool
-    created_at: str
-    updated_at: str
-    last_login: Optional[str] = None
+    id: uuid.UUID
+    role: str = "user"
+    is_active: bool = True
+    is_verified: bool = False
+    created_at: datetime
+    updated_at: datetime
+    last_login: Optional[datetime] = None
+    google_picture: Optional[str] = None
+    oauth_provider: Optional[str] = None
 
     @field_validator('id', mode='before')
     @classmethod
@@ -140,3 +142,8 @@ class Pagination(BaseModel):
 
 class Message(BaseModel):
     message: str
+
+
+class UserUpdate(BaseModel):
+    username: Optional[constr(min_length=3, max_length=128, pattern="^[A-Za-z0-9-_]+$")] = None
+    full_name: Optional[constr(min_length=1, max_length=128)] = None

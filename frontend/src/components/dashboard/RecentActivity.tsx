@@ -40,7 +40,7 @@ const RecentActivity: React.FC = () => {
         const publicMatches = await duelsApiService.getPublicRecentMatches(5);
         
         // Transform the data to match RecentDuel interface
-        const transformedDuels = publicMatches.map((item: MatchHistoryItem) => ({
+        const transformedDuels = Array.isArray(publicMatches) ? publicMatches.map((item: MatchHistoryItem) => ({
           id: item.id,
           opponent_name: item.opponent_name,
           is_victory: item.is_victory,
@@ -48,7 +48,7 @@ const RecentActivity: React.FC = () => {
           problem_title: item.problem_title,
           rating_change: item.rating_change,
           played_at: item.played_at
-        }));
+        })) : [];
         
         setRecentDuels(transformedDuels);
       } catch (err) {

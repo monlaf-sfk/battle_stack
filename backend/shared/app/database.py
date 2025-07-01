@@ -1,5 +1,7 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
+from sqlalchemy.exc import ProgrammingError
+import asyncio # Import asyncio
 
 from .config import settings
 

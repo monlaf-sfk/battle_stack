@@ -329,4 +329,11 @@ export interface Duel {
   started_at?: string;
   finished_at?: string | null;
   problem?: DuelProblem;
+}
+
+export interface AIDuelCreateRequest {
+  user_id: string | null;
+  theme: string;
+  difficulty: string;
+  language: string;
 } 

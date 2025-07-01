@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 export interface User {
   id: string;
   username: string;
@@ -19,32 +21,25 @@ export interface UserPermissions {
 }
 
 class UserService {
-  private baseUrl = 'http://localhost:8001'; // Auth service
+  private api = axios.create({
+    baseURL: '/api/auth', // Use the same base as auth for now
+  });
 
   async getCurrentUser(): Promise<User | null> {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return null;
+    }
+
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return null;
-
-      const response = await fetch(`${this.baseUrl}/auth/me`, {
+      const response = await this.api.get<User>('/users/me', {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Token is invalid, clear it
-          localStorage.removeItem('token');
-          return null;
-        }
-        throw new Error('Failed to fetch user');
-      }
-
-      return await response.json();
+      return response.data;
     } catch (error) {
-      console.error('Error fetching current user:', error);
+      console.error('Failed to fetch current user:', error);
       return null;
     }
   }

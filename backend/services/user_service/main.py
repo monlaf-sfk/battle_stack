@@ -14,7 +14,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(user_router, prefix="/users", tags=["users"])
+app.include_router(user_router, prefix="/api/v1/users", tags=["users"])
 
 @app.get("/health", include_in_schema=False)
 async def health_check() -> dict[str, str]:

@@ -7,10 +7,9 @@ import asyncio
 from sqlalchemy import text
 from shared.app.config import settings
 
-# Import all models from all services to ensure they are registered with Base.metadata
+# Import models FOR THIS SERVICE ONLY
 from shared.app.auth.models import User, AdminAuditLog
-from shared.app.user.models import UserProfile, UserProgress, UserAchievement
-from shared.app.problems.models import Problem, Tag, Company, CodeTemplate, TestCase, UserSubmission
+
 
 app = FastAPI(title="CodeArena Auth Service", version="0.1.0")
 
@@ -23,9 +22,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Prefix all auth routes with /auth for clarity when proxied via gateway
-app.include_router(auth_router, prefix="/auth", tags=["auth"])
-app.include_router(admin_router_v1, prefix="/admin", tags=["admin"])
+# Prefix all auth routes with /api/v1/auth for clarity when proxied via gateway
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+# Admin router also needs to conform to the standard
+app.include_router(admin_router_v1, prefix="/api/v1/admin", tags=["admin"])
 
 @app.get("/health", include_in_schema=False)
 async def health_check() -> dict[str, str]:

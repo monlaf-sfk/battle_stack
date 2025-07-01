@@ -52,7 +52,7 @@ const AppRoutes = () => {
             <Route path="/problems/:problemId" element={<ProblemSolvingPage />} />
             <Route path="/admin/problems" element={<AdminProblemsPage />} />
             <Route path="/quick-duel" element={<QuickDuelPage />} />
-            <Route path="/pve-duel" element={<PvEDuelPage />} />
+            <Route path="/duel/pve/:duelId" element={<PvEDuelPage />} />
             <Route path="/leaderboards" element={<LeaderboardsPage />} />
           </Route>
         </Routes>

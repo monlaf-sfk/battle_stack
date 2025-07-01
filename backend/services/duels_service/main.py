@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from shared.app.duels.router import router as duels_router
 from shared.app.config import settings
-from shared.app.database import SessionLocal
+from shared.app.database import SessionLocal, get_db
 from shared.app.duels.flow_service import duel_flow_service
 from shared.app.duels import service as duel_service
 
@@ -19,13 +19,12 @@ async def check_for_timed_out_duels():
     """
     while True:
         print("Running periodic check for timed-out duels...")
-        db: AsyncSession = SessionLocal()
         try:
-            await duel_service.end_timed_out_duels(db, DUEL_TIME_LIMIT_SECONDS)
-        finally:
-            await db.close()
+            async with SessionLocal() as db:
+                await duel_service.end_timed_out_duels(db, DUEL_TIME_LIMIT_SECONDS)
+        except Exception as e:
+            print(f"An error occurred in check_for_timed_out_duels: {e}")
         
-        # Wait for 60 seconds before the next check
         await asyncio.sleep(60)
 
 @asynccontextmanager
@@ -33,10 +32,15 @@ async def lifespan(app: FastAPI):
     # Startup
     print("Starting up Duels Service...")
     # Start the background task
-    asyncio.create_task(check_for_timed_out_duels())
+    background_task = asyncio.create_task(check_for_timed_out_duels())
     yield
     # Shutdown
     print("Shutting down Duels Service...")
+    background_task.cancel()
+    try:
+        await background_task
+    except asyncio.CancelledError:
+        print("Background task for checking timed-out duels was cancelled.")
 
 
 app = FastAPI(
@@ -55,7 +59,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(duels_router, prefix="/api/v1", tags=["duels"])
+app.include_router(duels_router, prefix="/api/v1/duels", tags=["duels"])
 
 @app.get("/health")
 async def health_check():

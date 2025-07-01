@@ -2,19 +2,19 @@ import axios from 'axios';
 import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
 const authApi = axios.create({
-  baseURL: (import.meta.env.VITE_AUTH_API_URL || 'http://127.0.0.1:8001') + '/auth',
+  baseURL: '/api/v1/auth',
 });
 
 const userApi = axios.create({
-  baseURL: (import.meta.env.VITE_USER_API_URL || 'http://127.0.0.1:8002') + '/users',
+  baseURL: '/api/v1/users',
 });
 
 const problemsApi = axios.create({
-  baseURL: (import.meta.env.VITE_PROBLEMS_API_URL || 'http://127.0.0.1:8003') + '/api/v1',
+  baseURL: '/api/v1/problems',
 });
 
 const duelsApi = axios.create({
-  baseURL: (import.meta.env.VITE_DUELS_API_URL || 'http://127.0.0.1:8004') + '/api/v1/duels',
+  baseURL: '/api/v1/duels',
 });
 
 // Add auth token to requests
@@ -97,9 +97,11 @@ export const dashboardApi = {
   },
   
   // Get recent duels
-  getRecentDuels: async () => {
-    return await userApi.get('/duels/recent');
-  },
+  // This function is being replaced by duelsApiService.getPublicRecentMatches
+  // getRecentDuels: async () => {
+  //   const response = await userApi.get('/duels/recent');
+  //   return response.data;
+  // },
 };
 
 // Problems API endpoints - NO MORE MOCK FALLBACKS
@@ -166,7 +168,7 @@ export const duelsApiService = {
   // Get recent matches (public)
   getRecentMatches: async () => {
     const publicDuelsApi = axios.create({
-      baseURL: (import.meta.env.VITE_DUELS_API_URL || 'http://127.0.0.1:8004') + '/api/v1/public/duels',
+      baseURL: '/api/v1/duels',
     });
     return await publicDuelsApi.get('/recent-matches');
   },
@@ -174,7 +176,7 @@ export const duelsApiService = {
   // Get public leaderboard
   getPublicLeaderboard: async () => {
     const publicDuelsApi = axios.create({
-      baseURL: (import.meta.env.VITE_DUELS_API_URL || 'http://127.0.0.1:8004') + '/api/v1/public/duels',
+      baseURL: '/api/v1/duels',
     });
     return await publicDuelsApi.get('/leaderboard');
   },
@@ -248,6 +250,11 @@ export const authApiService = {
   // Change password
   changePassword: async (oldPassword: string, newPassword: string) => {
     return await authApi.post('/change-password', { old_password: oldPassword, new_password: newPassword });
+  },
+
+  // Google OAuth Login
+  googleLogin: async (credential: string) => {
+    return await authApi.post('/google', { credential });
   },
 };
 

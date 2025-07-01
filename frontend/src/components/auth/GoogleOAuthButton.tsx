@@ -2,6 +2,7 @@ import React, { useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
 import { useNavigate } from 'react-router-dom';
+import { authApiService } from '../../services/api'; // Import the service
 
 interface GoogleOAuthButtonProps {
   onSuccess?: () => void;
@@ -46,22 +47,14 @@ export const GoogleOAuthButton: React.FC<GoogleOAuthButtonProps> = ({
     try {
       console.log('🔐 Google OAuth credential received');
       
-      // Send credential to our backend
-      const authApiUrl = import.meta.env.VITE_AUTH_API_URL || 'http://127.0.0.1:8001';
-      const response = await fetch(`${authApiUrl}/auth/google`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ credential }),
-      });
+      // Send credential to our backend using the centralized service
+      const response = await authApiService.googleLogin(credential);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Google authentication failed');
+      if (!response.data) {
+        throw new Error('Google authentication failed');
       }
 
-      const authData: GoogleOAuthResponse = await response.json();
+      const authData: GoogleOAuthResponse = response.data;
       
       // Store tokens using our auth context
       login(authData.access_token, authData.refresh_token);

@@ -103,7 +103,7 @@ const AdminProblemsPage: React.FC = () => {
         if (value) queryParams.append(key, value);
       });
 
-      const response = await fetch(`http://localhost:8003/api/v1/admin/problems?${queryParams}`, {
+      const response = await fetch(`/api/v1/admin/problems?${queryParams}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
@@ -123,7 +123,7 @@ const AdminProblemsPage: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('http://localhost:8003/api/v1/admin/stats', {
+      const response = await fetch('/api/v1/admin/stats', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
@@ -141,7 +141,7 @@ const AdminProblemsPage: React.FC = () => {
 
   const fetchTags = async () => {
     try {
-      const response = await fetch('http://localhost:8003/api/v1/admin/tags', {
+      const response = await fetch('/api/v1/admin/tags', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
@@ -159,7 +159,7 @@ const AdminProblemsPage: React.FC = () => {
 
   const fetchCompanies = async () => {
     try {
-      const response = await fetch('http://localhost:8003/api/v1/admin/companies', {
+      const response = await fetch('/api/v1/admin/companies', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
@@ -179,7 +179,7 @@ const AdminProblemsPage: React.FC = () => {
     if (selectedProblems.size === 0) return;
 
     try {
-      const response = await fetch('http://localhost:8003/api/v1/admin/problems/bulk/status', {
+      const response = await fetch('/api/v1/admin/problems/bulk/status', {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -204,7 +204,7 @@ const AdminProblemsPage: React.FC = () => {
     if (!confirm('Are you sure you want to delete this problem?')) return;
 
     try {
-      const response = await fetch(`http://localhost:8003/api/v1/admin/problems/${problemId}`, {
+      const response = await fetch(`/api/v1/admin/problems/${problemId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -231,7 +231,7 @@ const AdminProblemsPage: React.FC = () => {
 
   const handleCreateProblem = async (problemData: any) => {
     try {
-      const response = await fetch('http://localhost:8003/api/v1/admin/problems', {
+      const response = await fetch('/api/v1/admin/problems', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -256,7 +256,7 @@ const AdminProblemsPage: React.FC = () => {
     if (!editingProblem) return;
 
     try {
-      const response = await fetch(`http://localhost:8003/api/v1/admin/problems/${editingProblem.id}`, {
+      const response = await fetch(`/api/v1/admin/problems/${editingProblem.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -659,7 +659,7 @@ const AdminProblemsPage: React.FC = () => {
                  tags={availableTags}
                  onCreateTag={async (tagData) => {
                    try {
-                     const response = await fetch('http://localhost:8003/api/v1/admin/tags', {
+                     const response = await fetch('/api/v1/admin/tags', {
                        method: 'POST',
                        headers: {
                          'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -677,7 +677,7 @@ const AdminProblemsPage: React.FC = () => {
                  }}
                  onDeleteTag={async (tagId) => {
                    try {
-                     const response = await fetch(`http://localhost:8003/api/v1/admin/tags/${tagId}`, {
+                     const response = await fetch(`/api/v1/admin/tags/${tagId}`, {
                        method: 'DELETE',
                        headers: {
                          'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -708,7 +708,7 @@ const AdminProblemsPage: React.FC = () => {
                  companies={availableCompanies}
                  onCreateCompany={async (companyData) => {
                    try {
-                     const response = await fetch('http://localhost:8003/api/v1/admin/companies', {
+                     const response = await fetch('/api/v1/admin/companies', {
                        method: 'POST',
                        headers: {
                          'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -726,7 +726,7 @@ const AdminProblemsPage: React.FC = () => {
                  }}
                  onDeleteCompany={async (companyId) => {
                    try {
-                     const response = await fetch(`http://localhost:8003/api/v1/admin/companies/${companyId}`, {
+                     const response = await fetch(`/api/v1/admin/companies/${companyId}`, {
                        method: 'DELETE',
                        headers: {
                          'Authorization': `Bearer ${localStorage.getItem('token')}`

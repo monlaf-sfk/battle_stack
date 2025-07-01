@@ -23,7 +23,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Import the shared database Base and user models
+# Import models for USER SERVICE ONLY
 from shared.app.database import Base
 from shared.app.user.models import UserProfile, UserProgress, UserAchievement
 
@@ -37,7 +37,7 @@ def get_url():
         return url
     
     # Fallback to environment variable
-    url = os.getenv('DATABASE_URL')
+    url = os.getenv('DATABASE_URL', 'postgresql://user_user:user_password@user-db:5432/user_db')
     if url:
         # Convert async URL to sync for Alembic
         if '+asyncpg' in url:

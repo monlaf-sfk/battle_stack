@@ -1,12 +1,18 @@
 import os
 import json
+import asyncio
+import uuid
 from openai import OpenAI
-from pydantic import BaseModel, Field
-from typing import List, Dict, Any
+from pydantic import BaseModel, Field, RootModel, field_validator
+from typing import List, Dict, Any, Union
+import logging
+
+from shared.app.code_runner import execute_code, SubmissionParams
 
 # It's good practice to initialize the client once and reuse it.
 # The API key will be read from the OPENAI_API_KEY environment variable.
 client = OpenAI()
+logger = logging.getLogger(__name__)
 
 class TestCase(BaseModel):
     input_data: str
@@ -19,6 +25,7 @@ class CodeTemplate(BaseModel):
     template_code: str
 
 class GeneratedProblem(BaseModel):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4)
     title: str
     description: str
     difficulty: str
@@ -62,8 +69,8 @@ def generate_algorithm_problem_prompt(theme: str, difficulty: str, language: str
     
     Requirements:
     1. Create a high-quality, solvable, and interesting problem suitable for competitive programming.
-    2. Provide a COMPLETE and **100% CORRECT** solution in the `solution` field.
-    3. The `code_templates` field should contain only boilerplate/starter code with a 'TODO' comment, NOT the solution.
+    2. Provide a COMPLETE and **100% CORRECT** solution in the `solution` field. This field must contain **ONLY** the function definition(s) required to solve the problem, with no top-level script, example calls, or `print` statements.
+    3. The `code_templates` field should contain only boilerplate/starter code with a 'TODO' comment, NOT the solution. It must be a full, runnable script that handles input and output.
     4. Include 3-5 diverse and effective test cases, including edge cases.
     5. **CRITICAL**: For each test case, the `expected_output` MUST be the result of running your provided `solution` code with the `input_data`. You must verify this yourself. Double-check for correctness. Do not include incorrect test cases.
     6. Provide code templates for at least Python.
@@ -85,7 +92,7 @@ def generate_algorithm_problem_prompt(theme: str, difficulty: str, language: str
       print(result)
       ```
 
-    The `solution` field, however, must contain the complete and correct, working code for the problem.
+    The `solution` field must contain ONLY the raw function definition(s), like `def my_function(a, b): ...`.
     
     **Verification Step (Internal Monologue for you, the AI):**
     - "After generating the solution and test cases, I will mentally (or actually) run the solution against each input to confirm the output is correct. For `[4, 4, 4]`, the subarrays are [4], [4], [4], [4,4], [4,4], [4,4,4]. The maxes are 4, 4, 4, 4, 4, 4. The sum is 24. My `expected_output` for this test case must be '24'."
@@ -135,6 +142,7 @@ def generate_sql_problem_prompt(category: str, difficulty: str, topic: str) -> s
 async def generate_algorithm_problem(theme: str, difficulty: str, language: str = "python") -> GeneratedProblem:
     """
     Generates a new algorithmic problem using AI for competitive programming duels.
+    This function now also self-corrects the test cases by running the generated solution.
     """
     prompt = generate_algorithm_problem_prompt(theme, difficulty, language)
     
@@ -153,7 +161,32 @@ async def generate_algorithm_problem(theme: str, difficulty: str, language: str 
         parsed_json = json.loads(response_json)
         
         # Validate the parsed JSON against our Pydantic model
-        problem = GeneratedProblem.model_validate(parsed_json)
+        problem = GeneratedProblem(**parsed_json)
+        
+        # Self-correction step: Run the generated solution against the generated inputs
+        # to create a ground-truth for expected outputs.
+        logger.info(f"Self-correcting test cases for generated problem: {problem.title}")
+        for i, test_case in enumerate(problem.test_cases):
+            logger.info(f"Running solution against test case {i+1} input: {test_case.input_data}")
+            params = SubmissionParams(
+                source_code=problem.solution,
+                language_id=71,  # Python 3
+                stdin=test_case.input_data,
+            )
+            result = await execute_code(params)
+
+            if result.status['description'] == 'Accepted' and result.stdout is not None:
+                corrected_output = result.stdout.strip()
+                if test_case.expected_output.strip() != corrected_output:
+                    logger.warning(f"Correcting test case {i+1}. Original output: '{test_case.expected_output}', Corrected output: '{corrected_output}'")
+                test_case.expected_output = corrected_output
+            else:
+                # If the solution code fails on one of its own test cases, the problem is invalid.
+                error_details = result.stderr or result.compile_output or result.message
+                logger.error(f"Generated solution failed validation for input '{test_case.input_data}'. Error: {error_details}")
+                raise ValueError(f"Generated solution is invalid and failed on its own test case: {test_case.input_data}")
+        
+        logger.info("✅ All test cases self-corrected successfully.")
         
         # Manually set the first two test cases to be public
         if problem.test_cases:
@@ -186,7 +219,7 @@ except:
         return problem
         
     except Exception as e:
-        print(f"Error generating algorithm problem: {e}")
+        logger.error(f"Error generating and self-correcting algorithm problem: {e}", exc_info=True)
         raise
 
 # Legacy SQL problem generator

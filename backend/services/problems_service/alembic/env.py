@@ -23,7 +23,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Import all models to ensure they are registered with Base.metadata
+# Import models for PROBLEMS SERVICE ONLY
 from shared.app.database import Base
 from shared.app.problems.models import (
     Problem, Tag, Company, TestCase, CodeTemplate, 
@@ -40,7 +40,7 @@ def get_url():
         return url
     
     # Fallback to environment variable
-    url = os.getenv('DATABASE_URL')
+    url = os.getenv('DATABASE_URL', 'postgresql://problems_user:problems_password@problems-db:5432/problems_db')
     if url:
         # Convert async URL to sync for Alembic
         if '+asyncpg' in url:

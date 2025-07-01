@@ -1,5 +1,5 @@
--- Create databases for each service
-CREATE DATABASE auth_db;
-CREATE DATABASE user_db; 
-CREATE DATABASE problem_db;
-CREATE DATABASE duels_db;
+-- This file is for common database initialization tasks, like enabling extensions.
+-- Individual databases are created via POSTGRES_DB environment variable in docker-compose.yml
+
+-- Enable uuid-ossp extension for UUID generation
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

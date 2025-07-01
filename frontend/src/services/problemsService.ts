@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Base API configuration for problems service
 const problemsApi = axios.create({
-  baseURL: 'http://127.0.0.1:8003', // Problems service port
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },

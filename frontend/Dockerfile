@@ -12,6 +12,9 @@ COPY . .
 # Build the application
 RUN npm run build
 
+# Debug: List contents of dist directory
+RUN ls -la /app/dist
+
 # Stage 2: Serve the application with Nginx
 FROM nginx:stable-alpine
 WORKDIR /usr/share/nginx/html

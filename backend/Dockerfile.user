@@ -5,24 +5,31 @@ WORKDIR /app
 # Install PostgreSQL client for pg_isready command
 RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
 
+# Copy and install requirements
 COPY requirements.txt .
-RUN pip install --upgrade pip setuptools wheel -i https://pypi.tuna.tsinghua.edu.cn/simple
+RUN pip install --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy shared library and service code
 COPY ./shared /app/shared
 COPY ./services/user_service /app/user_service
 
-# Copy wait_for_db script
+# Install the shared module
+RUN pip install --no-cache-dir ./shared
+
+# Copy and setup scripts
 COPY ./services/user_service/wait_for_db.py /app/wait_for_db.py
 RUN chmod +x /app/wait_for_db.py
 
-RUN pip install --no-cache-dir --force-reinstall --retries 5 --timeout 30 -i https://pypi.tuna.tsinghua.edu.cn/simple ./shared
-
-# Copy entrypoint and make it executable
 COPY ./services/user_service/entrypoint.sh /app/user_service/entrypoint.sh
 RUN chmod +x /app/user_service/entrypoint.sh
 
 # Set environment variables
 ENV PYTHONPATH=/app
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Expose port
+EXPOSE 8000
 
 ENTRYPOINT ["/app/user_service/entrypoint.sh"] 

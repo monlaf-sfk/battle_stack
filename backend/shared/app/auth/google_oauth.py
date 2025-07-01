@@ -14,6 +14,7 @@ from google.auth.exceptions import GoogleAuthError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from fastapi import HTTPException, status
+from fastapi.concurrency import run_in_threadpool
 
 from shared.app.auth.models import User as UserModel, UserRole
 from shared.app.auth.service import get_user_by_email, create_user_google
@@ -34,16 +35,54 @@ class GoogleOAuthService:
     
     def __init__(self):
         self.client_id = self._get_google_client_id()
+        self.client_secret = self._get_google_client_secret()
+        
+        # Log configuration status
         if not self.client_id:
-            print("⚠️ Google OAuth not configured - GOOGLE_CLIENT_ID environment variable not set")
+            print("❌ Google OAuth not configured - GOOGLE_CLIENT_ID environment variable not set")
+            print("🔧 Run setup-google-oauth.sh to configure OAuth")
+        elif not self.client_secret:
+            print("❌ Google OAuth partially configured - GOOGLE_CLIENT_SECRET environment variable not set")
+            print("🔧 Update your .env.auth file with your Google Client Secret")
+        else:
+            print(f"✅ Google OAuth configured with Client ID: {self.client_id[:20]}...")
     
     def _get_google_client_id(self) -> Optional[str]:
         """Get Google Client ID from environment variables"""
-        return (
+        client_id = (
             os.getenv("GOOGLE_CLIENT_ID") or 
             os.getenv("GOOGLE_OAUTH_CLIENT_ID") or
             getattr(settings, "GOOGLE_CLIENT_ID", None)
         )
+        # Remove any whitespace and check for placeholder values
+        if client_id:
+            client_id = client_id.strip()
+            if client_id in ["", "YOUR_GOOGLE_CLIENT_ID_HERE"]:
+                return None
+        return client_id
+    
+    def _get_google_client_secret(self) -> Optional[str]:
+        """Get Google Client Secret from environment variables"""
+        client_secret = (
+            os.getenv("GOOGLE_CLIENT_SECRET") or 
+            os.getenv("GOOGLE_OAUTH_CLIENT_SECRET") or
+            getattr(settings, "GOOGLE_CLIENT_SECRET", None)
+        )
+        # Remove any whitespace and check for placeholder values
+        if client_secret:
+            client_secret = client_secret.strip()
+            placeholder_values = [
+                "", 
+                "YOUR_GOOGLE_CLIENT_SECRET_HERE", 
+                "GOCSPX-YOUR_ACTUAL_GOOGLE_CLIENT_SECRET_HERE",
+                "your-google-client-secret-here",
+                "your-actual-google-client-secret",
+                "GOOGLE_CLIENT_SECRET",
+                "your_google_client_secret"
+            ]
+            if client_secret in placeholder_values:
+                return None
+        return client_secret
     
     async def verify_google_token(self, credential: str) -> GoogleUserInfo:
         """
@@ -67,13 +106,16 @@ class GoogleOAuthService:
         try:
             print(f"🔍 Verifying Google ID token...")
             
-            # Verify the token using Google's library
-            # This validates the signature, expiration, issuer, and audience
-            idinfo = id_token.verify_oauth2_token(
-                credential, 
-                requests.Request(), 
-                self.client_id
-            )
+            def _verify():
+                # This function is synchronous and will be run in a thread pool.
+                # It validates the signature, expiration, issuer, and audience.
+                return id_token.verify_oauth2_token(
+                    credential, 
+                    requests.Request(), 
+                    self.client_id
+                )
+
+            idinfo = await run_in_threadpool(_verify)
             
             # Additional security checks
             if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:

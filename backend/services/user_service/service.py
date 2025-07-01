@@ -390,4 +390,4 @@ async def get_roadmap_events(db: AsyncSession, *, user_id: uuid.UUID):
 
 async def get_recent_duels(db: AsyncSession, *, user_id: uuid.UUID):
     profile = await get_or_create_user_profile(db, user_id=user_id)
-    return profile.recent_duels 
+    return profile.recent_duels or [] 

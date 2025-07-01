@@ -23,9 +23,9 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
+# Import models for DUELS SERVICE ONLY
 from shared.app.database import Base
-from shared.app.duels import models
+from shared.app.duels.models import Duel, PlayerRating
 
 target_metadata = Base.metadata
 
@@ -37,7 +37,7 @@ def get_url():
         return url
     
     # Fallback to environment variable
-    url = os.getenv('DATABASE_URL')
+    url = os.getenv('DATABASE_URL', 'postgresql://duels_user:duels_password@duels-db:5432/duels_db')
     if url:
         # Convert async URL to sync for Alembic
         if '+asyncpg' in url:

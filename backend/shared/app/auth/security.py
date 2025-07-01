@@ -7,12 +7,9 @@ from passlib.context import CryptContext
 from pydantic import UUID4
 from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from shared.app.config import settings
 from .jwt_models import JWTUser
 from .models import User
-from ..database import get_db
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
@@ -101,7 +98,7 @@ def verify_refresh_token(token: str) -> dict[str, Any]:
         )
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> JWTUser:
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> JWTUser:
     """Dependency to get current user from JWT token (microservice-friendly)."""
     print(f"🐛 DEBUG: get_current_user called with token: {token[:50]}...")
     
