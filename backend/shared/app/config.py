@@ -56,8 +56,13 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     DATABASE_URL: str
     ENVIRONMENT: str = "development"
-    OPENAI_API_KEY: str = ""
     JUDGE0_API_KEY: str = ""
+
+    # Azure OpenAI Configuration
+    AZURE_OPENAI_ENDPOINT: str = "https://battlestackai.openai.azure.com/"
+    AZURE_OPENAI_API_KEY: str = ""
+    AZURE_OPENAI_API_VERSION: str = "2024-12-01-preview"
+    AZURE_OPENAI_DEPLOYMENT_NAME: str = "gpt-4o-mini"
     
     # 🔐 Google OAuth Configuration
     GOOGLE_CLIENT_ID: str = ""

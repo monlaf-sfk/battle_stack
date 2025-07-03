@@ -37,7 +37,7 @@ const RecentActivity: React.FC = () => {
         setError(null);
 
         // Fetch from public duels endpoint
-        const publicMatches = await duelsApiService.getPublicRecentMatches(5);
+        const publicMatches = await duelsApiService.getMatchHistory(5);
         
         // Transform the data to match RecentDuel interface
         const transformedDuels = Array.isArray(publicMatches) ? publicMatches.map((item: MatchHistoryItem) => ({

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock, Loader2, Plus, Users } from 'lucide-react';
 import { Button } from './Button';
 import { useToast } from './Toast';
-import { joinPrivateRoom, createPrivateRoom } from '../../services/duelService';
+import duelsApiService, { createPrivateRoom } from '../../services/duelService';
 import { useNavigate } from 'react-router-dom';
 
 interface JoinPrivateRoomModalProps {
@@ -45,7 +45,7 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
     try {
       setIsJoining(true);
       
-      const duel = await joinPrivateRoom(roomCode.toUpperCase());
+      const duel = await duelsApiService.joinRoom(roomCode.toUpperCase());
       
       addToast({
         type: 'success',

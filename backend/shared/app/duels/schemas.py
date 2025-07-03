@@ -104,6 +104,7 @@ class AIDuelCreateRequest(BaseModel):
     theme: str
     difficulty: str
     language: str
+    category: str = "algorithms"
 
 class DuelStats(BaseModel):
     total_duels: int

@@ -1,247 +1,215 @@
-import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Zap, BookOpen, Code, Flame, Shield } from 'lucide-react';
+import { Button } from '../ui/Button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { motion } from "framer-motion";
 
-interface AIDuelSettingsModalProps {
+export interface AIDuelSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onStartDuel: (settings: AIDuelSettings) => void;
-  isLoading?: boolean;
+  onStart: (settings: AIDuelSettings) => void;
 }
 
 export interface AIDuelSettings {
   theme: string;
   difficulty: 'easy' | 'medium' | 'hard' | 'expert';
   language: string;
+  category: 'algorithms' | 'sql';
 }
 
-const THEMES = [
-  { value: 'algorithms', label: 'Algorithms', description: 'Array operations, sorting, searching' },
-  { value: 'data_structures', label: 'Data Structures', description: 'Trees, graphs, hash maps, stacks' },
-  { value: 'sql', label: 'SQL', description: 'Database queries and optimization' },
-  { value: 'math', label: 'Mathematics', description: 'Number theory, geometry, statistics' }
-];
-
 const DIFFICULTIES = [
-  { 
-    value: 'easy', 
-    label: 'Easy', 
-    description: '3-8 minutes • Basic algorithms',
-    color: 'text-green-600 bg-green-50 border-green-200'
-  },
-  { 
-    value: 'medium', 
-    label: 'Medium', 
-    description: '8-15 minutes • Data structures',
-    color: 'text-yellow-600 bg-yellow-50 border-yellow-200'
-  },
-  { 
-    value: 'hard', 
-    label: 'Hard', 
-    description: '15-25 minutes • Advanced algorithms',
-    color: 'text-orange-600 bg-orange-50 border-orange-200'
-  },
-  { 
-    value: 'expert', 
-    label: 'Expert', 
-    description: '25+ minutes • Complex optimization',
-    color: 'text-red-600 bg-red-50 border-red-200'
-  }
+    { value: 'easy', label: 'Easy', description: 'Beginner-friendly problems', color: 'text-green-500' },
+    { value: 'medium', label: 'Medium', description: 'Challenging, requires some thought', color: 'text-yellow-500' },
+    { value: 'hard', label: 'Hard', description: 'Complex, for experienced coders', color: 'text-red-500' },
+    { value: 'expert', label: 'Expert', description: 'Very difficult, for pros', color: 'text-purple-500' },
 ];
 
-const LANGUAGES = [
-  { value: 'python', label: 'Python', icon: '🐍' },
-  { value: 'javascript', label: 'JavaScript', icon: '🟨' },
-  { value: 'typescript', label: 'TypeScript', icon: '🔷' },
-  { value: 'java', label: 'Java', icon: '☕' },
-  { value: 'cpp', label: 'C++', icon: '⚡' },
-  { value: 'sql', label: 'SQL', icon: '🗄️' }
+const availableThemes = {
+  algorithms: [
+    { value: 'dynamic_programming', label: 'Dynamic Programming', icon: <Code className="w-4 h-4" />  },
+    { value: 'graph_theory', label: 'Graph Theory', icon: <Zap className="w-4 h-4" /> },
+    { value: 'string_manipulation', label: 'String Manipulation', icon: <BookOpen className="w-4 h-4" />  },
+  ],
+  sql: [
+    { value: 'sql', label: 'SQL', icon: <Flame className="w-4 h-4" />  },
+  ],
+};
+
+const languagesForCategory = {
+  algorithms: [
+    { value: 'python', label: 'Python' },
+    { value: 'javascript', label: 'JavaScript' },
+    { value: 'java', label: 'Java' },
+    { value: 'cpp', label: 'C++' },
+    { value: 'rust', label: 'Rust' },
+    { value: 'go', label: 'Go' },
+  ],
+  sql: [
+    { value: 'sql', label: 'SQL' },
+  ]
+};
+
+const categoryOptions = [
+  { value: 'algorithms', label: 'Algorithms', icon: <Code className="w-5 h-5" /> },
+  { value: 'sql', label: 'SQL', icon: <Shield className="w-5 h-5" /> },
 ];
 
 export const AIDuelSettingsModal: React.FC<AIDuelSettingsModalProps> = ({
   isOpen,
   onClose,
-  onStartDuel,
-  isLoading = false
+  onStart,
 }) => {
   const [settings, setSettings] = useState<AIDuelSettings>({
-    theme: 'algorithms',
+    theme: availableThemes.algorithms[0].value,
     difficulty: 'medium',
-    language: 'python'
+    language: languagesForCategory.algorithms[0].value,
+    category: 'algorithms',
   });
 
-  // Load saved preferences
-  useEffect(() => {
-    const savedSettings = localStorage.getItem('ai_duel_preferences');
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings);
-        setSettings(prev => ({
-          ...prev,
-          ...parsed
-        }));
-      } catch (error) {
-        console.warn('Failed to parse saved AI duel preferences');
-      }
-    }
-  }, []);
-
-  // Save preferences when settings change
-  useEffect(() => {
-    localStorage.setItem('ai_duel_preferences', JSON.stringify(settings));
-  }, [settings]);
-
   const handleStartDuel = () => {
-    onStartDuel(settings);
+    onStart(settings);
   };
 
   const updateSetting = <K extends keyof AIDuelSettings>(
-    key: K, 
+    key: K,
     value: AIDuelSettings[K]
   ) => {
-    setSettings(prev => ({
-      ...prev,
-      [key]: value
-    }));
+    setSettings(prev => {
+      const newState = { ...prev, [key]: value };
+      // If category changes, reset theme and language
+      if (key === 'category') {
+        const newCategory = value as 'algorithms' | 'sql';
+        newState.theme = availableThemes[newCategory][0].value;
+        newState.language = languagesForCategory[newCategory][0].value;
+      }
+      return newState;
+    });
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">🤖 AI Opponent Settings</h2>
-            <p className="text-gray-600 mt-1">Customize your duel against AI</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            disabled={isLoading}
-          >
-            <X className="w-6 h-6 text-gray-500" />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="bg-gray-900 border border-gray-700 text-white rounded-2xl shadow-2xl">
+        <DialogHeader className="px-6 pt-6">
+          <DialogTitle className="text-3xl font-bold gradient-text-safe mb-2">AI Duel Setup</DialogTitle>
+          <DialogDescription className="text-gray-400">Configure your AI opponent and problem settings.</DialogDescription>
+        </DialogHeader>
 
-        {/* Content */}
-        <div className="p-6 space-y-8">
-          {/* Theme Selection */}
+        <div className="px-6 py-6 space-y-4 flex-1">
+          {/* Category Selection */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">📚 Problem Theme</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {THEMES.map((theme) => (
-                <div
-                  key={theme.value}
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                    settings.theme === theme.value
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
+            <Label className="block text-lg font-semibold text-gray-200 mb-4">Choose Category</Label>
+            <div className="grid grid-cols-2 gap-4">
+              {categoryOptions.map((option) => (
+                <motion.div
+                  key={option.value}
+                  whileHover={{ scale: 1.03, boxShadow: "0 0 15px rgba(0,255,153,0.3)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`p-5 rounded-lg cursor-pointer transition-all duration-200 border-2 ${
+                    settings.category === option.value
+                      ? 'border-green-500 bg-green-900/20 shadow-lg'
+                      : 'border-gray-700 bg-gray-800 hover:border-gray-600'
                   }`}
-                  onClick={() => updateSetting('theme', theme.value)}
+                  onClick={() => updateSetting('category', option.value as 'algorithms' | 'sql')}
                 >
-                  <div className="font-medium text-gray-900">{theme.label}</div>
-                  <div className="text-sm text-gray-600 mt-1">{theme.description}</div>
-                </div>
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <span className="text-green-400">{option.icon}</span>
+                    <span className="font-medium text-lg text-white">{option.label}</span>
+                  </div>
+                </motion.div>
               ))}
             </div>
           </div>
 
+          {/* Problem Theme Selection */}
+          <div>
+            <Label htmlFor="theme" className="block text-lg font-semibold text-gray-200 mb-4">Problem Theme</Label>
+            <Select
+              value={settings.theme}
+              onValueChange={(value) => updateSetting('theme', value)}
+            >
+              <SelectTrigger className="w-full bg-gray-800 border-gray-700 text-white focus:ring-green-500 data-[state=open]:border-green-500">
+                <SelectValue placeholder="Select a theme" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                {availableThemes[settings.category].map((theme) => (
+                  <SelectItem key={theme.value} value={theme.value} className="flex items-center gap-2">
+                    {theme.icon} {theme.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+  
           {/* Difficulty Selection */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">⚡ Difficulty Level</h3>
-            <div className="space-y-3">
+            <Label className="block text-lg font-semibold text-gray-200 mb-4">Difficulty Level</Label>
+            <div className="grid grid-cols-1 gap-4">
               {DIFFICULTIES.map((difficulty) => (
-                <div
+                <motion.div
                   key={difficulty.value}
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  whileHover={{ scale: 1.02, boxShadow: "0 0 10px rgba(0,255,153,0.2)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`p-4 rounded-lg cursor-pointer transition-all duration-200 border-2 ${
                     settings.difficulty === difficulty.value
-                      ? `border-current ${difficulty.color}`
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? `border-current ${difficulty.color} bg-opacity-20`
+                      : 'border-gray-700 bg-gray-800 hover:border-gray-600'
                   }`}
                   onClick={() => updateSetting('difficulty', difficulty.value as AIDuelSettings['difficulty'])}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-medium text-gray-900">{difficulty.label}</div>
-                      <div className="text-sm text-gray-600">{difficulty.description}</div>
+                      <div className={`font-semibold text-lg ${difficulty.color}`}>{difficulty.label}</div>
+                      <div className="text-sm text-gray-400">{difficulty.description}</div>
                     </div>
                     {settings.difficulty === difficulty.value && (
-                      <div className="w-6 h-6 rounded-full border-2 border-current flex items-center justify-center">
-                        <div className="w-3 h-3 rounded-full bg-current"></div>
-                      </div>
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                        className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center"
+                      >
+                        <X className="w-3 h-3 text-white" />
+                      </motion.div>
                     )}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
-
+  
           {/* Language Selection */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">💻 Programming Language</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {LANGUAGES.map((language) => (
-                <div
-                  key={language.value}
-                  className={`p-3 border-2 rounded-lg cursor-pointer transition-all text-center ${
-                    settings.language === language.value
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => updateSetting('language', language.value)}
-                >
-                  <div className="text-2xl mb-1">{language.icon}</div>
-                  <div className="font-medium text-gray-900 text-sm">{language.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* AI Opponent Info */}
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-200">
-            <h4 className="font-semibold text-gray-900 mb-2">🎯 About Your AI Opponent</h4>
-            <ul className="text-sm text-gray-700 space-y-1">
-              <li>• AI adapts to your chosen difficulty level</li>
-              <li>• Realistic coding speed and thinking time</li>
-              <li>• Simulates human-like problem-solving approach</li>
-              <li>• Provides immediate feedback and learning opportunities</li>
-            </ul>
+            <Label htmlFor="language" className="block text-lg font-semibold text-gray-200 mb-4">Programming Language</Label>
+            <Select
+              value={settings.language}
+              onValueChange={(value) => updateSetting('language', value)}
+            >
+              <SelectTrigger className="w-full bg-gray-800 border-gray-700 text-white focus:ring-green-500 data-[state=open]:border-green-500">
+                <SelectValue placeholder="Select a language" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                {languagesForCategory[settings.category].map((lang) => (
+                  <SelectItem key={lang.value} value={lang.value}>{lang.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
-          <div className="text-sm text-gray-600">
-            Your preferences will be saved for future duels
-          </div>
-          <div className="flex space-x-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              disabled={isLoading}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleStartDuel}
-              disabled={isLoading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-            >
-              {isLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                  <span>Starting Duel...</span>
-                </>
-              ) : (
-                <>
-                  <span>🚀 Start AI Duel</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+        <DialogFooter className="flex justify-end border-t border-gray-700 px-6 pb-6">
+          <Button variant="ghost" onClick={onClose} className="mr-4">Cancel</Button>
+          <Button
+            onClick={handleStartDuel}
+            variant="gradient"
+            size="lg"
+            className="text-white font-bold"
+          >
+            Start AI Duel
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }; 

@@ -1,7 +1,6 @@
 import { NavLink } from "react-router-dom";
 import clsx from "clsx";
 import { useLayout } from "@/contexts/LayoutContext";
-import { useAuth } from "@/contexts/AuthContext";
 import { getMenuItems } from "./menuItems.tsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDashboard } from "../../hooks/useDashboard";
@@ -9,11 +8,10 @@ import { Flame, Zap, Crown, Lock } from "lucide-react";
 
 const Sidebar = () => {
   const { isSidebarOpen, setSidebarOpen } = useLayout();
-  const { permissions } = useAuth();
   const { data } = useDashboard();
 
   const isDesktopCollapsed = !isSidebarOpen;
-  const menuItems = getMenuItems(permissions);
+  const menuItems = getMenuItems();
 
   return (
     <>

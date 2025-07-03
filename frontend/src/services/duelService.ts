@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { userApi, duelsApi } from './api';
+import { duelsApi } from './api';
 import type { DuelCreateRequest, DuelResponse, DuelSubmission, CodeSubmission, LeaderboardEntry, MatchHistoryItem, DuelJoinRequest, SubmissionResponse, ProblemType, DuelDifficulty, AIDuelCreateRequest } from '../types/duel.types';
 
 export class DuelService {
@@ -8,23 +7,19 @@ export class DuelService {
     return response.data;
   }
 
-  async joinDuel(request?: DuelJoinRequest): Promise<DuelResponse> {
-    const response = await duelsApi.post<DuelResponse>('/matchmaking/find_or_create', null, {
-      params: request,
-    });
+  async joinDuel(duelId: string): Promise<DuelResponse> {
+    const response = await duelsApi.post<DuelResponse>(`/${duelId}/join`);
     return response.data;
   }
 
-  async getActiveOrWaitingDuel(userId: string): Promise<DuelResponse | null> {
-    try {
-      const response = await duelsApi.get<DuelResponse>(`/user/${userId}/active-or-waiting`);
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        return null;
-      }
-      throw error;
-    }
+  async submitSolution(duelId: string, submission: DuelSubmission): Promise<SubmissionResponse> {
+    const response = await duelsApi.post<SubmissionResponse>(`/${duelId}/submit`, submission);
+    return response.data;
+  }
+
+  async testCode(duelId: string, submission: CodeSubmission): Promise<any> {
+    const response = await duelsApi.post(`/${duelId}/test`, submission);
+    return response.data;
   }
 
   async getDuel(duelId: string): Promise<DuelResponse> {
@@ -32,48 +27,50 @@ export class DuelService {
     return response.data;
   }
 
-  async submitCode(duelId: string, submission: DuelSubmission): Promise<SubmissionResponse> {
-    const response = await duelsApi.post<SubmissionResponse>(`/${duelId}/submit`, submission);
+  async getLeaderboard(limit?: number): Promise<LeaderboardEntry[]> {
+    const url = limit ? `/leaderboard?limit=${limit}` : '/leaderboard';
+    const response = await duelsApi.get<LeaderboardEntry[]>(url);
     return response.data;
   }
 
-  async testCode(duelId: string, submission: CodeSubmission): Promise<{ message: string }> {
-    const response = await duelsApi.post<{ message: string }>(`/${duelId}/test`, submission);
+  async getMatchHistory(limit?: number): Promise<MatchHistoryItem[]> {
+    const url = limit ? `/matches/recent?limit=${limit}` : '/matches/recent';
+    const response = await duelsApi.get<MatchHistoryItem[]>(url);
     return response.data;
   }
 
-  async getLeaderboard(limit: number = 10): Promise<LeaderboardEntry[]> {
-    const response = await duelsApi.get<LeaderboardEntry[]>('/leaderboard', { params: { limit } });
+  async leaveDuel(duelId: string): Promise<void> {
+    await duelsApi.post(`/${duelId}/leave`);
+  }
+
+  async createPrivateRoom(request: DuelJoinRequest): Promise<DuelResponse> {
+    const response = await duelsApi.post<DuelResponse>('/rooms', request);
     return response.data;
   }
 
-  async getMyRank(userId: string): Promise<{ rank: number }> {
-    const response = await duelsApi.get<LeaderboardEntry[]>(`/leaderboard`, { params: { user_id: userId } });
-    const userEntry = response.data.find(entry => entry.user_id === userId);
-    return { rank: userEntry ? userEntry.rank : 0 };
-  }
-
-  // Get recent matches (public)
-  async getPublicRecentMatches(limit: number = 10): Promise<MatchHistoryItem[]> {
-    // The actual endpoint for recent duels is in the user service
-    const response = await userApi.get<MatchHistoryItem[]>('/duels/recent', { params: { limit } });
+  async joinRoom(roomCode: string): Promise<DuelResponse> {
+    const response = await duelsApi.post<DuelResponse>('/rooms/join', { room_code: roomCode });
     return response.data;
   }
 
-  async createCustomAIDuel(settings: AIDuelCreateRequest): Promise<DuelResponse> {
-    const response = await duelsApi.post<DuelResponse>('/ai-duel-custom', settings);
+  async createAIDuel(request: AIDuelCreateRequest): Promise<DuelResponse> {
+    const response = await duelsApi.post<DuelResponse>('/ai-duel-custom', request);
     return response.data;
   }
 }
 
 export const duelsApiService = new DuelService();
 
-// Duels API endpoints
-export const createAIDuel = async (settings: AIDuelCreateRequest): Promise<DuelResponse> => {
-  const response = await duelsApi.post<DuelResponse>('/ai-duel-custom', settings);
-  return response.data;
+// Specific service functions for different duel types
+
+// Create an AI duel with custom settings
+export const createAIDuel = async (
+  request: AIDuelCreateRequest
+): Promise<DuelResponse> => {
+  return await duelsApiService.createAIDuel(request);
 };
 
+// Legacy functions - deprecated, use createAIDuel instead
 export const createPrivateRoom = async (difficulty: DuelDifficulty = 'medium', problemType: ProblemType = 'algorithm'): Promise<DuelResponse> => {
   const response = await duelsApi.post<DuelResponse>('/', {
     mode: 'private_room',
@@ -83,29 +80,4 @@ export const createPrivateRoom = async (difficulty: DuelDifficulty = 'medium', p
   return response.data;
 };
 
-export const joinPrivateRoom = async (roomCode: string): Promise<DuelResponse> => {
-  const response = await duelsApi.post<DuelResponse>('/matchmaking/join', null, {
-    params: {
-      room_code: roomCode,
-    },
-  });
-  return response.data;
-};
-
-export const quickDuel = async (difficulty: DuelDifficulty = 'medium'): Promise<DuelResponse> => {
-  const response = await duelsApi.post<DuelResponse>('/matchmaking/find_or_create', {
-    problem_id: 'some-default-problem-id', // Replace with actual logic for selecting a problem
-    mode: 'random_player',
-    difficulty,
-  });
-  return response.data;
-};
-
-export const aiDuel = async (difficulty: DuelDifficulty = 'medium'): Promise<DuelResponse> => {
-  const response = await duelsApi.post<DuelResponse>('/ai-duel', {
-    problem_id: 'some-default-problem-id', // Replace with actual logic for selecting a problem
-    mode: 'ai_opponent',
-    difficulty,
-  });
-  return response.data;
-};
+export default duelsApiService;

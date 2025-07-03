@@ -59,61 +59,6 @@ class AuditService:
         
         return audit_log
     
-    async def log_problem_created(
-        self, 
-        user: User, 
-        problem_id: str, 
-        problem_title: str,
-        request: Optional[Request] = None
-    ):
-        """Log problem creation"""
-        await self.log_action(
-            user=user,
-            action="CREATE",
-            resource_type="problem",
-            resource_id=problem_id,
-            description=f"Created problem: {problem_title}",
-            extra_data={"problem_title": problem_title},
-            request=request
-        )
-    
-    async def log_problem_updated(
-        self, 
-        user: User, 
-        problem_id: str, 
-        problem_title: str,
-        changes: Dict[str, Any],
-        request: Optional[Request] = None
-    ):
-        """Log problem update"""
-        await self.log_action(
-            user=user,
-            action="UPDATE",
-            resource_type="problem",
-            resource_id=problem_id,
-            description=f"Updated problem: {problem_title}",
-            extra_data={"problem_title": problem_title, "changes": changes},
-            request=request
-        )
-    
-    async def log_problem_deleted(
-        self, 
-        user: User, 
-        problem_id: str, 
-        problem_title: str,
-        request: Optional[Request] = None
-    ):
-        """Log problem deletion"""
-        await self.log_action(
-            user=user,
-            action="DELETE",
-            resource_type="problem",
-            resource_id=problem_id,
-            description=f"Deleted problem: {problem_title}",
-            extra_data={"problem_title": problem_title},
-            request=request
-        )
-    
     async def log_bulk_action(
         self, 
         user: User, 

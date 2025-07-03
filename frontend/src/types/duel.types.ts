@@ -5,6 +5,11 @@ export type DuelStatus = 'waiting' | 'in_progress' | 'completed' | 'cancelled' |
 export type ParticipantStatus = 'joined' | 'ready' | 'coding' | 'finished' | 'disconnected';
 export type Language = 'python' | 'javascript' | 'java' | 'cpp';
 
+export interface CodeTemplate {
+  language: string;
+  template_code: string;
+}
+
 export interface TestCase {
   input_data: string;
   expected_output: string;
@@ -13,14 +18,19 @@ export interface TestCase {
 }
 
 export interface DuelProblem {
-  id: string;
+  id: number;
   title: string;
   description: string;
-  difficulty: string;
+  difficulty: 'easy' | 'medium' | 'hard' | 'expert';
+  category: string;
+  code_templates: CodeTemplate[] | null;
+  created_at: string;
+  updated_at: string;
+  test_cases?: TestCase[];
   constraints?: string;
-  starter_code?: { [key: string]: string };
-  code_templates?: { language: string, template_code: string }[];
-  test_cases: TestCase[];
+  starter_code?: Record<string, string>;
+  solution?: string;
+  ai_solution_length?: number;
 }
 
 export interface Participant {
@@ -145,16 +155,14 @@ export interface AIDeleteMessage {
     };
 }
 
-export type WSMessage = 
-    | CodeUpdate 
-    | DuelComplete 
-    | TypingStatus 
-    | UserStatus 
-    | DuelStartMessage 
-    | DuelEndMessage 
-    | TestResultMessage 
-    | AIProgressMessage
-    | AIDeleteMessage;
+export type WSMessage =
+    | { type: 'duel_state'; payload: Duel }
+    | { type: 'duel_start'; data: any }
+    | { type: 'duel_end'; data: DuelResult }
+    | { type: 'code_update'; user_id: string; code: string }
+    | { type: 'ai_progress'; data: { code_chunk: string } }
+    | { type: 'ai_delete'; data: { char_count: number } }
+    | { type: 'test_result'; user_id: string; data: { is_correct: boolean; test_case_id: number } };
 
 export interface Notification {
   id: number;

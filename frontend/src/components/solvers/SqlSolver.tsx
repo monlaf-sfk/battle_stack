@@ -1,50 +1,40 @@
-import { useState, useEffect } from 'react';
-import type { DuelProblem } from '../../types/duel.types';
-import { CodeEditor, ThemeToggle } from '../ui/CodeEditor';
+import React, { useState } from 'react';
+import { CodeEditor } from '../ui/CodeEditor';
 import { Button } from '../ui/Button';
-import { Send } from 'lucide-react';
 
 interface SqlSolverProps {
-  problem: DuelProblem;
-  onCodeChange: (language: string, code: string) => void;
+  problem: {
+    description: string;
+    // Add other relevant problem properties here
+  };
+  onSubmit: (solution: string) => void;
 }
 
-export const SqlSolver: React.FC<SqlSolverProps> = ({ problem, onCodeChange }) => {
-  const [code, setCode] = useState('');
-  const [editorTheme, setEditorTheme] = useState<'vs-dark' | 'vs-light'>('vs-dark');
+const SqlSolver: React.FC<SqlSolverProps> = ({ problem, onSubmit }) => {
+  const [solution, setSolution] = useState<string>('');
 
-  useEffect(() => {
-    const template = problem.code_templates?.find(t => t.language === 'sql');
-    const initialCode = template ? template.template_code : '-- Write your SQL query here\n';
-    setCode(initialCode);
-    onCodeChange('sql', initialCode);
-  }, [problem]);
-
-  const handleLocalCodeChange = (newCode: string) => {
-    setCode(newCode);
-    onCodeChange('sql', newCode);
-  }
+  const handleSubmit = () => {
+    onSubmit(solution);
+  };
 
   return (
     <div className="flex flex-col h-full">
-      <p className="p-2 text-sm text-arena-text-muted bg-arena-background-darker rounded-t-lg">
-        Write a SQL query to solve the problem. Your query will be executed against the database schema described in the problem.
-      </p>
-      <div className="flex-grow min-h-0">
+      <div className="p-4 bg-gray-800 text-white rounded-t-lg">
+        <h2 className="text-xl font-bold">SQL Challenge</h2>
+        <p className="mt-2 text-sm">{problem.description}</p>
+      </div>
+      <div className="flex-grow">
         <CodeEditor
           language="sql"
-          value={code}
-          onChange={(c) => handleLocalCodeChange(c || '')}
-          theme={editorTheme}
+          value={solution}
+          onChange={(value: string | undefined) => setSolution(value || '')}
         />
       </div>
-      <div className="flex items-center gap-4 p-4 bg-arena-background-darker rounded-b-lg">
-        <Button variant="gradient" className="gap-2">
-          <Send size={16} />
-          Submit Query
-        </Button>
-        <ThemeToggle theme={editorTheme} onToggleTheme={setEditorTheme} />
+      <div className="p-4 bg-gray-800 rounded-b-lg flex justify-end">
+        <Button onClick={handleSubmit}>Submit Query</Button>
       </div>
     </div>
   );
-}; 
+};
+
+export default SqlSolver;

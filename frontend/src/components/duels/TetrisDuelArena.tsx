@@ -217,7 +217,7 @@ export const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ duel }) => {
         code,
         language,
       };
-      const result = await duelsApiService.submitCode(duel.id, submission);
+      const result = await duelsApiService.submitSolution(duel.id, submission);
 
       if (result.is_correct) {
         showNotification('success', 'Solution Submitted', 'Your final solution was correct!');

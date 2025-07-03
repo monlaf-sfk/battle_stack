@@ -4,20 +4,11 @@ import {
   Gamepad2,
   LayoutDashboard,
   Settings,
-  ShieldCheck,
   Swords,
-  Target,
   Trophy,
   User,
 } from "lucide-react";
 // Локальное определение типа для избежания проблем с импортом
-interface UserPermissions {
-  canAccessAdmin: boolean;
-  canManageProblems: boolean;
-  canManageUsers: boolean;
-  canModerate: boolean;
-}
-
 interface MenuItem {
   icon: React.JSX.Element;
   text: string;
@@ -30,7 +21,7 @@ interface MenuSection {
   items: MenuItem[];
 }
 
-export const getMenuItems = (permissions?: UserPermissions): MenuSection[] => {
+export const getMenuItems = (): MenuSection[] => {
   const baseItems: MenuSection[] = [
     {
       section: "MAIN",
@@ -41,12 +32,6 @@ export const getMenuItems = (permissions?: UserPermissions): MenuSection[] => {
           path: "/dashboard",
         },
         { icon: <Swords size={20} />, text: "Quick Duel", path: "/quick-duel" },
-        {
-          icon: <Target size={20} />,
-          text: "Problems",
-          path: "/problems",
-          locked: true,
-        },
       ],
     },
     {
@@ -80,18 +65,6 @@ export const getMenuItems = (permissions?: UserPermissions): MenuSection[] => {
       ],
     },
   ];
-
-  // Add admin section if user has admin permissions
-  if (permissions?.canAccessAdmin) {
-    baseItems.push({
-      section: "ADMIN",
-      items: [
-        { icon: <ShieldCheck size={20} />, text: "Admin Panel", path: "/admin" },
-      ],
-    });
-  }
-
-
 
   return baseItems;
 };

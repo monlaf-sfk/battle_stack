@@ -86,7 +86,7 @@ const CodeExecutionPanel: React.FC<CodeExecutionPanelProps> = ({
   const handleSubmitSolution = () => {
     if (!user) return;
     const submission: DuelSubmission = { player_id: user.id, code: code.trim(), language: selectedLanguage as Language };
-    performApiCall(() => duelsApiService.submitCode(duelId, submission), 'Submission');
+    performApiCall(() => duelsApiService.submitSolution(duelId, submission), 'Submission');
   };
 
   const handleEditorDidMount = (editor: any) => {

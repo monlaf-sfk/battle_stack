@@ -22,6 +22,11 @@ export const useUniversalDuelSocket = ({
   enabled,
 }: UniversalDuelSocketProps) => {
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const messageQueueRef = useRef<any[]>([]);
+  const isMounted = useRef(true);
+  const reconnectAttemptsRef = useRef(0);
+  const MAX_RECONNECT_ATTEMPTS = 5;
   const onMessageRef = useRef(onMessage);
   const onStatusChangeRef = useRef(onStatusChange);
 
@@ -34,67 +39,126 @@ export const useUniversalDuelSocket = ({
     onStatusChangeRef.current = onStatusChange;
   }, [onStatusChange]);
 
-  useEffect(() => {
+  const handleStatus = useCallback((newStatus: 'connecting' | 'connected' | 'disconnected' | 'error') => {
+    console.log(`WebSocket: Status changed to: ${newStatus} for ${duelId}/${userId}`);
+    onStatusChangeRef.current(newStatus);
+  }, [duelId, userId]);
+
+  const connectWs = useCallback(() => {
     if (!duelId || !userId || !enabled) {
-      if (wsRef.current) {
-        console.log(`WebSocket: Closing connection for ${duelId}/${userId} (disabled/no IDs)`);
-        wsRef.current.close();
-        wsRef.current = null;
-      }
       return;
+    }
+
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
+        console.log(`WebSocket: Already connected or connecting to ${duelId}/${userId}. Aborting new connection attempt.`);
+        return;
     }
 
     const DUELS_WS_BASE_URL = getWebSocketBaseUrl();
     console.log(`WebSocket: Attempting to connect to ${DUELS_WS_BASE_URL}/${duelId}/${userId}`);
     const ws = new WebSocket(`${DUELS_WS_BASE_URL}/${duelId}/${userId}`);
-    wsRef.current = ws;
-
-    const handleStatus = (newStatus: 'connecting' | 'connected' | 'disconnected' | 'error') => {
-      console.log(`WebSocket: Status changed to: ${newStatus} for ${duelId}/${userId}`);
-      onStatusChangeRef.current(newStatus);
-    };
 
     handleStatus('connecting');
 
     ws.onopen = () => {
-      console.log(`WebSocket: Connected to ${duelId}/${userId}`);
+      console.log('WebSocket connected.');
       handleStatus('connected');
-    };
-    ws.onclose = (event) => {
-      console.log(`WebSocket: Disconnected from ${duelId}/${userId}. Code: ${event.code}, Reason: ${event.reason}`);
-      // Don't set to disconnected if we are unmounting
-      if (wsRef.current) {
-        handleStatus('disconnected');
+      reconnectAttemptsRef.current = 0;
+      while (messageQueueRef.current.length > 0) {
+        const message = messageQueueRef.current.shift();
+        ws.send(JSON.stringify(message));
       }
-    };
-    ws.onerror = (error) => {
-      console.error(`WebSocket: Error for ${duelId}/${userId}:`, error);
-      handleStatus('error');
     };
 
     ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data) as WSMessage;
-        // console.log(`WebSocket: Parsed message type: ${message.type || 'undefined'}`, message);
         onMessageRef.current(message);
       } catch (error) {
         console.error("Failed to parse WebSocket message:", error);
       }
     };
 
-    return () => {
-      console.log(`WebSocket: Running cleanup for ${duelId}/${userId}`);
+    ws.onclose = (event) => {
+      console.log('WebSocket disconnected:', event.code, event.reason);
       handleStatus('disconnected');
-      ws.close();
+      wsRef.current = null;
+      if (isMounted.current && !event.wasClean && event.code !== 1000) {
+        reconnectAttemptsRef.current += 1;
+        if (reconnectAttemptsRef.current <= MAX_RECONNECT_ATTEMPTS) {
+          console.log(`Attempting to reconnect WebSocket (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})...`);
+          reconnectTimeoutRef.current = setTimeout(connectWs, 3000 * reconnectAttemptsRef.current);
+        } else {
+          console.error(`Max reconnection attempts reached for duel ${duelId}. Stopping auto-reconnect.`);
+          handleStatus('error');
+        }
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      handleStatus('error');
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
       wsRef.current = null;
     };
-  }, [duelId, userId, enabled]);
+
+    wsRef.current = ws;
+
+    return () => {
+        if (wsRef.current === ws) {
+            console.log(`WebSocket: Running cleanup for ${duelId}/${userId} (from connectWs)`);
+            handleStatus('disconnected');
+            if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+                ws.close(1000, "Cleanup from connectWs");
+            }
+            wsRef.current = null;
+        }
+    };
+  }, [duelId, userId, enabled, handleStatus]);
+
+  useEffect(() => {
+    isMounted.current = true;
+    connectWs();
+
+    return () => {
+      isMounted.current = false;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      if (wsRef.current) {
+        console.log(`WebSocket: Running main useEffect cleanup for ${duelId}/${userId}`);
+        wsRef.current.close(1000, "Component unmounted or enabled changed to false");
+        wsRef.current = null;
+      }
+    };
+  }, [connectWs]);
 
   const sendMessage = useCallback((message: object) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message));
+    } else {
+      messageQueueRef.current.push(message);
+      console.warn("WebSocket not open. Message queued.", message);
     }
   }, []);
 
-  return { sendMessage };
+  const disconnect = useCallback(() => {
+    if (wsRef.current) {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
+        wsRef.current.close(1000, "Component unmounted or duel ended");
+      }
+      wsRef.current = null;
+      handleStatus('disconnected');
+      console.log("WebSocket explicitly disconnected.");
+    }
+  }, [handleStatus]);
+
+  return { sendMessage, disconnect };
 };

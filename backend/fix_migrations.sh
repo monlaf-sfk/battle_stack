@@ -36,16 +36,6 @@ fix_service_migrations() {
             docker-compose exec $db_container psql -U $db_user -d $db_name -c "DROP TABLE IF EXISTS user_progress CASCADE;" || true
             docker-compose exec $db_container psql -U $db_user -d $db_name -c "DROP TABLE IF EXISTS user_profiles CASCADE;" || true
             ;;
-        "problems")
-            docker-compose exec $db_container psql -U $db_user -d $db_name -c "DROP TABLE IF EXISTS user_submissions CASCADE;" || true
-            docker-compose exec $db_container psql -U $db_user -d $db_name -c "DROP TABLE IF EXISTS test_cases CASCADE;" || true
-            docker-compose exec $db_container psql -U $db_user -d $db_name -c "DROP TABLE IF EXISTS code_templates CASCADE;" || true
-            docker-compose exec $db_container psql -U $db_user -d $db_name -c "DROP TABLE IF EXISTS problem_companies CASCADE;" || true
-            docker-compose exec $db_container psql -U $db_user -d $db_name -c "DROP TABLE IF EXISTS problem_tags CASCADE;" || true
-            docker-compose exec $db_container psql -U $db_user -d $db_name -c "DROP TABLE IF EXISTS problems CASCADE;" || true
-            docker-compose exec $db_container psql -U $db_user -d $db_name -c "DROP TABLE IF EXISTS companies CASCADE;" || true
-            docker-compose exec $db_container psql -U $db_user -d $db_name -c "DROP TABLE IF EXISTS tags CASCADE;" || true
-            ;;
         "duels")
             docker-compose exec $db_container psql -U $db_user -d $db_name -c "DROP TABLE IF EXISTS player_ratings CASCADE;" || true
             docker-compose exec $db_container psql -U $db_user -d $db_name -c "DROP TABLE IF EXISTS duels CASCADE;" || true
@@ -69,9 +59,6 @@ fix_service_migrations() {
         "user")
             export DATABASE_URL="postgresql://user_user:user_password@user-db:5432/user_db"
             ;;
-        "problems")
-            export DATABASE_URL="postgresql://problems_user:problems_password@problems-db:5432/problems_db"
-            ;;
         "duels")
             export DATABASE_URL="postgresql://duels_user:duels_password@duels-db:5432/duels_db"
             ;;
@@ -91,9 +78,6 @@ echo "🔧 Starting migration fixes..."
 
 # User service
 fix_service_migrations "user"
-
-# Problems service  
-fix_service_migrations "problems"
 
 # Duels service
 fix_service_migrations "duels"

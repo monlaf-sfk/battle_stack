@@ -2,7 +2,6 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPExce
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
-import httpx
 import json
 import asyncio
 import uuid
@@ -18,38 +17,15 @@ from .flow_service import duel_flow_service, _execute_code_against_tests, _execu
 from shared.app.database import get_db, SessionLocal
 from shared.app.auth.security import get_current_user_id
 from shared.app.ai_opponent.core import generate_ai_coding_process, CodeTypingAction, PauseAction, DeleteAction, CodingStep
-from .problem_provider import get_problem_from_service, generate_ai_problem
-from shared.app.ai.generator import generate_algorithm_problem, GeneratedProblem
+import shared.app.ai.generator as problem_generator
 from . import flow_service
 from shared.app.auth.security import get_current_user
 from shared.app.auth.jwt_models import JWTUser
 from shared.app.duels.flow_service import DuelFlowService, get_duel_flow_service
 
-# Define the base URL for the problems service (legacy - for existing problems)
-PROBLEMS_SERVICE_URL = "http://problems-service:8000/api/v1/problems"
+# All duels now use AI-generated problems only
 
 logger = logging.getLogger(__name__)
-
-async def get_problem_from_service(problem_id: UUID) -> dict:
-    """Fetches a specific problem from the problems_service (legacy)."""
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(f"{PROBLEMS_SERVICE_URL}/{problem_id}")
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPStatusError as e:
-            raise HTTPException(status_code=e.response.status_code, detail=f"Error fetching problem from service: {e.response.text}")
-        except httpx.RequestError as e:
-            raise HTTPException(status_code=503, detail=f"Problems service is unavailable: {e}")
-
-
-async def generate_ai_problem(theme: str, difficulty: str, language: str) -> GeneratedProblem:
-    """Generates a new problem using AI instead of fetching from database."""
-    try:
-        return await generate_algorithm_problem(theme, difficulty, language)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate AI problem: {str(e)}")
-
 
 router = APIRouter()
 
@@ -96,35 +72,47 @@ async def generate_problem_and_run_ai(duel_id: UUID, settings: schemas.AIDuelCre
         logger.info(f"🤖 Generating AI problem for duel {duel_id}...")
         
         MAX_RETRIES = 3
-        generated_problem = None
+        generated_problem_obj = None
         for attempt in range(MAX_RETRIES):
             try:
-                problem_to_validate: GeneratedProblem = await generate_ai_problem(
-                    theme=settings.theme, difficulty=settings.difficulty, language=settings.language
+                problem_candidate = await problem_generator.generate_problem(
+                    category=settings.category, topic=settings.theme, difficulty=settings.difficulty, language=settings.language
                 )
                 
-                # Validate the generated problem
-                logger.info(f"Validating generated problem, attempt {attempt + 1}...")
-                validation_submission = schemas.CodeSubmission(
-                    code=problem_to_validate.solution,
-                    language="python" # Assuming solution is always python for now
-                )
-                
-                # Use a simplified version of problem_to_validate for execution
-                problem_dict = problem_to_validate.model_dump()
-                
-                execution_result = await _execute_code_against_tests(validation_submission, problem_dict)
+                # Validate the generated problem based on its type
+                logger.info(f"Validating generated problem ({settings.category}), attempt {attempt + 1}...")
 
-                if execution_result.is_correct:
-                    logger.info("✅ Generated problem passed validation.")
-                    generated_problem = problem_to_validate
-                    break # Exit loop on success
+                if settings.category == "algorithms" and isinstance(problem_candidate, problem_generator.GeneratedProblem):
+                    validation_submission = schemas.CodeSubmission(
+                        code=problem_candidate.solution,
+                        language=settings.language # Use selected language for algo
+                    )
+                    problem_dict = problem_candidate.model_dump()
+                    execution_result = await _execute_code_against_tests(validation_submission, problem_dict)
+
+                    if execution_result.is_correct:
+                        logger.info("✅ Generated algorithm problem passed validation.")
+                        generated_problem_obj = problem_candidate
+                        break # Exit loop on success
+                    else:
+                        logger.warning(f"Algorithm validation failed: {execution_result.details}. Retrying...")
+                elif settings.category == "sql" and isinstance(problem_candidate, problem_generator.SQLGeneratedProblem):
+                    # For SQL, basic validation might involve checking schema setup query can run,
+                    # and solution query can run without errors against the setup.
+                    # This is a simplified check for now.
+                    # A more robust check would involve actually running tests.
+                    if problem_candidate.schema_setup_sql and problem_candidate.correct_solution_sql:
+                        logger.info("✅ Generated SQL problem passed basic validation (schema and solution present).")
+                        generated_problem_obj = problem_candidate
+                        break
+                    else:
+                        logger.warning("SQL problem validation failed: Missing schema setup or solution. Retrying...")
                 else:
-                    logger.warning(f"Validation failed: {execution_result.details}. Retrying...")
+                    logger.warning(f"Generated problem type mismatch or unsupported category: {settings.category}. Retrying...")
             except Exception as e:
                 logger.error(f"Error during problem generation/validation attempt {attempt + 1}: {e}")
         
-        if not generated_problem:
+        if not generated_problem_obj:
             raise Exception("Failed to generate a valid problem after multiple retries.")
 
         # Set time limit based on difficulty
@@ -133,28 +121,27 @@ async def generate_problem_and_run_ai(duel_id: UUID, settings: schemas.AIDuelCre
             "medium": 900,  # 15 minutes
             "hard": 1200    # 20 minutes
         }
-        time_limit = time_limits.get(generated_problem.difficulty.lower(), 900)
+        time_limit = time_limits.get(settings.difficulty.lower(), 900)
         
         # Problem generated, now update the duel
         db_duel = await service.get_duel(db, duel_id)
         if not db_duel:
             raise Exception(f"Duel {duel_id} not found after problem generation.")
 
-        db_duel.problem_id = generated_problem.id
+        db_duel.problem_id = generated_problem_obj.id if hasattr(generated_problem_obj, 'id') else uuid.uuid4() # SQL problems don't have ID from generator
         db_duel.status = DuelStatus.IN_PROGRESS
         db_duel.started_at = datetime.now(timezone.utc)
         db_duel.time_limit_seconds = time_limit
         
-        # Use the generated_problem directly instead of fetching from problems-service
-        # Convert its UUIDs to strings for proper JSON serialization if needed later
-        db_duel.problem = convert_uuids_to_str(generated_problem.model_dump())
+        # Convert to dictionary and then ensure UUIDs are strings
+        problem_data_for_db = convert_uuids_to_str(generated_problem_obj.model_dump())
         
-        # Apply the UUID conversion here to ensure all nested UUIDs are strings
-        problem_data_for_db = db_duel.problem # Already converted above
+        db_duel.problem = problem_data_for_db
         
         db_duel.results = {
             "ai_problem_data": problem_data_for_db,
             "duel_type": "ai_generated",
+            "problem_category": settings.category # Store category for later use
         }
         await db.commit()
         await db.refresh(db_duel)
@@ -165,22 +152,25 @@ async def generate_problem_and_run_ai(duel_id: UUID, settings: schemas.AIDuelCre
             "data": schemas.Duel.model_validate(db_duel).model_dump(mode='json')
         }))
 
-        # Generate the AI's coding process
-        template_for_lang = next((t.template_code for t in generated_problem.code_templates if t.language == settings.language), '')
-        ai_coding_steps = await generate_ai_coding_process(
-            solution=generated_problem.solution,
-            template=template_for_lang,
-            language=settings.language
-        )
-        
-        # Now start the AI opponent task, passing the pre-generated steps
-        logger.info(f"Starting AI opponent for duel {db_duel.id}")
-        await run_ai_opponent(
-            str(db_duel.id), 
-            generated_problem.solution,
-            template_for_lang,
-            [step.model_dump(mode='json') for step in ai_coding_steps] # Pass steps as dicts
-        )
+        # Generate the AI's coding process only for algorithm problems
+        if isinstance(generated_problem_obj, problem_generator.GeneratedProblem):
+            template_for_lang = next((t.template_code for t in generated_problem_obj.code_templates if t.language == settings.language), '')
+            ai_coding_steps = await generate_ai_coding_process(
+                solution=generated_problem_obj.solution,
+                template=template_for_lang,
+                language=settings.language
+            )
+            
+            # Now start the AI opponent task, passing the pre-generated steps
+            logger.info(f"Starting AI opponent for duel {db_duel.id}")
+            await run_ai_opponent(
+                str(db_duel.id), 
+                generated_problem_obj.solution,
+                template_for_lang,
+                [step.model_dump(mode='json') for step in ai_coding_steps] # Pass steps as dicts
+            )
+        elif isinstance(generated_problem_obj, problem_generator.SQLGeneratedProblem):
+            logger.info(f"AI opponent not implemented for SQL problems in duel {db_duel.id}")
 
     except Exception as e:
         logger.error(f"Error in AI duel setup for duel {duel_id}: {e}", exc_info=True)
@@ -222,18 +212,7 @@ async def create_custom_ai_duel(
 
     return db_duel
 
-@router.post("/", response_model=schemas.Duel)
-async def create_duel(
-    duel: schemas.DuelCreate, 
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Creates a new duel. This can be for a player vs. player (PvP) match
-    or a player vs. AI (PvE) match.
-    """
-    # For PvP, player_two_id would be provided.
-    # For PvE, player_two_id can be null, and we can assign an AI later.
-    return await service.create_duel(db=db, duel=duel)
+# Removed generic create_duel endpoint - use AI duel generation instead via /ai-duel-custom
 
 @router.get("/leaderboard", response_model=list[schemas.LeaderboardEntry])
 async def get_leaderboard(
@@ -281,25 +260,7 @@ async def get_duel(
         raise HTTPException(status_code=404, detail="Duel not found")
     return db_duel
 
-@router.post("/matchmaking/join", response_model=schemas.Duel)
-async def join_matchmaking(
-    problem_id: UUID,
-    # In a real app, you'd get the user_id from a dependency that
-    # decodes a JWT token, not from the request body.
-    # For now, we'll pass it directly for simplicity.
-    current_user_id: UUID, 
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Finds a pending duel for a specific problem or creates a new one.
-    """
-    duel = await service.find_or_create_duel(
-        db=db, player_id=current_user_id, problem_id=problem_id
-    )
-    # This endpoint now needs to commit the transaction
-    await db.commit()
-    await db.refresh(duel)
-    return duel
+# Removed join_matchmaking endpoint - use AI duel generation instead
 
 @router.websocket("/ws/{duel_id}/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, duel_id: str, user_id: str):
@@ -439,41 +400,58 @@ async def run_tests_and_notify(duel_id: UUID, user_id: UUID, code: str, language
         # Prepare a submission object for testing
         submission_obj = schemas.CodeSubmission(code=code, language=language)
 
-        # Fetch problem data for public tests only
+        # Fetch problem data for public tests only (must be AI generated)
         duel = await service.get_duel(db, duel_id)
         problem_data = None
+        problem_category = None
         if duel and duel.results and duel.results.get("ai_problem_data"):
             problem_data = duel.results["ai_problem_data"]
+            problem_category = duel.results.get("problem_category", "algorithms") # Default to algorithms
         else:
             if not duel:
                 logger.error(f"Could not find duel {duel_id} for test run.")
                 return 
-            try:
-                problem_data = await get_problem_from_service(duel.problem_id)
-            except HTTPException as e:
-                logger.error(f"Failed to get problem data for duel {duel_id}: {e}")
-                error_payload = {
-                    "type": "test_result",
-                    "user_id": str(user_id),
-                    "data": {
-                        "is_correct": False,
-                        "error": f"Failed to load problem data: {e.detail}",
-                        "details": [],
-                        "passed": 0,
-                        "failed": 0
-                    },
-                }
-                await manager.send_to_user_in_duel(str(duel_id), str(user_id), json.dumps(error_payload))
-                return
+            logger.error(f"No AI problem data found for duel {duel_id}")
+            error_payload = {
+                "type": "test_result",
+                "user_id": str(user_id),
+                "data": {
+                    "is_correct": False,
+                    "error": "Only AI-generated duels are supported",
+                    "details": [],
+                    "passed": 0,
+                    "failed": 0
+                },
+            }
+            await manager.send_to_user_in_duel(str(duel_id), str(user_id), json.dumps(error_payload))
+            return
 
-        # Ensure function_name exists for python helper calls
-        if problem_data and "function_name" not in problem_data:
-            slug = problem_data.get("slug", "")
-            problem_data["function_name"] = slug.replace('-', '_')
+        # Handle different problem types for execution
+        execution_result = None
+        if problem_category == "algorithms":
+            # Ensure function_name exists for python helper calls
+            if problem_data and "function_name" not in problem_data:
+                slug = problem_data.get("slug", "")
+                problem_data["function_name"] = slug.replace('-', '_')
 
-        execution_result = await flow_service._execute_code_against_public_tests(submission_obj, problem_data)
+            execution_result = await flow_service._execute_code_against_public_tests(submission_obj, problem_data)
+        elif problem_category == "sql":
+            # For SQL problems, the _execute_code_against_public_tests would need to be adapted
+            # or a new function for SQL execution would be needed.
+            # For now, return a placeholder error.
+            execution_result = CodeExecutionResult(
+                is_correct=False,
+                error="SQL problem execution not yet fully implemented for tests.",
+                details=[]
+            )
+        else:
+            execution_result = CodeExecutionResult(
+                is_correct=False,
+                error=f"Unsupported problem category: {problem_category}",
+                details=[]
+            )
         
-        if not problem_data.get("test_cases") and not execution_result.error:
+        if not execution_result.error and not problem_data.get("test_cases"):
              execution_result.error = "No public test cases available to run."
 
         result_payload = {
@@ -519,22 +497,16 @@ async def submit_solution(
     # The result object now contains all necessary details.
     return result
 
-@router.post("/matchmaking/find_or_create", response_model=schemas.Duel)
-async def find_or_create_duel_endpoint(
-    problem_id: UUID,
-    # In a real app, you'd get the user_id from a dependency that
-    # decodes a JWT token, not from the request body.
-    # For now, we'll pass it directly for simplicity.
-    current_user_id: UUID, 
+# Removed find_or_create_duel_endpoint - use AI duel generation instead 
+
+@router.post("/ai", response_model=schemas.Duel)
+async def create_ai_duel_endpoint(
+    request: schemas.AIDuelCreateRequest,
+    user: JWTUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Finds a pending duel for a specific problem or creates a new one.
-    """
-    duel = await service.find_or_create_duel(
-        db=db, player_id=current_user_id, problem_id=problem_id
-    )
-    # This endpoint now needs to commit the transaction
-    await db.commit()
-    await db.refresh(duel)
-    return duel 
+    if user.id != str(request.user_id):
+        raise HTTPException(status_code=403, detail="User ID does not match authenticated user.")
+    
+    duel_response = await service.create_ai_duel(db, request.user_id, request.theme, request.difficulty, request.language, request.category)
+    return duel_response

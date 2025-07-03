@@ -198,8 +198,21 @@ export const duelsApiService = {
 
   // Get duel by ID
   getDuel: async (duelId: string) => {
-    return await duelsApi.get(`/${duelId}`);
-  }
+    const response = await duelsApi.get(`/${duelId}`);
+    return response.data;
+  },
+
+  // Submit solution for a duel
+  submitSolution: async (duelId: string, submission: { player_id: string; language: string; code: string; }) => {
+    const response = await duelsApi.post(`/${duelId}/submit`, submission);
+    return response.data;
+  },
+
+  // Test code against public tests for a duel
+  testCode: async (duelId: string, submission: { code: string; language: string; }) => {
+    const response = await duelsApi.post(`/${duelId}/test`, submission);
+    return response.data;
+  },
 };
 
 // Auth API endpoints

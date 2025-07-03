@@ -1,140 +1,241 @@
-import { createContext, useReducer, useContext } from 'react';
-import type { ReactNode } from 'react';
-import type { Duel, WSMessage, DuelResult } from '../types/duel.types';
+import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
+import type { Duel, DuelProblem, DuelResult, WSMessage } from '../types/duel.types';
+import { useAuth } from './AuthContext';
+import { useUniversalDuelSocket } from '../hooks/useUniversalDuelSocket';
+import * as api from '../services/api'; // Import the API service
 
-// 1. Define State and Action Types
-interface DuelState {
-  duel: Duel | null;
-  error: string | null;
-  socketStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
+export interface DuelState {
+    duel: Duel | null;
+    problem: DuelProblem | null;
+    results: DuelResult[] | null;
+    error: string | null;
+    isConnecting: boolean;
+    ws: WebSocket | null; // Keep for now, but will be managed by hook
+    isConnected: boolean; // New: Track actual connection status
+    aiOpponentCode: string; // New: To store AI typing progress
+    opponentIsTyping: boolean; // New: To track if AI is typing
+    opponentTestResults: any; // New: To store AI test results
+    aiProgressPercentage: number; // New: AI's typing progress
 }
 
-type DuelAction =
-  | { type: 'SET_DUEL'; payload: Duel }
-  | { type: 'SOCKET_MESSAGE_RECEIVED'; payload: WSMessage }
-  | { type: 'SET_SOCKET_STATUS'; payload: 'connecting' | 'connected' | 'disconnected' | 'error' }
-  | { type: 'SET_ERROR'; payload: string }
-  | { type: 'RESET_STATE' };
+interface DuelContextType {
+    duelState: DuelState;
+    connect: (duelId: string) => void;
+    disconnect: () => void;
+    updateCode: (duelId: string, language: string, code: string) => void;
+    sendSolution: (duelId: string, code: string, language: string) => void;
+    testCode: (duelId: string, code: string, language: string) => void;
+    aiOpponentCode: string; // Expose AI typing progress
+    opponentIsTyping: boolean; // Expose AI typing status
+    opponentTestResults: any; // Expose AI test results
+    aiProgressPercentage: number; // Expose AI's typing progress
+}
 
-// 2. Initial State
-const initialState: DuelState = {
-  duel: null,
-  error: null,
-  socketStatus: 'disconnected',
-};
+const DuelContext = createContext<DuelContextType | undefined>(undefined);
 
-// 3. Reducer Function
-const duelReducer = (state: DuelState, action: DuelAction): DuelState => {
-  switch (action.type) {
-    case 'SET_DUEL':
-      return { ...state, duel: action.payload, error: null };
-    
-    case 'SOCKET_MESSAGE_RECEIVED':
-      const message: any = action.payload;
-      console.log('DuelContext - SOCKET_MESSAGE_RECEIVED:', message['type'], message);
-      
-      if (!state.duel) {
-          console.warn('DuelContext - Received message but duel is null:', message['type']);
-          return state;
-      }
-      
-      switch (message['type']) {
-        case 'duel_start':
-          return {
-            ...state,
-            duel: message.data,
-            socketStatus: 'connected',
-            error: null,
-          };
-        case 'duel_end':
-          try {
-            const parsedResult: DuelResult = message.data;
-            console.log('DuelContext - Processing duel_end message. Final results:', parsedResult);
-            if (parsedResult.player_one_result && parsedResult.player_two_result) {
-                console.log('DuelContext - Both player results present in duel_end message.');
-            } else {
-                console.warn('DuelContext - Missing player results in duel_end message:', parsedResult);
+export const DuelProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
+    const { user } = useAuth();
+
+    const [duelState, setDuelState] = useState<DuelState>({
+        duel: null,
+        problem: null,
+        results: null,
+        error: null,
+        isConnecting: false,
+        ws: null,
+        isConnected: false,
+        aiOpponentCode: '',
+        opponentIsTyping: false,
+        opponentTestResults: null,
+        aiProgressPercentage: 0,
+    });
+
+    // Ref to hold the current code of the user, for sending with submissions
+    const userCodeRef = useRef<Record<string, string>>({});
+    const userLanguageRef = useRef<string>('python');
+
+    const handleWsMessage = useCallback((message: WSMessage) => {
+        // console.log("Received WebSocket message:", message);
+
+        setDuelState(prev => {
+            const newState = { ...prev };
+            switch (message.type) {
+                case 'duel_start':
+                    newState.duel = message.data;
+                    newState.problem = message.data.problem ?? null;
+                    newState.isConnecting = false;
+                    newState.isConnected = true;
+                    newState.error = null;
+                    // Initialize AI code with the problem's starter code if available
+                    if (newState.problem && newState.problem.starter_code && message.data.player_two_id === null) {
+                        newState.aiOpponentCode = newState.problem.starter_code[message.data.player_one_code_language || 'python'] || '';
+                    }
+                    break;
+                case 'duel_end':
+                    newState.results = [message.data]; // Assuming only one duel result for now
+                    newState.duel = { ...newState.duel!, status: 'completed', results: message.data };
+                    newState.isConnected = false; // Duel ended
+                    newState.opponentIsTyping = false;
+                    newState.aiProgressPercentage = 0;
+                    break;
+                case 'ai_progress':
+                    newState.aiOpponentCode += message.data.code_chunk;
+                    newState.opponentIsTyping = true;
+                    // Calculate AI progress based on estimated solution length
+                    const totalSolutionLength = newState.problem?.ai_solution_length || 1;
+                    const currentAITypingLength = newState.aiOpponentCode.length;
+                    newState.aiProgressPercentage = (currentAITypingLength / totalSolutionLength) * 100;
+                    break;
+                case 'ai_delete':
+                    newState.aiOpponentCode = newState.aiOpponentCode.slice(0, -message.data.char_count);
+                    // Adjust percentage down based on deletion
+                    const totalSolLength = newState.problem?.ai_solution_length || 1;
+                    const currentAITypingLen = newState.aiOpponentCode.length;
+                    newState.aiProgressPercentage = (currentAITypingLen / totalSolLength) * 100;
+                    break;
+                case 'test_result':
+                    if (message.user_id !== user?.id) { // Only update opponent's test results
+                        newState.opponentTestResults = message.data;
+                    }
+                    break;
+                // case 'code_update':
+                //     if (message.user_id !== user?.id) {
+                //         // For multi-player, update opponent's code here
+                //     }
+                //     break;
+                default:
+                    console.warn("Unhandled WebSocket message type:", message.type);
             }
-            return {
-              ...state,
-              duel: {
-                ...state.duel,
-                status: 'completed',
-                finished_at: parsedResult.finished_at,
-                results: parsedResult
-              } as Duel
-            };
-          } catch (e) {
-            console.error('DuelContext - Failed to process duel_end data:', e);
-            return state;
-          }
-        case 'code_update':
-          return {
-            ...state,
-            duel: {
-              ...state.duel,
-              player_one_code: message.user_id === state.duel.player_one_id ? message.code : state.duel.player_one_code,
-              player_two_code: message.user_id === state.duel.player_two_id ? message.code : state.duel.player_two_code,
-            }
-          };
-        case 'ai_progress':
-          console.log('DuelContext - AI Progress Update:', message.data.code_chunk.substring(0, 50) + '...');
-          return state;
-        case 'ai_delete':
-          console.log('DuelContext - AI Delete Update:', message.data.char_count);
-          return state;
-        case 'test_result':
-          console.log('DuelContext - Test Result Update for user:', message.user_id, 'is_correct:', message.data.is_correct);
-          return state;
-        default:
-          console.log('DuelContext - Unhandled WebSocket message type:', message['type']);
-          return state;
-      }
+            return newState;
+        });
+    }, [user]);
 
-    case 'SET_SOCKET_STATUS':
-      return { ...state, socketStatus: action.payload };
-      
-    case 'SET_ERROR':
-      return { ...state, error: action.payload };
+    const handleWsStatusChange = useCallback((status: 'connecting' | 'connected' | 'disconnected' | 'error') => {
+        setDuelState(prev => ({
+            ...prev,
+            isConnecting: status === 'connecting',
+            isConnected: status === 'connected',
+            error: status === 'error' ? 'WebSocket connection error.' : null,
+        }));
+        // Special handling for AI typing status on disconnect
+        if (status === 'disconnected' || status === 'error') {
+            setDuelState(prev => ({ ...prev, opponentIsTyping: false }));
+        }
+    }, []);
 
-    case 'RESET_STATE':
-      return { duel: null, error: null, socketStatus: 'disconnected' };
+    const { disconnect: disconnectWs } = useUniversalDuelSocket({
+        duelId: duelState.duel?.id || '',
+        userId: user?.id || '',
+        onMessage: handleWsMessage,
+        onStatusChange: handleWsStatusChange,
+        enabled: !!duelState.duel?.id && !!user?.id && !duelState.results, // Enable only when duelId & userId are present and not completed
+    });
 
-    default:
-      return state;
-  }
+    const connect = useCallback(async (duelId: string) => {
+        if (!user) {
+            setDuelState(prev => ({ ...prev, error: "User not authenticated. Cannot start duel." }));
+            return;
+        }
+
+        setDuelState(prev => ({ ...prev, isConnecting: true, error: null }));
+
+        try {
+            // Fetch duel details first to ensure we have problem data before connecting WS
+            const duelDetails = await api.duelsApiService.getDuel(duelId);
+            setDuelState(prev => ({
+                ...prev,
+                duel: duelDetails,
+                problem: duelDetails.problem ?? null,
+                isConnecting: false, // Connection will be handled by useUniversalDuelSocket
+            }));
+            // useUniversalDuelSocket will now connect because duelState.duel.id is set
+        } catch (err) {
+            console.error("Failed to fetch duel details:", err);
+            setDuelState(prev => ({ ...prev, error: "Failed to load duel. Please try again.", isConnecting: false }));
+        }
+    }, [user]);
+
+    // Existing disconnect now calls the hook's disconnect
+    const disconnect = useCallback(() => {
+        disconnectWs(); // Call the disconnect function from the hook
+        setDuelState(prev => ({ ...prev, duel: null, problem: null, results: null, error: null, isConnected: false, aiOpponentCode: '', opponentIsTyping: false, opponentTestResults: null, aiProgressPercentage: 0 }));
+    }, [disconnectWs]);
+
+    // Update internal refs for latest code/language
+    const updateCode = useCallback((duelId: string, language: string, code: string) => {
+        userCodeRef.current[duelId] = code;
+        userLanguageRef.current = language; // Assuming one language per duel for now
+        // Optionally send code updates via WS for real-time multiplayer display
+        // sendMessage({ type: 'code_update', user_id: user?.id, code, language });
+    }, [/* user */]);
+
+    const sendSolution = useCallback(async (duelId: string, code: string, language: string) => {
+        if (!user?.id) return;
+
+        setDuelState(prev => ({ ...prev, isConnecting: true })); // Indicate submission in progress
+
+        try {
+            const response = await api.duelsApiService.submitSolution(duelId, {
+                player_id: user.id,
+                language: language as any, // Cast to any because the API expects a specific string literal
+                code: code,
+            });
+            // The actual duel end message will come via WebSocket from the server
+            // We can show immediate feedback from this API call if needed
+            console.log("Solution submission response:", response);
+            setDuelState(prev => ({ ...prev, isConnecting: false }));
+        } catch (err) {
+            console.error("Failed to submit solution:", err);
+            setDuelState(prev => ({ ...prev, error: "Failed to submit solution.", isConnecting: false }));
+        }
+    }, [user]);
+
+    const testCode = useCallback(async (duelId: string, code: string, language: string) => {
+        if (!user?.id) return;
+
+        setDuelState(prev => ({ ...prev, isConnecting: true })); // Indicate testing in progress
+
+        try {
+            const response = await api.duelsApiService.testCode(duelId, { code, language: language as any });
+            // Test results will come via WebSocket from the server (test_result type)
+            console.log("Code test initiated:", response);
+            setDuelState(prev => ({ ...prev, isConnecting: false }));
+        } catch (err) {
+            console.error("Failed to run tests:", err);
+            setDuelState(prev => ({ ...prev, error: "Failed to run tests.", isConnecting: false }));
+        }
+    }, [user]);
+
+    useEffect(() => {
+        // Cleanup on unmount
+        return () => {
+            disconnectWs();
+        };
+    }, [disconnectWs]);
+
+
+    return (
+        <DuelContext.Provider value={{
+            duelState,
+            connect,
+            disconnect,
+            updateCode,
+            sendSolution,
+            testCode, // Expose testCode
+            aiOpponentCode: duelState.aiOpponentCode,
+            opponentIsTyping: duelState.opponentIsTyping,
+            opponentTestResults: duelState.opponentTestResults,
+            aiProgressPercentage: duelState.aiProgressPercentage,
+        }}>
+            {children}
+        </DuelContext.Provider>
+    );
 };
 
-// 4. Create Context
-const DuelStateContext = createContext<DuelState | undefined>(undefined);
-const DuelDispatchContext = createContext<React.Dispatch<DuelAction> | undefined>(undefined);
-
-// 5. Provider Component
-export const DuelProvider = ({ children }: { children: ReactNode }) => {
-  const [state, dispatch] = useReducer(duelReducer, initialState);
-
-  return (
-    <DuelStateContext.Provider value={state}>
-      <DuelDispatchContext.Provider value={dispatch}>
-        {children}
-      </DuelDispatchContext.Provider>
-    </DuelStateContext.Provider>
-  );
-};
-
-// 6. Custom Hooks for easy access
-export const useDuelState = () => {
-  const context = useContext(DuelStateContext);
-  if (context === undefined) {
-    throw new Error('useDuelState must be used within a DuelProvider');
-  }
-  return context;
-};
-
-export const useDuelDispatch = () => {
-  const context = useContext(DuelDispatchContext);
-  if (context === undefined) {
-    throw new Error('useDuelDispatch must be used within a DuelProvider');
-  }
-  return context;
+export const useDuel = () => {
+    const context = useContext(DuelContext);
+    if (context === undefined) {
+        throw new Error('useDuel must be used within a DuelProvider');
+    }
+    return context;
 }; 

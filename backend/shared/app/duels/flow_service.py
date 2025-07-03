@@ -13,17 +13,48 @@ from . import schemas, service, models
 from .scoring import scoring_service
 from .websocket_manager import manager
 from shared.app.code_runner import execute_code, SubmissionParams, SubmissionResult
-from shared.app.duels.problem_provider import get_problem_from_service, generate_ai_problem
+from shared.app.ai.generator import generate_algorithm_problem
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Map language names to Judge0 language IDs
 LANGUAGE_MAP = {
-    "python": 71,
-    "javascript": 63,
+    "assembly": 45,
+    "bash": 46,
+    "basic": 47,
+    "c": 50, # C (GCC 9.2.0)
+    "cpp": 54, # C++ (GCC 9.2.0)
+    "csharp": 51,
+    "common-lisp": 55,
+    "d": 56,
+    "elixir": 57,
+    "erlang": 58,
+    "executable": 44,
+    "fortran": 59,
+    "go": 60,
+    "haskell": 61,
     "java": 62,
-    "cpp": 54,
+    "javascript": 63,
+    "lua": 64,
+    "ocaml": 65,
+    "octave": 66,
+    "pascal": 67,
+    "php": 68,
+    "prolog": 69,
+    "python2": 70,
+    "python": 71, # Python 3
+    "ruby": 72,
+    "rust": 73,
+    "typescript": 74,
+    "cobol": 77,
+    "kotlin": 78,
+    "objective-c": 79,
+    "r": 80,
+    "scala": 81,
+    "sql": 82, # SQLite
+    "swift": 83,
+    "vbnet": 84, # Visual Basic.Net
 }
 
 class CodeExecutionResult(BaseModel):
@@ -187,20 +218,17 @@ class DuelFlowService:
         if not duel or duel.status != models.DuelStatus.IN_PROGRESS:
             return CodeExecutionResult(is_correct=False, error="Duel not found or not in progress.")
 
-        # 1. Get problem data
+        # 1. Get problem data (must be AI generated)
         problem_data = None
         if duel.results and duel.results.get("ai_problem_data"):
             problem_data = duel.results["ai_problem_data"]
         else:
-            try:
-                problem_data = await get_problem_from_service(duel.problem_id)
-            except HTTPException:
-                 return CodeExecutionResult(is_correct=False, error="Could not fetch problem details.")
+            return CodeExecutionResult(is_correct=False, error="Only AI-generated duels are supported. No problem data found.")
         
         if not problem_data:
-            return CodeExecutionResult(is_correct=False, error="Problem data is missing.")
+            return CodeExecutionResult(is_correct=False, error="AI problem data is missing.")
 
-        # HACK: Manually add function_name for testing since we can't modify problems-service
+        # Add function_name for testing if not present (for AI generated problems)
         if "function_name" not in problem_data:
             slug = problem_data.get("slug", "")
             problem_data["function_name"] = slug.replace('-', '_')

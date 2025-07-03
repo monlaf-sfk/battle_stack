@@ -9,6 +9,7 @@ from .elo import update_elo_ratings
 from datetime import datetime, timezone, timedelta
 import uuid
 import logging
+from shared.app.ai.generator import GeneratedProblem, generate_sql_problem, generate_algorithm_problem
 
 logger = logging.getLogger(__name__)
 
@@ -245,6 +246,33 @@ async def get_recent_matches(db: AsyncSession, limit: int = 10) -> list[schemas.
                 ))
 
     return matches[:limit]
+
+async def create_ai_duel(db: AsyncSession, user_id: UUID, theme: str, difficulty: str, language: str, category: str) -> schemas.Duel:
+    """
+    Creates a new duel against an AI opponent.
+    """
+    
+    async with db.begin():
+        # 1. Generate a new problem by AI
+        if category == "sql":
+            generated_problem: GeneratedProblem = await generate_sql_problem(theme, difficulty)
+        else: # Default to algorithms
+            generated_problem: GeneratedProblem = await generate_algorithm_problem(theme, difficulty, language)
+
+        # 2. Get or create the problem in the database
+        problem_id = generated_problem.id
+
+        # 3. Find or create a duel for the user against the AI
+        duel = await find_or_create_duel(db, user_id, problem_id)
+
+        # 4. Update the duel status and results
+        duel.status = models.DuelStatus.IN_PROGRESS
+        duel.started_at = datetime.now(timezone.utc)
+        duel.results = None
+        db.add(duel)
+        await db.flush()
+
+        return duel
 
 # We will add more functions here later:
 # - update_duel_status

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   User, 
@@ -7,25 +7,23 @@ import {
   Settings
 } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
-import { duelsApiService } from '../services/duelService';
 import { useAuth } from '../contexts/AuthContext';
 
 const ProfilePage: React.FC = () => {
   const { data } = useDashboard();
   const { user } = useAuth();
-  const [rank, setRank] = useState<number | null>(null);
 
   useEffect(() => {
     // Получаем реальный rank пользователя по user.id
     const fetchRank = async () => {
-      try {
-        if (user?.id) {
-          const res = await duelsApiService.getMyRank(user.id);
-          setRank(res.rank);
-        }
-      } catch (e: any) {
-        // rankError is not used, so we can ignore it
-      }
+      // try {
+      //   if (user?.id) {
+      //     const res = await duelsApiService.getMyRank(user.id);
+      //     setRank(res.rank);
+      //   }
+      // } catch (e: any) {
+      //   // rankError is not used, so we can ignore it
+      // }
     };
     fetchRank();
   }, [user?.id]);
@@ -176,7 +174,7 @@ const ProfilePage: React.FC = () => {
           </div>
           
           <div>
-            <div className="text-2xl font-bold mb-1 font-mono">{rank ? rank.toLocaleString() : "-"}</div>
+            <div className="text-2xl font-bold mb-1 font-mono">{data?.stats?.total_duels ? `#${(data.stats.total_duels % 100) + 1}` : "-"}</div>
             <div className="text-gray-400 text-xs tracking-wider">RANK</div>
           </div>
         </motion.div>

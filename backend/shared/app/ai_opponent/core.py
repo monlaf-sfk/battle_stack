@@ -71,16 +71,27 @@ async def generate_ai_coding_process(solution: str, template: str, language: str
 
     except GeneratorInvalidResponse as e:
         # Fallback to the simpler, non-mistake-prone generation if the LLM fails.
-        logger.error(f"LLM failed to generate valid coding steps: {e}. Falling back to simple typing.")
+        logger.error(f"LLM failed to generate valid coding steps: {e}. Falling back to more human-like simple typing.")
         solution_lines = solution.splitlines(True)
-        return [
-            CodingStep(root=CodeTypingAction(content=line, speed=random.uniform(1.8, 3.0)))
-            for line in solution_lines if line.strip()
-        ]
+        steps = []
+        for line in solution_lines:
+            if not line.strip():
+                steps.append(CodingStep(root=PauseAction(duration=random.uniform(0.3, 0.7)))) # Longer pause for empty lines or just newlines
+                continue
+            # Introduce random typing speed and small pauses between lines
+            typing_speed = random.uniform(0.5, 1.2)  # Even slower typing speed for realism
+            steps.append(CodingStep(root=CodeTypingAction(content=line, speed=typing_speed)))
+            steps.append(CodingStep(root=PauseAction(duration=random.uniform(0.1, 0.4)))) # Slightly longer pause after each line
+        return steps
     except Exception as e:
-        logger.error(f"An unexpected error occurred during AI process generation: {e}. Falling back to simple typing.")
+        logger.error(f"An unexpected error occurred during AI process generation: {e}. Falling back to more human-like simple typing.")
         solution_lines = solution.splitlines(True)
-        return [
-            CodingStep(root=CodeTypingAction(content=line, speed=random.uniform(1.8, 3.0)))
-            for line in solution_lines if line.strip()
-        ] 
+        steps = []
+        for line in solution_lines:
+            if not line.strip():
+                steps.append(CodingStep(root=PauseAction(duration=random.uniform(0.3, 0.7))))
+                continue
+            typing_speed = random.uniform(0.5, 1.2)
+            steps.append(CodingStep(root=CodeTypingAction(content=line, speed=typing_speed)))
+            steps.append(CodingStep(root=PauseAction(duration=random.uniform(0.1, 0.4))))
+        return steps 

@@ -7,7 +7,7 @@
 
 set -e
 
-SERVICES=("auth" "user" "problems" "duels")
+SERVICES=("auth" "user" "duels")
 
 # Colors for output
 RED='\033[0;31m'
@@ -43,9 +43,6 @@ function get_db_url() {
             ;;
         user)
             echo "postgresql://user_user:user_password@localhost:5434/user_db"
-            ;;
-        problems)
-            echo "postgresql://problems_user:problems_password@localhost:5435/problems_db"
             ;;
         duels)
             echo "postgresql://duels_user:duels_password@localhost:5436/duels_db"
