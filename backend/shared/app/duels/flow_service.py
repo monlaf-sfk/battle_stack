@@ -4,6 +4,7 @@ import logging
 from uuid import UUID
 from datetime import datetime, timezone
 import ast
+from typing import Dict, Any, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
@@ -64,13 +65,13 @@ class CodeExecutionResult(BaseModel):
     passed: int = 0
     total: int = 0
 
-async def _execute_code_against_tests(submission: schemas.CodeSubmission, problem: dict) -> CodeExecutionResult:
+async def _execute_code_against_tests(submission: schemas.CodeSubmission, problem: Dict[str, Any]) -> CodeExecutionResult:
     """Runs the user's code against all test cases for the problem using Judge0."""
     language_id = LANGUAGE_MAP.get(submission.language)
-    if not language_id:
+    if language_id is None:
         return CodeExecutionResult(is_correct=False, error="Unsupported language.")
 
-    if not problem or not problem.get("test_cases"):
+    if problem is None or not problem.get("test_cases"):
         return CodeExecutionResult(is_correct=False, error="Problem has no test cases.")
 
     total_tests = len(problem["test_cases"])
@@ -81,7 +82,7 @@ async def _execute_code_against_tests(submission: schemas.CodeSubmission, proble
     # Always wrap python code to handle I/O, making it easier for the user.
     if submission.language == "python":
         function_name = problem.get("function_name")
-        if not function_name:
+        if function_name is None:
             # Fallback if function_name is not in problem data
             import re
             match = re.search(r"def\s+(\w+)\s*\(", submission.code)
@@ -189,7 +190,7 @@ except Exception as e:
     return CodeExecutionResult(is_correct=True, passed=passed_tests, total=total_tests)
 
 
-async def _execute_code_against_public_tests(submission: schemas.CodeSubmission, problem: dict) -> CodeExecutionResult:
+async def _execute_code_against_public_tests(submission: schemas.CodeSubmission, problem: Dict[str, Any]) -> CodeExecutionResult:
     """Runs the user's code against only the PUBLIC test cases for the problem."""
     public_test_cases = [tc for tc in problem.get("test_cases", []) if tc.get("is_public")]
     
@@ -213,72 +214,96 @@ class DuelFlowService:
         submission: schemas.DuelSubmission,
     ) -> CodeExecutionResult:
         duel = await service.get_duel(db, duel_id)
+
+        # Check duel status and existence first
+        if duel is None:
+            return CodeExecutionResult(is_correct=False, error="Duel not found.")
+        if duel.status != models.DuelStatus.IN_PROGRESS: # type: ignore
+            return CodeExecutionResult(is_correct=False, error="Duel not in progress.")
+
         user_id = submission.player_id
 
-        if not duel or duel.status != models.DuelStatus.IN_PROGRESS:
-            return CodeExecutionResult(is_correct=False, error="Duel not found or not in progress.")
-
         # 1. Get problem data (must be AI generated)
-        problem_data = None
-        if duel.results and duel.results.get("ai_problem_data"):
-            problem_data = duel.results["ai_problem_data"]
-        else:
+        # Safely access JSONB data, ensuring it's treated as a dict
+        duel_results_raw = getattr(duel, 'results', None)
+        duel_results_dict: Dict[str, Any] = cast(Dict[str, Any], duel_results_raw) if duel_results_raw is not None else {}
+        problem_data_from_db: Dict[str, Any] = duel_results_dict.get("ai_problem_data", {})
+
+        if not problem_data_from_db:
             return CodeExecutionResult(is_correct=False, error="Only AI-generated duels are supported. No problem data found.")
-        
-        if not problem_data:
-            return CodeExecutionResult(is_correct=False, error="AI problem data is missing.")
+
+        # Make a copy to ensure mutability when modifying problem_data for execution
+        problem_data_mutable = problem_data_from_db.copy()
 
         # Add function_name for testing if not present (for AI generated problems)
-        if "function_name" not in problem_data:
-            slug = problem_data.get("slug", "")
-            problem_data["function_name"] = slug.replace('-', '_')
+        if "function_name" not in problem_data_mutable:
+            slug = problem_data_mutable.get("slug", "")
+            problem_data_mutable["function_name"] = slug.replace('-', '_')
 
         # 2. Execute code against test cases
         code_submission = schemas.CodeSubmission(code=submission.code, language=submission.language)
-        execution_result = await _execute_code_against_tests(code_submission, problem_data)
+        execution_result = await _execute_code_against_tests(code_submission, problem_data_mutable)
         logger.info(f"Execution result for user {user_id} in duel {duel_id}: is_correct={execution_result.is_correct}, error='{execution_result.error}', details='{execution_result.details}'")
 
+        # For submissions, only public test case details should be revealed if incorrect.
+        # If correct, no details are needed for the frontend.
+        if execution_result.is_correct:
+            execution_result.details = None
+        elif execution_result.details:
+            public_test_details = []
+            for detail_message in execution_result.details:
+                if "Compilation Error" in detail_message or "Execution Error" in detail_message:
+                    public_test_details.append(detail_message)
+            execution_result.details = public_test_details if public_test_details else ["One or more tests failed. No further details available for private tests."]
+
         # 2. Update submission count and test results
-        is_player_one = duel.player_one_id == user_id
+        is_player_one = duel.player_one_id == user_id # type: ignore
         
-        results_data = duel.results or {}
+        # Need to ensure duel.results is a mutable dict for updates
+        current_duel_results: Dict[str, Any] = duel_results_dict.copy() # Use the already casted `duel_results_dict`
+
         player_subs_key = "p1_subs" if is_player_one else "p2_subs"
         player_passed_key = "p1_passed_tests" if is_player_one else "p2_passed_tests"
         player_total_key = "p1_total_tests" if is_player_one else "p2_total_tests"
 
-        results_data[player_subs_key] = results_data.get(player_subs_key, 0) + 1
-        results_data[player_passed_key] = execution_result.passed
-        results_data[player_total_key] = execution_result.total
+        current_duel_results[player_subs_key] = current_duel_results.get(player_subs_key, 0) + 1
+        current_duel_results[player_passed_key] = execution_result.passed
+        current_duel_results[player_total_key] = execution_result.total
         
-        await service.update_duel_results(db, duel, results_data)
+        # The update_duel_results function expects the duel object and the updated dictionary
+        # It handles the assignment to duel.results internally and flushes the session.
+        await service.update_duel_results(db, duel, current_duel_results)
 
         if not execution_result.is_correct:
             # We still return the result to potentially show failure reasons on the UI
             logger.warning(f"Submission by {user_id} for duel {duel_id} is incorrect. Not ending duel.")
             return execution_result
-            
+
         # 3. Code is correct, record solve time and end the duel.
         player_solved_key = "p1_solved_at" if is_player_one else "p2_solved_at"
         # Avoid overwriting if already solved
-        if player_solved_key in results_data:
+        if player_solved_key in current_duel_results: # type: ignore
             logger.info(f"Player {user_id} has already solved duel {duel_id}. Not ending again.")
             return execution_result
 
         logger.info(f"Correct submission by {user_id} for duel {duel_id}. Recording solve time.")
         finish_time = datetime.now(timezone.utc)
-        results_data[player_solved_key] = finish_time.isoformat()
+        current_duel_results[player_solved_key] = finish_time.isoformat()
 
         other_player_solved_key = "p2_solved_at" if is_player_one else "p1_solved_at"
-        was_first_to_solve = other_player_solved_key not in results_data
+        # This comparison `other_player_solved_key not in current_duel_results` is correct for a dict.
+        # Adding type ignore for the linter if it still misinterprets current_duel_results.
+        was_first_to_solve = other_player_solved_key not in current_duel_results # type: ignore
 
         if was_first_to_solve:
-            results_data['first_solver'] = 'p1' if is_player_one else 'p2'
+            current_duel_results['first_solver'] = 'p1' if is_player_one else 'p2'
 
-        await service.update_duel_results(db, duel, results_data)
+        await service.update_duel_results(db, duel, current_duel_results)
 
         # 4. End the duel and broadcast results
         logger.info(f"All tests passed for user {user_id}. Ending duel {duel_id}.")
-        await self.end_duel_and_broadcast(db, duel.id)
+        # duel.id is of type UUID from the ORM when `as_uuid=True` is used. Casting for linter safety.
+        await self.end_duel_and_broadcast(db, cast(UUID, duel.id))
         return execution_result
 
 

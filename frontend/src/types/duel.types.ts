@@ -19,6 +19,31 @@ export interface TestCase {
   is_hidden?: boolean;
 }
 
+export interface Problem {
+  id: string | number;
+  title: string;
+  slug: string;
+  description?: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  problem_type: string;
+  category: string;
+  time_limit_ms?: number;
+  memory_limit_mb?: number;
+  hints?: string[];
+  test_cases?: TestCase[];
+  code_templates?: CodeTemplate[] | null;
+  starter_code?: Record<string, string>;
+  tags: { id: string; name: string }[];
+  companies: { id: string; name: string }[];
+  submission_stats?: {
+    total_submissions: number;
+    acceptance_rate: number;
+    user_solved: boolean;
+  };
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface DuelProblem {
   id: number;
   title: string;
@@ -46,6 +71,17 @@ export interface Participant {
   rating_before?: number;
   rating_after?: number;
   solve_duration_seconds?: number;
+}
+
+export interface IndividualTestCaseResult {
+  input_data: string;
+  expected_output: string;
+  actual_output: string;
+  passed: boolean;
+  runtime_ms?: number;
+  memory_mb?: number;
+  error?: string | null;
+  is_hidden?: boolean;
 }
 
 export interface TestResult {
@@ -115,6 +151,8 @@ export interface DuelResult {
     player_one_result: PlayerResult | null;
     player_two_result: PlayerResult | null;
     finished_at: string;
+    is_timeout: boolean;
+    is_ai_duel: boolean;
     ai_problem_data?: any;
 }
 
@@ -136,6 +174,9 @@ export interface TestResultMessage {
         is_correct: boolean;
         error?: string;
         details?: string[];
+        passed: number;
+        total: number;
+        failed?: number;
     };
 }
 
@@ -269,8 +310,8 @@ export interface TestResultResponse {
 
 export interface SubmissionResponse {
   is_correct: boolean;
-  error?: string;
-  details?: string[];
+  error?: string | null;
+  details?: string[] | null;
   passed: number;
   total: number;
 }
@@ -338,7 +379,7 @@ export interface Duel {
   player_two_id?: string | null;
   player_one_code?: string;
   player_two_code?: string;
-  results?: DuelResult | null; 
+  results?: DuelResult | null;
   time_limit_seconds?: number;
   created_at: string;
   started_at?: string;
@@ -354,4 +395,5 @@ export interface AIDuelCreateRequest {
   theme: string;
   difficulty: string;
   language: string;
-} 
+  category: string;
+}

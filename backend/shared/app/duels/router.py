@@ -9,10 +9,11 @@ import logging
 from sqlalchemy import func
 from datetime import datetime, timezone
 import random
+from typing import Dict, Any, cast
 
 from .websocket_manager import manager
 from . import schemas, service, models
-from .models import DuelStatus
+from .models import DuelStatus, Duel
 from .flow_service import duel_flow_service, _execute_code_against_tests, _execute_code_against_public_tests, CodeExecutionResult
 from shared.app.database import get_db, SessionLocal
 from shared.app.auth.security import get_current_user_id
@@ -55,7 +56,7 @@ async def get_my_stats(
 
 # New helper function to recursively convert UUIDs to strings
 def convert_uuids_to_str(obj):
-    if isinstance(obj, UUID):
+    if isinstance(obj, uuid.UUID):
         return str(obj)
     if isinstance(obj, dict):
         return {k: convert_uuids_to_str(v) for k, v in obj.items()}
@@ -63,7 +64,7 @@ def convert_uuids_to_str(obj):
         return [convert_uuids_to_str(elem) for elem in obj]
     return obj
 
-async def generate_problem_and_run_ai(duel_id: UUID, settings: schemas.AIDuelCreateRequest):
+async def generate_problem_and_run_ai(duel_id: uuid.UUID, settings: schemas.AIDuelCreateRequest):
     """
     A background task to generate a problem for a duel and run the AI.
     """
@@ -124,11 +125,14 @@ async def generate_problem_and_run_ai(duel_id: UUID, settings: schemas.AIDuelCre
         time_limit = time_limits.get(settings.difficulty.lower(), 900)
         
         # Problem generated, now update the duel
-        db_duel = await service.get_duel(db, duel_id)
-        if not db_duel:
+        db_duel_raw = await service.get_duel(db, duel_id)
+        if not db_duel_raw:
             raise Exception(f"Duel {duel_id} not found after problem generation.")
+        
+        db_duel: models.Duel = cast(models.Duel, db_duel_raw) # Explicitly type db_duel
 
-        db_duel.problem_id = generated_problem_obj.id if hasattr(generated_problem_obj, 'id') else uuid.uuid4() # SQL problems don't have ID from generator
+        # Assign values directly to the ORM object attributes
+        db_duel.problem_id = generated_problem_obj.id if isinstance(generated_problem_obj, problem_generator.GeneratedProblem) else uuid.uuid4()
         db_duel.status = DuelStatus.IN_PROGRESS
         db_duel.started_at = datetime.now(timezone.utc)
         db_duel.time_limit_seconds = time_limit
@@ -136,13 +140,14 @@ async def generate_problem_and_run_ai(duel_id: UUID, settings: schemas.AIDuelCre
         # Convert to dictionary and then ensure UUIDs are strings
         problem_data_for_db = convert_uuids_to_str(generated_problem_obj.model_dump())
         
-        db_duel.problem = problem_data_for_db
+        # Prepare the results dictionary for the service function
+        current_results: Dict[str, Any] = cast(Dict[str, Any], db_duel.results) if db_duel.results is not None else {}
+        current_results["ai_problem_data"] = problem_data_for_db
+        current_results["duel_type"] = "ai_generated"
+        current_results["problem_category"] = settings.category # Store category for later use
         
-        db_duel.results = {
-            "ai_problem_data": problem_data_for_db,
-            "duel_type": "ai_generated",
-            "problem_category": settings.category # Store category for later use
-        }
+        await service.update_duel_results(db, db_duel, current_results) # Use service function to update JSONB
+
         await db.commit()
         await db.refresh(db_duel)
 
@@ -174,8 +179,9 @@ async def generate_problem_and_run_ai(duel_id: UUID, settings: schemas.AIDuelCre
 
     except Exception as e:
         logger.error(f"Error in AI duel setup for duel {duel_id}: {e}", exc_info=True)
-        db_duel = await service.get_duel(db, duel_id)
-        if db_duel:
+        db_duel_raw = await service.get_duel(db, duel_id)
+        if db_duel_raw:
+            db_duel: models.Duel = cast(models.Duel, db_duel_raw) # Explicitly type db_duel
             db_duel.status = models.DuelStatus.FAILED_GENERATION
             await db.commit()
         
@@ -203,12 +209,14 @@ async def create_custom_ai_duel(
         player_one_id=settings.user_id,
         status=models.DuelStatus.GENERATING_PROBLEM,
     )
-    db_duel = await service.create_duel(db, duel=duel_data)
+    db_duel_raw = await service.create_duel(db, duel=duel_data)
     
+    db_duel: models.Duel = cast(models.Duel, db_duel_raw) # Explicitly type db_duel
+
     await db.commit()
     await db.refresh(db_duel)
 
-    background_tasks.add_task(generate_problem_and_run_ai, db_duel.id, settings)
+    background_tasks.add_task(generate_problem_and_run_ai, cast(uuid.UUID, db_duel.id), settings) # Cast db_duel.id to uuid.UUID
 
     return db_duel
 
@@ -217,7 +225,7 @@ async def create_custom_ai_duel(
 @router.get("/leaderboard", response_model=list[schemas.LeaderboardEntry])
 async def get_leaderboard(
     limit: int = Query(10, ge=1, le=100),
-    user_id: UUID = Query(None),
+    user_id: uuid.UUID = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -249,7 +257,7 @@ async def get_public_recent_matches(
 
 @router.get("/{duel_id}", response_model=schemas.Duel)
 async def get_duel(
-    duel_id: UUID,
+    duel_id: uuid.UUID,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -277,14 +285,18 @@ async def websocket_endpoint(websocket: WebSocket, duel_id: str, user_id: str):
         logger.error(f"Error in websocket for duel {duel_id}, user {user_id}: {e}")
         manager.disconnect(duel_id, user_id, websocket)
 
-async def run_ai_opponent(duel_id: str, solution: str, template: str, steps: list = None):
+async def run_ai_opponent(duel_id: str, solution: str, template: str, steps: list[Any] | None = None):
     """A background task that simulates an AI opponent typing out a solution."""
     try:
         # Check duel status right at the start with a fresh session
         async with SessionLocal() as db_session_start:
-            duel = await service.get_duel(db_session_start, UUID(duel_id))
-            if not duel or duel.status != models.DuelStatus.IN_PROGRESS:
-                logger.info(f"[AI Opponent] Duel {duel_id}: Already ended or not in progress (status: {duel.status if duel else 'None'}). AI will not proceed.")
+            duel_raw = await service.get_duel(db_session_start, uuid.UUID(duel_id))
+            if not duel_raw:
+                logger.info(f"[AI Opponent] Duel {duel_id}: Duel not found. AI will not proceed.")
+                return
+            duel: models.Duel = cast(models.Duel, duel_raw)
+            if duel.status is not models.DuelStatus.IN_PROGRESS: # Use 'is not' for enum comparison
+                logger.info(f"[AI Opponent] Duel {duel_id}: Already ended or not in progress (status: {duel.status}). AI will not proceed.")
                 return
 
         # Initialize ai_process
@@ -310,8 +322,12 @@ async def run_ai_opponent(duel_id: str, solution: str, template: str, steps: lis
         for step_model in ai_process:
             # Re-check duel status before each significant step (typing/pause)
             async with SessionLocal() as db_session_step:
-                duel = await service.get_duel(db_session_step, UUID(duel_id))
-                if not duel or duel.status != models.DuelStatus.IN_PROGRESS:
+                duel_raw = await service.get_duel(db_session_step, uuid.UUID(duel_id))
+                if not duel_raw:
+                    logger.info(f"[AI Opponent] Duel {duel_id}: Duel not found during AI typing. Aborting AI process.")
+                    return
+                duel: models.Duel = cast(models.Duel, duel_raw)
+                if duel.status is not models.DuelStatus.IN_PROGRESS: # Use 'is not' for enum comparison
                     logger.info(f"[AI Opponent] Duel {duel_id}: Duel ended during AI typing. Aborting AI process.")
                     return
 
@@ -345,32 +361,36 @@ async def run_ai_opponent(duel_id: str, solution: str, template: str, steps: lis
 
         # Crucial final check before AI attempts to submit
         async with SessionLocal() as db_session_final:
-            duel = await service.get_duel(db_session_final, UUID(duel_id))
-            if not duel or duel.status != models.DuelStatus.IN_PROGRESS:
+            duel_raw = await service.get_duel(db_session_final, uuid.UUID(duel_id))
+            if not duel_raw:
+                logger.info(f"[AI Opponent] Duel {duel_id}: Duel not found for final submission. AI will not submit.")
+                return
+            duel: models.Duel = cast(models.Duel, duel_raw)
+            if duel.status is not models.DuelStatus.IN_PROGRESS: # Use 'is not' for enum comparison
                 logger.info(f"[AI Opponent] Duel {duel_id}: Duel already completed before AI submission. AI will not submit.")
                 return
 
             # Check if player one has already solved it (secondary check, duel.status is primary)
-            if duel.results and duel.results.get("p1_solved_at"):
+            current_results_for_update: Dict[str, Any] = cast(Dict[str, Any], duel.results) if duel.results is not None else {} # New variable name to avoid confusion
+            if current_results_for_update.get("p1_solved_at"):
                 logger.info(f"[AI Opponent] Duel {duel_id}: Player 1 already solved. AI will not submit.")
                 return
 
             # Record AI's solve time.
-            results_data = duel.results or {}
-            results_data["ai_solved_at"] = datetime.now(timezone.utc).isoformat()
-            results_data["first_solver"] = "ai"
+            current_results_for_update["ai_solved_at"] = datetime.now(timezone.utc).isoformat()
+            current_results_for_update["first_solver"] = "ai"
 
-            await service.update_duel_results(db_session_final, duel, results_data)
+            await service.update_duel_results(db_session_final, duel, current_results_for_update)
             
             # End the duel and broadcast the results
-            await duel_flow_service.end_duel_and_broadcast(db_session_final, duel.id, for_ai=True)
+            await duel_flow_service.end_duel_and_broadcast(db_session_final, cast(uuid.UUID, duel.id), for_ai=True) # Cast duel.id to uuid.UUID
 
     except Exception as e:
         logger.error(f"[AI Opponent] Duel {duel_id}: An error occurred: {e}", exc_info=True)
 
 @router.get("/user/{user_id}/active-or-waiting", response_model=schemas.Duel, description="Get the active or waiting duel for a user.")
 async def get_active_or_waiting_duel_for_user(
-    user_id: UUID,
+    user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db)
 ):
     duel = await service.get_active_or_waiting_duel(db, user_id=user_id)
@@ -380,10 +400,10 @@ async def get_active_or_waiting_duel_for_user(
 
 @router.post("/{duel_id}/test", status_code=202)
 async def test_solution(
-    duel_id: UUID,
+    duel_id: uuid.UUID,
     submission: schemas.CodeSubmission,
     background_tasks: BackgroundTasks,
-    user_id: UUID = Depends(get_current_user_id),
+    user_id: uuid.UUID = Depends(get_current_user_id),
 ):
     """
     Handles code testing against public test cases for a duel.
@@ -393,7 +413,7 @@ async def test_solution(
     background_tasks.add_task(run_tests_and_notify, duel_id, user_id, submission.code, submission.language)
     return {"message": "Test execution started"}
 
-async def run_tests_and_notify(duel_id: UUID, user_id: UUID, code: str, language: str):
+async def run_tests_and_notify(duel_id: uuid.UUID, user_id: uuid.UUID, code: str, language: str):
     """
     Asynchronously runs the user's code against PUBLIC test cases and notifies them of the result.
     """
@@ -405,14 +425,18 @@ async def run_tests_and_notify(duel_id: UUID, user_id: UUID, code: str, language
         submission_obj = schemas.CodeSubmission(code=code, language=language)
 
         # Fetch problem data for public tests only (must be AI generated)
-        duel = await service.get_duel(db, duel_id)
-        problem_data = None
+        duel_raw = await service.get_duel(db, duel_id)
+        problem_data: Dict[str, Any] | None = None # Explicitly type problem_data as Dict[str, Any]
         problem_category = None
-        if duel and duel.results and duel.results.get("ai_problem_data"):
-            problem_data = duel.results["ai_problem_data"]
-            problem_category = duel.results.get("problem_category", "algorithms") # Default to algorithms
-        else:
-            if not duel:
+
+        if duel_raw and duel_raw.results is not None: # Check duel.results is not None
+            duel: models.Duel = cast(models.Duel, duel_raw)
+            current_duel_results: Dict[str, Any] = cast(Dict[str, Any], duel.results) # Assign to a new typed variable and cast
+            problem_data = current_duel_results.get("ai_problem_data")
+            problem_category = current_duel_results.get("problem_category", "algorithms") # Default to algorithms
+        
+        if problem_data is None: # If problem_data is None after checks
+            if not duel_raw:
                 logger.error(f"Could not find duel {duel_id} for test run.")
                 return 
             logger.error(f"No AI problem data found for duel {duel_id}")
@@ -434,7 +458,8 @@ async def run_tests_and_notify(duel_id: UUID, user_id: UUID, code: str, language
         execution_result = None
         if problem_category == "algorithms":
             # Ensure function_name exists for python helper calls
-            if problem_data and "function_name" not in problem_data:
+            # problem_data is guaranteed not to be None here due to the check above
+            if "function_name" not in problem_data: 
                 slug = problem_data.get("slug", "")
                 problem_data["function_name"] = slug.replace('-', '_')
 
@@ -478,7 +503,7 @@ async def run_tests_and_notify(duel_id: UUID, user_id: UUID, code: str, language
 
 @router.post("/{duel_id}/submit", response_model=flow_service.CodeExecutionResult, status_code=200)
 async def submit_solution(
-    duel_id: UUID,
+    duel_id: uuid.UUID,
     submission: schemas.DuelSubmission,
     db: AsyncSession = Depends(get_db),
     current_user: JWTUser = Depends(get_current_user),
@@ -488,7 +513,7 @@ async def submit_solution(
     Submits a solution for a duel, runs it against test cases,
     and returns immediate feedback.
     """
-    if UUID(current_user.id) != submission.player_id:
+    if uuid.UUID(current_user.id) != submission.player_id:
         raise HTTPException(status_code=403, detail="Player ID does not match authenticated user.")
 
     result = await flow_service.handle_submission(

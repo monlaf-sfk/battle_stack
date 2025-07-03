@@ -17,13 +17,18 @@ export class DuelService {
     return response.data;
   }
 
-  async testCode(duelId: string, submission: CodeSubmission): Promise<any> {
-    const response = await duelsApi.post(`/${duelId}/test`, submission);
+  async testCode(duelId: string, submission: CodeSubmission): Promise<SubmissionResponse> {
+    const response = await duelsApi.post<SubmissionResponse>(`/${duelId}/test`, submission);
     return response.data;
   }
 
   async getDuel(duelId: string): Promise<DuelResponse> {
     const response = await duelsApi.get<DuelResponse>(`/${duelId}`);
+    return response.data;
+  }
+
+  async getDuelForUser(userId: string): Promise<DuelResponse> {
+    const response = await duelsApi.get<DuelResponse>(`/user/${userId}/active-or-waiting`);
     return response.data;
   }
 

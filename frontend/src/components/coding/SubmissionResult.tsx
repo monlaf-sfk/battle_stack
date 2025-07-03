@@ -9,22 +9,11 @@ import {
   ServerCrash
 } from 'lucide-react';
 
-// Упрощенный интерфейс, который может содержать либо ошибку, либо успешные данные
-interface UniversalResult {
-  error?: string;
-  details?: string[];
-  message?: string; // Для сообщений типа "Ожидание результата..."
-  status?: string;
-  accepted?: boolean;
-  score?: number;
-  passed_tests?: number;
-  total_tests?: number;
-  execution_time?: string;
-  memory_usage?: string;
-}
+// Import TestResult and SubmissionResponse types from duel.types.ts
+import type { SubmissionResponse } from '../../types/duel.types';
 
 interface SubmissionResultProps {
-  result: UniversalResult | null;
+  result: SubmissionResponse | null;
   isLoading: boolean;
 }
 
@@ -47,7 +36,7 @@ const SubmissionResult: React.FC<SubmissionResultProps> = ({ result, isLoading }
   }
 
   // === Рендеринг ОШИБКИ ===
-  if (result.error) {
+  if (result?.error) {
     return (
       <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 text-white">
         <div className="flex items-start">
@@ -71,25 +60,27 @@ const SubmissionResult: React.FC<SubmissionResultProps> = ({ result, isLoading }
     );
   }
   
-  // === Рендеринг простого сообщения (например, "ожидание...") ===
-  if (result.message && !result.status) {
-      return (
-        <div className="flex items-center justify-center h-full text-gray-400">
-          <span>{result.message}</span>
-        </div>
-      );
-  }
+  // === Рендеринг УСПЕШНОГО/НЕУСПЕШНОГО РЕЗУЛЬТАТА ===
+  // This block now handles both correct and incorrect submissions based on `is_correct`
+  if (result?.is_correct !== undefined && result.passed !== undefined && result.total !== undefined) {
+    const isAccepted = result.is_correct && result.passed === result.total;
+    const textColor = isAccepted ? "text-green-400" : "text-red-400";
+    const statusText = isAccepted ? "Accepted" : "Wrong Answer";
 
-  // === Рендеринг УСПЕШНОГО РЕЗУЛЬТАТА (старая логика) ===
-  // (Здесь должна быть ваша сложная логика для отображения оценок, статистики и т.д.)
-  // Этот блок будет работать, когда WebSocket вернет полный объект результата.
-  if (result.status) {
     return (
-      <div className="text-green-400">
-        <h3 className="text-lg font-bold">Success!</h3>
-        <p>Status: {result.status}</p>
-        <p>Passed: {result.passed_tests}/{result.total_tests}</p>
-        {/* Добавьте остальную часть вашего красивого рендеринга здесь */}
+      <div className={`${textColor}`}>
+        <h3 className="text-lg font-bold">{statusText}</h3>
+        <p>Passed Tests: {result.passed}/{result.total}</p>
+        {result.details && result.details.length > 0 && (
+          <div className="mt-2 text-sm">
+            <h4 className="font-medium">Details:</h4>
+            <ul className="list-disc space-y-1 pl-5">
+              {result.details.map((detail, index) => (
+                <li key={index}>{detail}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     );
   }
@@ -97,4 +88,4 @@ const SubmissionResult: React.FC<SubmissionResultProps> = ({ result, isLoading }
   return null; // На случай если result не соответствует ни одному из условий
 };
 
-export default SubmissionResult; 
+export default SubmissionResult;
