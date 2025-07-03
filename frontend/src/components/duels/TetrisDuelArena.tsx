@@ -16,12 +16,12 @@ import {
 } from 'lucide-react';
 
 import { CodeEditor } from '../ui/CodeEditor';
-import { useUniversalDuelSocket } from '../../hooks/useUniversalDuelSocket';
 import { DuelComplete } from './DuelComplete';
-import type { Duel, WSMessage, DuelResult, Language, DuelProblem, DuelSubmission } from '../../types/duel.types';
+import type { Duel, Language, DuelProblem, DuelSubmission } from '../../types/duel.types';
 import { duelsApiService } from '../../services/duelService';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useAuth } from '../../contexts/AuthContext';
+import { useDuel } from '../../contexts/DuelContext';
 
 interface TetrisDuelArenaProps {
   duel: Duel;
@@ -45,6 +45,13 @@ const getProblemData = (duel: Duel): DuelProblem | null => {
 export const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ duel }) => {
   const { user } = useAuth();
   const userId = user?.id || '';
+  const { 
+    duelState, 
+    updateCode, 
+    testCode, 
+    aiOpponentCode 
+  } = useDuel();
+
   const problemData = getProblemData(duel);
   
   const getInitialCode = () => {
@@ -61,16 +68,10 @@ export const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ duel }) => {
   // State management
   const [code, setCode] = useState(getInitialCode());
   const [language] = useState<Language>('python');
-  const [opponentCode, setOpponentCode] = useState('');
-  const [testResults, setTestResults] = useState<any>(null);
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
   const [isTesting, setIsTesting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<SubmissionError | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [aiStartedTyping, setAiStartedTyping] = useState(false);
-  const [duelComplete, setDuelComplete] = useState(false);
-  const [duelResult, setDuelResult] = useState<DuelResult | null>(null);
   const [showProblemModal, setShowProblemModal] = useState(false);
   const [showTestResults, setShowTestResults] = useState(false);
 
@@ -111,100 +112,33 @@ export const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ duel }) => {
     return () => clearInterval(interval);
   }, [duel.status, duel.started_at, timeLimit, showNotification]);
 
-  // WebSocket message handler
-  const handleMessage = useCallback((message: WSMessage) => {
-    switch (message.type) {
-      case 'code_update':
-        if (message.user_id !== userId) setOpponentCode(message.code || '');
-        break;
-      case 'ai_progress':
-        // This is AI typing progress
-        const aiCodeChunk = message.data.code_chunk;
-        setAiStartedTyping(true);
-        setOpponentCode(prev => prev + aiCodeChunk);
-
-        // Update AI's code in the duel state (optional for rendering AI's code)
-        // if (aiCodeChunk !== undefined) {
-        //   // Assuming you have a dispatch function to update the duel state
-        //   // dispatch({
-        //   //   type: 'SOCKET_MESSAGE_RECEIVED',
-        //   //   payload: {
-        //   //     type: 'code_update',
-        //   //     user_id: aiOpponentId,
-        //   //     code: (duel.player_two_code || '') + aiCodeChunk,
-        //   //     language: selectedLanguage, // Assume AI uses the same language as player for now
-        //   //     timestamp: Date.now(),
-        //   //   },
-        //   // });
-        // }
-        break;
-      case 'ai_delete':
-        // Handle AI deleting characters
-        const charCount = message.data.char_count;
-        setOpponentCode(prev => prev.slice(0, -charCount));
-        setAiStartedTyping(true);
-
-        // Update AI's code in the duel state (optional for rendering AI's code)
-        // dispatch({
-        //   type: 'SOCKET_MESSAGE_RECEIVED',
-        //   payload: {
-        //   //     type: 'code_update',
-        //   //     user_id: aiOpponentId,
-        //   //     code: (duel.player_two_code || '').slice(0, -charCount),
-        //   //     language: selectedLanguage, // Assume AI uses the same language as player for now
-        //   //     timestamp: Date.now(),
-        //   },
-        // });
-        break;
-      case 'test_result':
-        if (message.user_id === userId) {
-            setTestResults(message.data);
-            setIsTesting(false);
-            setShowTestResults(true);
-        }
-        break;
-      case 'duel_end':
-        try {
-          const duelEndMessageData = message.data; // Now directly an object
-          setDuelComplete(true);
-          setDuelResult(duelEndMessageData);
-        } catch (error) {
-          console.error('Error processing duel_end message in TetrisDuelArena:', error, message.data);
-        }
-        break;
-      default:
-        console.log('Unknown message type', (message as any).type);
+  useEffect(() => {
+    if (duelState.userTestResults) {
+      setIsTesting(false);
+      setShowTestResults(true);
     }
-  }, [userId, aiStartedTyping]);
-
-  const { sendMessage } = useUniversalDuelSocket({
-    duelId: duel.id,
-    userId,
-    onMessage: handleMessage,
-    onStatusChange: setConnectionStatus,
-    enabled: true
-  });
+  }, [duelState.userTestResults]);
 
   // Code change handler
   const handleCodeChange = useCallback((newCode: string) => {
     setCode(newCode);
-    sendMessage({ type: 'code_update', user_id: userId, data: { code: newCode, language } });
-  }, [sendMessage, language, userId]);
+    updateCode(duel.id, language, newCode);
+  }, [updateCode, duel.id, language]);
 
   // Test code handler
   const handleTestCode = useCallback(async () => {
     if (!code.trim() || isTesting) return;
     setIsTesting(true);
-    setTestResults(null);
+    setSubmissionError(null); 
     try {
-      await duelsApiService.testCode(duel.id, { code, language });
+      await testCode(duel.id, code, language);
       showNotification('info', 'Test Submitted', 'Your code is being tested...');
     } catch (error) {
       console.error('Error testing code:', error);
       showNotification('error', 'Test Failed', 'Could not submit your code for testing.');
       setIsTesting(false);
     }
-  }, [code, language, duel.id, isTesting, showNotification]);
+  }, [code, language, duel.id, isTesting, showNotification, testCode]);
 
   // Submit code handler
   const handleSubmitCode = useCallback(async () => {
@@ -248,8 +182,8 @@ export const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ duel }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (duelComplete && duelResult) {
-    return <DuelComplete result={duelResult} currentUserId={userId} />;
+  if (duelState.isCompleted && duelState.duelResult) {
+    return <DuelComplete result={duelState.duelResult} currentUserId={userId} />;
   }
 
   if (!problemData) {
@@ -262,12 +196,12 @@ export const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ duel }) => {
 
   const visibleTestCases = problemData.test_cases?.filter(tc => !tc.is_hidden) || [];
   
-  const resultsToDisplay = submissionError || testResults;
+  const resultsToDisplay = submissionError || duelState.userTestResults;
   
   const userStats = {
-    pieces: testResults?.passed || 0,
-    attack: testResults?.passed ? testResults.passed * 10 : 0,
-    ko: testResults?.is_correct ? 1 : 0
+    pieces: duelState.userTestResults?.passed || 0,
+    attack: duelState.userTestResults?.passed ? duelState.userTestResults.passed * 10 : 0,
+    ko: duelState.userTestResults?.is_correct ? 1 : 0
   };
 
   const opponentStats = {
@@ -353,15 +287,15 @@ export const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ duel }) => {
           {/* Player Actions */}
           <div className="h-16 bg-black/50 border-t border-gray-800 flex items-center justify-between px-6">
             <div className="flex items-center gap-4">
-              {connectionStatus === 'connected' ? (
+              {duelState.isConnected ? (
                 <Activity className="w-4 h-4 text-green-400" />
               ) : (
                 <AlertCircle className="w-4 h-4 text-red-400" />
               )}
               <span className="text-sm text-gray-400">
-                {connectionStatus === 'connected' ? 'Connected' : 'Disconnected'}
+                {duelState.isConnected ? 'Connected' : 'Disconnected'}
               </span>
-              {testResults && (
+              {duelState.userTestResults && (
                 <button
                   onClick={() => setShowTestResults(true)}
                   className="flex items-center gap-2 px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
@@ -437,7 +371,7 @@ export const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ duel }) => {
           {/* Opponent Code Editor */}
           <div className="flex-1 bg-gray-950">
             <CodeEditor
-              value={opponentCode}
+              value={aiOpponentCode}
               onChange={() => {}}
               language={language}
               readOnly={true}
@@ -446,7 +380,7 @@ export const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ duel }) => {
 
           {/* Opponent Status */}
           <div className="h-16 bg-black/50 border-t border-gray-800 flex items-center justify-center">
-            {aiStartedTyping ? (
+            {duelState.opponentIsTyping ? (
               <div className="flex items-center gap-2 text-gray-400">
                 <Zap className="w-4 h-4 text-yellow-400" />
                 <span className="text-sm">AI is coding...</span>
@@ -559,66 +493,60 @@ export const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ duel }) => {
       <AnimatePresence>
         {showTestResults && resultsToDisplay && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
-            onClick={() => setShowTestResults(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           >
-            <div
-              className="bg-gray-800 border border-purple-500/30 rounded-2xl shadow-2xl w-full max-w-2xl p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                  <TestTube size={24} />
-                  Test Results
-                </h2>
-                <button onClick={() => setShowTestResults(false)} className="text-gray-400 hover:text-white">
-                  <X size={24} />
-                </button>
-              </div>
-              {resultsToDisplay ? (
-                <div className="space-y-4">
-                  <div className={`p-4 rounded-lg flex items-center gap-3 ${
-                    resultsToDisplay.is_correct || (!resultsToDisplay.error && !resultsToDisplay.message)
-                      ? 'bg-green-500/10 text-green-400' 
-                      : 'bg-red-500/10 text-red-400'
-                  }`}>
-                    {resultsToDisplay.is_correct || (!resultsToDisplay.error && !resultsToDisplay.message) ? <CheckCircle size={20} /> : <XCircle size={20} />}
-                    <div>
-                      <h3 className="font-bold text-lg">
-                        {resultsToDisplay.message || (resultsToDisplay.is_correct ? 'All Public Tests Passed' : 'Some Tests Failed')}
-                      </h3>
-                      <p className="text-sm">
-                        {resultsToDisplay.passed ?? '0'} out of {resultsToDisplay.total ?? '0'} test cases passed
-                      </p>
+            <div className="w-full max-w-2xl bg-gray-800 rounded-lg shadow-2xl border border-gray-700">
+              <div className="flex justify-between items-center p-4 border-b border-gray-700">
+                <div className="flex items-center gap-3">
+                  {'is_correct' in resultsToDisplay && resultsToDisplay.is_correct ? (
+                    <CheckCircle className="w-6 h-6 text-green-400" />
+                  ) : (
+                    <XCircle className="w-6 h-6 text-red-400" />
+                  )}
+                  <div>
+                    <div className="text-lg font-semibold">
+                      {'is_correct' in resultsToDisplay && resultsToDisplay.is_correct
+                        ? <span className="text-green-400">All Tests Passed</span>
+                        : ('message' in resultsToDisplay && resultsToDisplay.message)
+                          ? <span className="text-red-400">{resultsToDisplay.message}</span>
+                          : <span className="text-red-400">Tests Failed</span>
+                      }
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      {('passed' in resultsToDisplay && 'total' in resultsToDisplay) &&
+                        <span>{resultsToDisplay.passed} / {resultsToDisplay.total} passed</span>
+                      }
                     </div>
                   </div>
-                  {resultsToDisplay.details && resultsToDisplay.details.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-gray-300">Failure Details:</h4>
-                      <div className="max-h-60 overflow-y-auto bg-black/30 p-3 rounded-md space-y-2">
-                        {resultsToDisplay.details.map((detail: string, index: number) => (
-                          <p key={index} className="font-mono text-xs text-red-300 bg-red-900/20 p-2 rounded">
-                            {detail}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {resultsToDisplay.error && !resultsToDisplay.message && (
-                      <p className="font-mono text-xs text-red-300 bg-red-900/20 p-2 rounded">
-                        {resultsToDisplay.error}
-                      </p>
-                  )}
                 </div>
-              ) : (
-                <div className="flex items-center justify-center text-gray-400 py-8">
-                  <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                  <span>Running tests...</span>
-                </div>
-              )}
+                <button onClick={() => setShowTestResults(false)} className="p-2 rounded-full hover:bg-gray-700 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-4 bg-gray-900 rounded-b-lg overflow-y-auto max-h-[60vh]">
+                {('details' in resultsToDisplay && resultsToDisplay.details && resultsToDisplay.details.length > 0) ? (
+                  <ul className="space-y-2">
+                    {resultsToDisplay.details?.map((detail, index) => (
+                      <li key={index} className="text-sm text-red-300 bg-red-900/20 p-3 rounded-md font-mono border border-red-500/20">
+                        <p className="font-semibold mb-1">Test Case Failure:</p>
+                        {detail}
+                      </li>
+                    ))}
+                  </ul>
+                ) : ('is_correct' in resultsToDisplay && resultsToDisplay.is_correct) ? (
+                  <div className="text-center text-green-300 py-8">
+                    <CheckCircle className="w-12 h-12 mx-auto mb-4" />
+                    <p className="text-lg">Congratulations! Your solution is correct and passed all tests.</p>
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-400 py-8">
+                    <p>No further details available. Please review your code and the problem description.</p>
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
         )}

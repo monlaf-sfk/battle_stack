@@ -20,78 +20,45 @@ class DeleteAction(BaseModel):
     char_count: int = Field(..., description="Number of characters to delete.")
 
 class CodingStep(RootModel):
-    root: Union[CodeTypingAction, PauseAction, DeleteAction] = Field(..., discriminator='action')
+    root: Union[CodeTypingAction, PauseAction, DeleteAction]
 
-async def generate_ai_coding_process(solution: str, template: str, language: str) -> List[CodingStep]:
+async def generate_ai_coding_process(
+    solution: str, template: str, language: str
+) -> List[CodingStep]:
     """
-    Generates a realistic sequence of coding actions, including mistakes and corrections,
-    by using an LLM to plan the transition from a template to the final solution.
+    Generates a sequence of coding actions (typing, pausing, deleting) to simulate
+    an AI opponent writing code.
     """
-    from shared.app.ai.generator import generator_client, GeneratorInvalidResponse
+    steps = []
+    
+    # The AI's final code should be the provided solution. The template is for the
+    # human user, and the AI should write the complete, correct solution.
+    full_code_target = solution
 
-    prompt = f"""
-    You are an AI assistant simulating a programmer solving a coding problem. Your task is to generate a realistic sequence of actions to transform a given code template into a final solution in the {language} language.
+    # Now, simulate the typing process for the `full_code_target`
+    remaining_code = full_code_target
+    
+    while remaining_code:
+        # Add a pause to simulate thinking
+        if random.random() < 0.2: # 20% chance of a pause
+            steps.append(CodingStep(root=PauseAction(duration=random.uniform(0.5, 2.0))))
 
-    The simulation should look human. Humans don't just type code perfectly from start to finish. They make mistakes, they pause to think, they delete code, and they refactor.
+        # Add a "mistake" and correction
+        if random.random() < 0.05 and len(steps) > 0: # 5% chance of a mistake
+            # Delete a few characters
+            delete_count = random.randint(3, 10)
+            steps.append(CodingStep(root=DeleteAction(char_count=delete_count)))
+            # Add a short pause
+            steps.append(CodingStep(root=PauseAction(duration=random.uniform(0.2, 0.5))))
+            # This is a simplified model; we don't actually "re-type" the correct code here,
+            # but we assume the `full_code_target` is what is eventually typed out.
 
-    Here is the starting template:
-    ```python
-    {template}
-    ```
-
-    Here is the final, correct solution:
-    ```python
-    {solution}
-    ```
-
-    You must generate a JSON array of "coding steps" that represents this process. The available actions are:
-    1. `{{ "action": "type", "content": "...", "speed": <float> }}`: Types out a string of code. `speed` is a multiplier (e.g., 2.0 is twice as fast).
-    2. `{{ "action": "pause", "duration": <float> }}`: Pauses for a duration in seconds.
-    3. `{{ "action": "delete", "char_count": <int> }}`: Deletes a specified number of characters from the end of the current code.
-
-    **CRITICAL INSTRUCTIONS:**
-    - The final state of the code after all actions are performed MUST exactly match the provided solution.
-    - Start by deleting the placeholder content from the template.
-    - Simulate a thought process. Use pauses before large blocks of code.
-    - Introduce plausible errors. For example, a typo in a variable name, a wrong operator, or a logical mistake.
-    - After making a mistake, pause, then use the "delete" action to correct it before typing the right code.
-    - Keep the `content` in "type" actions relatively short to simulate real typing.
-    - Ensure all code, including indentation and newlines, is correctly represented in the `content` fields. Use `\\n` for newlines within the JSON string.
-    - Your entire output must be a single, valid JSON array of action objects. Do not include any text before or after the JSON array.
-
-    Generate the JSON array of coding steps now.
-    """
-    try:
-        response_json = await generator_client.generate(prompt)
+        # Type a chunk of code
+        chunk_size = random.randint(5, 15)
+        code_chunk = remaining_code[:chunk_size]
+        remaining_code = remaining_code[chunk_size:]
         
-        # The output from the generator is a list of dictionaries.
-        # We need to validate and convert them into our Pydantic models.
-        validated_steps = [CodingStep.model_validate(step) for step in response_json]
-        return validated_steps
-
-    except GeneratorInvalidResponse as e:
-        # Fallback to the simpler, non-mistake-prone generation if the LLM fails.
-        logger.error(f"LLM failed to generate valid coding steps: {e}. Falling back to more human-like simple typing.")
-        solution_lines = solution.splitlines(True)
-        steps = []
-        for line in solution_lines:
-            if not line.strip():
-                steps.append(CodingStep(root=PauseAction(duration=random.uniform(0.3, 0.7)))) # Longer pause for empty lines or just newlines
-                continue
-            # Introduce random typing speed and small pauses between lines
-            typing_speed = random.uniform(0.5, 1.2)  # Even slower typing speed for realism
-            steps.append(CodingStep(root=CodeTypingAction(content=line, speed=typing_speed)))
-            steps.append(CodingStep(root=PauseAction(duration=random.uniform(0.1, 0.4)))) # Slightly longer pause after each line
-        return steps
-    except Exception as e:
-        logger.error(f"An unexpected error occurred during AI process generation: {e}. Falling back to more human-like simple typing.")
-        solution_lines = solution.splitlines(True)
-        steps = []
-        for line in solution_lines:
-            if not line.strip():
-                steps.append(CodingStep(root=PauseAction(duration=random.uniform(0.3, 0.7))))
-                continue
-            typing_speed = random.uniform(0.5, 1.2)
-            steps.append(CodingStep(root=CodeTypingAction(content=line, speed=typing_speed)))
-            steps.append(CodingStep(root=PauseAction(duration=random.uniform(0.1, 0.4))))
-        return steps 
+        typing_speed = random.uniform(0.8, 1.5) # Varies typing speed
+        steps.append(CodingStep(root=CodeTypingAction(content=code_chunk, speed=typing_speed)))
+    
+    return steps 

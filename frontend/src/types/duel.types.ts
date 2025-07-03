@@ -1,3 +1,5 @@
+export type UUID = string;
+
 export type DuelMode = 'random_player' | 'private_room' | 'ai_opponent';
 export type DuelDifficulty = 'easy' | 'medium' | 'hard' | 'expert';
 export type ProblemType = 'algorithm' | 'data_structure' | 'dynamic_programming' | 'graph' | 'string' | 'array' | 'tree' | 'math' | 'hash_table' | 'stack_queue' | 'heap' | 'linked_list' | 'binary_search' | 'recursion' | 'backtracking' | 'bit_manipulation' | 'sliding_window' | 'two_pointers' | 'sorting' | 'searching' | 'design' | 'simulation' | 'geometry' | 'combinatorics';
@@ -47,16 +49,12 @@ export interface Participant {
 }
 
 export interface TestResult {
-  type: 'test_result';
-  user_id: string;
+  is_correct: boolean;
+  error?: string | null;
+  details?: string[] | null;
   passed: number;
-  failed: number;
-  total_tests: number;
-  execution_time_ms?: number;
-  error?: string;
-  is_solution_correct: boolean;
-  progress_percentage: number;
-  timestamp: number;
+  total: number;
+  failed?: number;
 }
 
 export interface CodeUpdate {
@@ -156,13 +154,14 @@ export interface AIDeleteMessage {
 }
 
 export type WSMessage =
-    | { type: 'duel_state'; payload: Duel }
-    | { type: 'duel_start'; data: any }
-    | { type: 'duel_end'; data: DuelResult }
-    | { type: 'code_update'; user_id: string; code: string }
-    | { type: 'ai_progress'; data: { code_chunk: string } }
-    | { type: 'ai_delete'; data: { char_count: number } }
-    | { type: 'test_result'; user_id: string; data: { is_correct: boolean; test_case_id: number } };
+  | { type: 'duel_state'; user_id: string; data: Duel; timestamp: string }
+  | { type: 'duel_start'; user_id: string; data: Duel; timestamp: string }
+  | { type: 'duel_end'; user_id: string; data: DuelResult | string; timestamp: string }
+  | { type: 'code_update'; user_id: string; data: { code: string; language: Language }; timestamp: string }
+  | { type: 'ai_progress'; user_id: string; data: { code_chunk: string }; timestamp: string }
+  | { type: 'ai_delete'; user_id: string; data: { char_count: number }; timestamp: string }
+  | { type: 'test_result'; user_id: string; data: TestResult; timestamp: string }
+  | { type: 'ai_start'; user_id: string; data: Record<string, never>; timestamp: string };
 
 export interface Notification {
   id: number;
@@ -232,7 +231,7 @@ export interface DuelCreateRequest {
 }
 
 export interface DuelSubmission {
-  player_id: string;
+  player_id: UUID;
   language: Language;
   code: string;
 }

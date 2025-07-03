@@ -301,6 +301,10 @@ async def run_ai_opponent(duel_id: str, solution: str, template: str, steps: lis
             return
 
         logger.info(f"[AI Opponent] Duel {duel_id}: Generated process with {len(ai_process)} steps.")
+        
+        # Send a start signal which can be used by the frontend to clear the AI's editor
+        await manager.broadcast_to_all(duel_id, json.dumps({"type": "ai_start"}))
+        
         await asyncio.sleep(3) # Initial delay to simulate thinking
 
         for step_model in ai_process:
@@ -315,7 +319,7 @@ async def run_ai_opponent(duel_id: str, solution: str, template: str, steps: lis
 
                 if isinstance(step, CodeTypingAction):
                     # Typing delay based on speed and content length
-                    delay = max(0.05, len(step.content) * 0.1 / step.speed)
+                    delay = max(0.05, len(step.content) * 0.15 / step.speed)
                     await asyncio.sleep(delay)
 
                     payload = {"type": "ai_progress", "data": {"code_chunk": step.content}}

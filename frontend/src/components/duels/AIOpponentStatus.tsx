@@ -30,10 +30,10 @@ export const AIOpponentStatus: React.FC<AIOpponentStatusProps> = ({
           )}
         </div>
         <div className="flex items-center gap-3">
-          {opponentTestResults && opponentTestResults.total_tests > 0 && (
+          {opponentTestResults && opponentTestResults.total > 0 && (
             <>
               <span className="text-red-300 font-bold">
-                {opponentTestResults.passed}/{opponentTestResults.total_tests} tests
+                {opponentTestResults.passed}/{opponentTestResults.total} tests
               </span>
               <div className="w-32 h-3 bg-gray-800 rounded-full overflow-hidden shadow-inner">
                 <div 

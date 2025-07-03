@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
-import type { Duel, DuelProblem, DuelResult, WSMessage } from '../types/duel.types';
+import type { Duel, DuelProblem, DuelResult, WSMessage, TestResult } from '../types/duel.types';
 import { useAuth } from './AuthContext';
 import { useUniversalDuelSocket } from '../hooks/useUniversalDuelSocket';
 import * as api from '../services/api'; // Import the API service
@@ -14,8 +14,11 @@ export interface DuelState {
     isConnected: boolean; // New: Track actual connection status
     aiOpponentCode: string; // New: To store AI typing progress
     opponentIsTyping: boolean; // New: To track if AI is typing
-    opponentTestResults: any; // New: To store AI test results
+    userTestResults: TestResult | null;
+    opponentTestResults: TestResult | null; // New: To store AI test results
     aiProgressPercentage: number; // New: AI's typing progress
+    duelResult: DuelResult | null;
+    isCompleted: boolean;
 }
 
 interface DuelContextType {
@@ -27,8 +30,11 @@ interface DuelContextType {
     testCode: (duelId: string, code: string, language: string) => void;
     aiOpponentCode: string; // Expose AI typing progress
     opponentIsTyping: boolean; // Expose AI typing status
-    opponentTestResults: any; // Expose AI test results
+    userTestResults: TestResult | null;
+    opponentTestResults: TestResult | null; // Expose AI test results
     aiProgressPercentage: number; // Expose AI's typing progress
+    duelResult: DuelResult | null;
+    isCompleted: boolean;
 }
 
 const DuelContext = createContext<DuelContextType | undefined>(undefined);
@@ -46,8 +52,11 @@ export const DuelProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
         isConnected: false,
         aiOpponentCode: '',
         opponentIsTyping: false,
+        userTestResults: null,
         opponentTestResults: null,
         aiProgressPercentage: 0,
+        duelResult: null,
+        isCompleted: false,
     });
 
     // Ref to hold the current code of the user, for sending with submissions
@@ -71,12 +80,25 @@ export const DuelProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
                         newState.aiOpponentCode = newState.problem.starter_code[message.data.player_one_code_language || 'python'] || '';
                     }
                     break;
-                case 'duel_end':
-                    newState.results = [message.data]; // Assuming only one duel result for now
-                    newState.duel = { ...newState.duel!, status: 'completed', results: message.data };
-                    newState.isConnected = false; // Duel ended
-                    newState.opponentIsTyping = false;
-                    newState.aiProgressPercentage = 0;
+                case 'duel_end': {
+                    try {
+                        const duelEndData = typeof message.data === 'string' 
+                            ? JSON.parse(message.data) as DuelResult 
+                            : message.data as DuelResult;
+
+                        return {
+                            ...newState,
+                            duel: { ...newState.duel!, status: 'completed' } as Duel,
+                            duelResult: duelEndData,
+                            isCompleted: true,
+                        };
+                    } catch (error) {
+                        console.error("Error parsing duel_end message data:", error, message.data);
+                        return { ...newState, error: "Failed to parse duel end data." };
+                    }
+                }
+                case 'ai_start':
+                    newState.aiOpponentCode = '';
                     break;
                 case 'ai_progress':
                     newState.aiOpponentCode += message.data.code_chunk;
@@ -93,11 +115,15 @@ export const DuelProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
                     const currentAITypingLen = newState.aiOpponentCode.length;
                     newState.aiProgressPercentage = (currentAITypingLen / totalSolLength) * 100;
                     break;
-                case 'test_result':
-                    if (message.user_id !== user?.id) { // Only update opponent's test results
-                        newState.opponentTestResults = message.data;
+                case 'test_result': {
+                    const testResult = message.data as TestResult;
+                    if (message.user_id === user?.id) {
+                        newState.userTestResults = testResult;
+                    } else {
+                        newState.opponentTestResults = testResult;
                     }
                     break;
+                }
                 // case 'code_update':
                 //     if (message.user_id !== user?.id) {
                 //         // For multi-player, update opponent's code here
@@ -158,7 +184,7 @@ export const DuelProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     // Existing disconnect now calls the hook's disconnect
     const disconnect = useCallback(() => {
         disconnectWs(); // Call the disconnect function from the hook
-        setDuelState(prev => ({ ...prev, duel: null, problem: null, results: null, error: null, isConnected: false, aiOpponentCode: '', opponentIsTyping: false, opponentTestResults: null, aiProgressPercentage: 0 }));
+        setDuelState(prev => ({ ...prev, duel: null, problem: null, results: null, error: null, isConnected: false, aiOpponentCode: '', opponentIsTyping: false, userTestResults: null, opponentTestResults: null, aiProgressPercentage: 0, duelResult: null, isCompleted: false }));
     }, [disconnectWs]);
 
     // Update internal refs for latest code/language
@@ -224,8 +250,11 @@ export const DuelProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
             testCode, // Expose testCode
             aiOpponentCode: duelState.aiOpponentCode,
             opponentIsTyping: duelState.opponentIsTyping,
+            userTestResults: duelState.userTestResults,
             opponentTestResults: duelState.opponentTestResults,
             aiProgressPercentage: duelState.aiProgressPercentage,
+            duelResult: duelState.duelResult,
+            isCompleted: duelState.isCompleted,
         }}>
             {children}
         </DuelContext.Provider>
