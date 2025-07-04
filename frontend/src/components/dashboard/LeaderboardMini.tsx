@@ -13,12 +13,14 @@ import {
   ChevronRight,
   Award
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const LeaderboardMini: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [yourRank] = useState<number | null>(null);
+  const { t } = useTranslation();
 
   const fetchLeaderboard = async () => {
     try {
@@ -28,11 +30,11 @@ const LeaderboardMini: React.FC = () => {
       const response = await duelsApiService.getLeaderboard(5);
       setLeaderboard(response || []);
     } catch (err: any) {
-      let message = 'Failed to load leaderboard';
+      let message = t('dashboard.failedToLoadLeaderboard');
       if (err?.response) {
         const status = err.response.status;
         const detail = err.response.data?.detail;
-        message = `Error ${status}: ${detail || err.message}`;
+        message = `${t('dashboard.errorColon')}${status}: ${detail || err.message}`;
       } else if (err?.message) {
         message = err.message;
       }
@@ -82,7 +84,7 @@ const LeaderboardMini: React.FC = () => {
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Crown size={20} className="text-arena-accent" />
-            Top Coders
+            {t('dashboard.topCodersTitle')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -104,7 +106,7 @@ const LeaderboardMini: React.FC = () => {
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Crown size={20} className="text-arena-accent" />
-            Top Coders
+            {t('dashboard.topCodersTitle')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -115,7 +117,7 @@ const LeaderboardMini: React.FC = () => {
               onClick={fetchLeaderboard}
               className="text-arena-accent hover:text-arena-accent-hover transition-colors"
             >
-              Try Again
+              {t('common.tryAgain')}
             </button>
           </div>
         </CardContent>
@@ -129,14 +131,14 @@ const LeaderboardMini: React.FC = () => {
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Crown size={20} className="text-arena-accent" />
-            Top Coders
+            {t('dashboard.topCodersTitle')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
             <Award className="mx-auto mb-3 text-arena-text-muted" size={32} />
             <p className="text-arena-text-muted text-sm">
-              No rankings yet. Be the first to climb the leaderboard!
+              {t('dashboard.noRankingsYet')}
             </p>
           </div>
         </CardContent>
@@ -150,11 +152,11 @@ const LeaderboardMini: React.FC = () => {
         <CardTitle className="flex items-center justify-between text-lg">
           <div className="flex items-center gap-2">
             <Crown size={20} className="text-arena-accent" />
-            Top Coders
+            {t('dashboard.topCodersTitle')}
           </div>
           {yourRank && (
             <span className="text-xs text-arena-text-muted bg-arena-surface/50 px-2 py-1 rounded">
-              You: #{yourRank}
+              {t('common.you')}: #{yourRank}
             </span>
           )}
         </CardTitle>
@@ -189,17 +191,17 @@ const LeaderboardMini: React.FC = () => {
                     <div className="flex items-center gap-3 text-xs text-arena-text-muted">
                       <div className="flex items-center gap-1">
                         <TrendingUp size={10} />
-                        {player.elo_rating} ELO
+                        {player.elo_rating} {t('dashboard.elo')}
                       </div>
                       
                       <div className="flex items-center gap-1">
                         <Trophy size={10} />
-                        {formatWinRate(player.win_rate)}
+                        {t('dashboard.winRate', { rate: formatWinRate(player.win_rate) })}
                       </div>
                       
                       <div className="flex items-center gap-1">
                         <Star size={10} />
-                        {player.current_streak}
+                        {player.current_streak} {t('dashboard.streak')}
                       </div>
                     </div>
                   </div>
@@ -221,7 +223,7 @@ const LeaderboardMini: React.FC = () => {
         
         <div className="mt-4 pt-3 border-t border-arena-border">
           <button className="w-full text-center text-xs text-arena-accent hover:text-arena-accent-bright transition-colors flex items-center justify-center gap-1">
-            View Full Leaderboard
+            {t('dashboard.viewFullLeaderboard')}
             <ChevronRight size={12} />
           </button>
         </div>

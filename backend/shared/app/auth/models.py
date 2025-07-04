@@ -4,11 +4,10 @@ from enum import Enum
 
 from sqlalchemy import Column, String, Boolean, DateTime, Text, JSON
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, declarative_base
 from sqlalchemy.sql import func
 
-from shared.app.database import Base
-
+Base = declarative_base()
 
 class UserRole(str, Enum):
     USER = "user"
@@ -40,7 +39,7 @@ class User(Base):
     oauth_provider: Mapped[str | None] = mapped_column(String, default=None, index=True)  # 'google', 'github', etc.
     
     # Timestamps
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     last_login: Mapped[datetime | None] = mapped_column(DateTime)
     

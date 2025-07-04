@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface FullTetrisDuelProps {
   problem: any;
@@ -17,6 +18,7 @@ export const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
   timeRemaining,
   isCompleted
 }) => {
+  const { t } = useTranslation();
   // State for panel visibility
   const [showProblemPanel, setShowProblemPanel] = useState(false); // Start hidden for Tetris mode
 
@@ -35,11 +37,11 @@ export const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
     attack: Math.round((participant?.tests_passed || 0) * 0.65) + Math.floor(Math.random() * 10),
     kos: participant?.is_winner ? 1 : 0,
     speed: isPlayer 
-      ? `${(0.55 + Math.random() * 0.20).toFixed(2)}/S` 
-      : `${(0.45 + Math.random() * 0.15).toFixed(2)}/S`,
+      ? t('duel.playerSpeed', { speed: (0.55 + Math.random() * 0.20).toFixed(2) })
+      : t('duel.aiSpeed', { speed: (0.45 + Math.random() * 0.15).toFixed(2) }),
     pps: isPlayer
-      ? `${(11.10 + Math.random() * 3).toFixed(2)}/M`
-      : `${(8.30 + Math.random() * 2).toFixed(2)}/M`
+      ? t('duel.playerPps', { pps: (11.10 + Math.random() * 3).toFixed(2) })
+      : t('duel.aiPps', { pps: (8.30 + Math.random() * 2).toFixed(2) })
   });
 
   const playerStats = getPlayerStats(currentPlayer, true);
@@ -209,7 +211,7 @@ export const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
                 : 'bg-black/60 text-gray-300 border border-gray-500'
             }`}
           >
-            PROBLEM
+            {t('duel.problemToggle').toUpperCase()}
           </motion.button>
         </div>
 
@@ -217,7 +219,7 @@ export const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
         <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-50">
           <div className="bg-black/80 backdrop-blur-sm rounded-xl px-6 py-3 border border-white/20">
             <div className="text-center">
-              <div className="text-white/60 font-mono text-sm mb-1">TIME REMAINING</div>
+              <div className="text-white/60 font-mono text-sm mb-1">{t('duel.timeRemaining')}</div>
               <div className="font-mono text-white text-3xl font-bold tracking-wider">
                 {formatTime(timeRemaining)}
               </div>
@@ -238,7 +240,7 @@ export const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
             {/* Left HOLD Box */}
             <div className="flex flex-col gap-4">
               <div className="bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <div className="text-white font-mono text-sm font-bold mb-2 text-center">HOLD</div>
+                <div className="text-white font-mono text-sm font-bold mb-2 text-center">{t('duel.hold')}</div>
                 <div className="w-16 h-16 bg-black/60 rounded border border-gray-600/30 flex items-center justify-center">
                   {renderMiniPiece(getRandomPiece())}
                 </div>
@@ -248,89 +250,43 @@ export const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
             {/* Left Tetris Board */}
             <div className="flex flex-col items-center">
               {renderTetrisBoard(createTetrisBoard(playerStats.pieces))}
-              
-              {/* Left Player Stats */}
-              <div className="mt-4 bg-black/80 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-                <div className="text-white font-mono text-lg font-bold mb-3 text-center">
-                  PIECES
-                </div>
-                <div className="text-center space-y-1">
-                  <div className="text-4xl font-bold text-emerald-400 font-mono">
-                    {playerStats.pieces}
+              <div className="mt-4 text-center">
+                <h3 className="text-2xl font-bold text-white font-mono mb-2 uppercase">
+                  {currentUser?.username || t('common.you')}
+                </h3>
+                <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-gray-300 font-mono">
+                  <div className="flex items-center gap-1">
+                    <Trophy size={14} className="text-yellow-400" />
+                    {t('duel.pieces')}: <span className="font-bold text-white">{playerStats.pieces}</span>
                   </div>
-                  <div className="text-sm text-white/60 font-mono">{playerStats.speed}</div>
-                </div>
-                
-                <div className="mt-4 space-y-2">
-                  <div className="flex justify-between text-sm font-mono">
-                    <span className="text-white/60">ATTACK</span>
-                    <span className="text-orange-400 font-bold">{playerStats.attack}</span>
+                  <div className="flex items-center gap-1">
+                    ⚡ {t('duel.attack')}: <span className="font-bold text-white">{playerStats.attack}</span>
                   </div>
-                  <div className="flex justify-between text-sm font-mono">
-                    <span className="text-white/60">PPS</span>
-                    <span className="text-cyan-400 font-bold">{playerStats.pps}</span>
+                  <div className="flex items-center gap-1">
+                    ⚔️ {t('duel.kos')}: <span className="font-bold text-white">{playerStats.kos}</span>
                   </div>
-                  <div className="flex justify-between text-sm font-mono">
-                    <span className="text-white/60">KOS</span>
-                    <span className="text-yellow-400 font-bold">{playerStats.kos}</span>
+                  <div className="flex items-center gap-1">
+                    🚀 {t('duel.speed')}: <span className="font-bold text-white">{playerStats.speed}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    🎯 {t('duel.pps')}: <span className="font-bold text-white">{playerStats.pps}</span>
                   </div>
                 </div>
-              </div>
-
-              {/* Left Player Name */}
-              <div className="mt-3 text-white font-mono text-lg font-bold">
-                {currentUser?.username?.toUpperCase() || 'PLAYER'}
               </div>
             </div>
-
-            {/* Left NEXT Box */}
-            <div className="flex flex-col gap-4">
-              <div className="bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <div className="text-white font-mono text-sm font-bold mb-2 text-center">NEXT</div>
-                <div className="space-y-2">
-                  {[0,1,2,3,4].map(i => (
-                    <div key={i} className="w-16 h-12 bg-black/60 rounded border border-gray-600/30 flex items-center justify-center">
-                      {renderMiniPiece(getRandomPiece(), "w-3 h-3")}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Placement indicator */}
-              <div className="bg-black/80 backdrop-blur-sm rounded-lg p-2 border border-white/20 text-center">
-                <div className="text-white/60 font-mono text-xs">PLACEMENT</div>
-                <div className="text-white font-mono text-lg font-bold">№1</div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Center - Code Editor (Hidden in Tetris mode, accessible via overlay) */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-40"
-          >
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowProblemPanel(true)}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-xl font-mono font-bold text-lg shadow-lg border border-purple-400/50"
-            >
-              🔧 OPEN CODE EDITOR
-            </motion.button>
           </motion.div>
 
           {/* Right Player (Opponent) */}
           <motion.div
             initial={{ opacity: 0, x: 100 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="flex gap-6"
+            transition={{ duration: 0.8 }}
+            className="flex gap-6 flex-row-reverse"
           >
-            {/* Right HOLD Box */}
+            {/* Right NEXT Box */}
             <div className="flex flex-col gap-4">
               <div className="bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <div className="text-white font-mono text-sm font-bold mb-2 text-center">HOLD</div>
+                <div className="text-white font-mono text-sm font-bold mb-2 text-center">{t('duel.next')}</div>
                 <div className="w-16 h-16 bg-black/60 rounded border border-gray-600/30 flex items-center justify-center">
                   {renderMiniPiece(getRandomPiece())}
                 </div>
@@ -339,155 +295,54 @@ export const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
 
             {/* Right Tetris Board */}
             <div className="flex flex-col items-center">
-              {renderTetrisBoard(createTetrisBoard(playerStats.pieces))}
-              
-              {/* Right Player Stats */}
-              <div className="mt-4 bg-black/80 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-                <div className="text-white font-mono text-lg font-bold mb-3 text-center">
-                  PIECES
-                </div>
-                <div className="text-center space-y-1">
-                  <div className="text-4xl font-bold text-red-400 font-mono">
-                    {playerStats.pieces}
+              {renderTetrisBoard(createTetrisBoard(participants.find(p => p.user_id !== currentUser?.id)?.tests_passed))}
+              <div className="mt-4 text-center">
+                <h3 className="text-2xl font-bold text-white font-mono mb-2 uppercase">
+                  {participants.find(p => p.user_id !== currentUser?.id)?.username || t('common.opponent')}
+                </h3>
+                <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-gray-300 font-mono">
+                  <div className="flex items-center gap-1">
+                    <Trophy size={14} className="text-yellow-400" />
+                    {t('duel.pieces')}: <span className="font-bold text-white">{participants.find(p => p.user_id !== currentUser?.id)?.tests_passed || 0}</span>
                   </div>
-                  <div className="text-sm text-white/60 font-mono">{playerStats.speed}</div>
-                </div>
-                
-                <div className="mt-4 space-y-2">
-                  <div className="flex justify-between text-sm font-mono">
-                    <span className="text-white/60">ATTACK</span>
-                    <span className="text-orange-400 font-bold">{playerStats.attack}</span>
+                  <div className="flex items-center gap-1">
+                    ⚡ {t('duel.attack')}: <span className="font-bold text-white">{getPlayerStats(participants.find(p => p.user_id !== currentUser?.id)).attack}</span>
                   </div>
-                  <div className="flex justify-between text-sm font-mono">
-                    <span className="text-white/60">PPS</span>
-                    <span className="text-cyan-400 font-bold">{playerStats.pps}</span>
+                  <div className="flex items-center gap-1">
+                    ⚔️ {t('duel.kos')}: <span className="font-bold text-white">{getPlayerStats(participants.find(p => p.user_id !== currentUser?.id)).kos}</span>
                   </div>
-                  <div className="flex justify-between text-sm font-mono">
-                    <span className="text-white/60">KOS</span>
-                    <span className="text-yellow-400 font-bold">{playerStats.kos}</span>
+                  <div className="flex items-center gap-1">
+                    🚀 {t('duel.speed')}: <span className="font-bold text-white">{getPlayerStats(participants.find(p => p.user_id !== currentUser?.id)).speed}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    🎯 {t('duel.pps')}: <span className="font-bold text-white">{getPlayerStats(participants.find(p => p.user_id !== currentUser?.id)).pps}</span>
                   </div>
                 </div>
-              </div>
-
-              {/* Right Player Name */}
-              <div className="mt-3 text-white font-mono text-lg font-bold">
-                {currentPlayer?.is_ai ? '🤖 AI-OPPONENT' : (currentPlayer?.username?.toUpperCase() || 'OPPONENT')}
-              </div>
-            </div>
-
-            {/* Right NEXT Box */}
-            <div className="flex flex-col gap-4">
-              <div className="bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <div className="text-white font-mono text-sm font-bold mb-2 text-center">NEXT</div>
-                <div className="space-y-2">
-                  {[0,1,2,3,4].map(i => (
-                    <div key={i} className="w-16 h-12 bg-black/60 rounded border border-gray-600/30 flex items-center justify-center">
-                      {renderMiniPiece(getRandomPiece(), "w-3 h-3")}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Placement indicator */}
-              <div className="bg-black/80 backdrop-blur-sm rounded-lg p-2 border border-white/20 text-center">
-                <div className="text-white/60 font-mono text-xs">PLACEMENT</div>
-                <div className="text-white font-mono text-lg font-bold">№2</div>
               </div>
             </div>
           </motion.div>
         </div>
 
-        {/* Code Editor Overlay */}
-        <AnimatePresence>
-          {showProblemPanel && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
-            >
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.8, opacity: 0 }}
-                className="w-[90vw] h-[80vh] bg-black/90 backdrop-blur-sm border border-white/20 rounded-2xl overflow-hidden flex"
-              >
-                {/* Problem Description */}
-                <div className="w-1/3 border-r border-white/20">
-                  <div className="text-white font-mono text-sm font-bold mb-2 text-center">
-                    {problem?.description}
-                  </div>
-                  <div className="text-center space-y-1">
-                    <div className="text-4xl font-bold text-emerald-400 font-mono">
-                      {problem?.title}
-                    </div>
-                    <div className="text-sm text-white/60 font-mono">
-                      {formatTime(timeRemaining)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Code Editor */}
-                <div className="w-2/3">
-                  {/* Placeholder for the removed CodeTerminal component */}
-                </div>
-
-                {/* Close Button */}
-                <button
-                  onClick={() => setShowProblemPanel(false)}
-                  className="absolute top-4 right-4 w-8 h-8 bg-red-500/80 text-white rounded-full font-bold hover:bg-red-500 transition-colors"
-                >
-                  ×
-                </button>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Victory Screen */}
-        <AnimatePresence>
-          {isCompleted && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50"
-            >
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="bg-black/90 border border-white/20 rounded-2xl p-8 text-center max-w-md"
-              >
-                <Trophy className="w-20 h-20 text-yellow-400 mx-auto mb-6" />
-                <h2 className="text-4xl font-bold text-white font-mono mb-4">
-                  {currentPlayer?.is_winner ? '🏆 TETRIS KO!' : '💥 GAME OVER!'}
-                </h2>
-                <p className="text-white/60 font-mono mb-6">
-                  {currentPlayer?.is_winner 
-                    ? 'Perfect Clear! You dominated the battlefield!'
-                    : 'Your opponent achieved Tetris mastery. Battle again!'
-                  }
-                </p>
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-white/10 rounded-lg p-3">
-                    <div className="text-white/60 text-xs font-mono">YOUR PIECES</div>
-                    <div className="text-emerald-400 text-xl font-bold font-mono">
-                      {playerStats.pieces}
-                    </div>
-                  </div>
-                </div>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-8 py-3 rounded-lg font-mono font-bold"
-                  onClick={() => window.location.href = '/duels'}
-                >
-                  RETURN TO OCEAN
-                </motion.button>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {isCompleted && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1, duration: 0.8 }}
+            className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm z-20"
+          >
+            <div className="text-center">
+              <Trophy size={80} className="text-yellow-400 mx-auto mb-4" />
+              <h2 className="text-5xl font-bold text-white mb-4">
+                {currentUser?.id === participants.find(p => p.is_winner)?.user_id 
+                  ? t('duel.youWin') 
+                  : t('duel.youLose')}
+              </h2>
+              <p className="text-xl text-gray-300">
+                {t('duel.finalScore')}: <span className="font-bold">{currentPlayer?.tests_passed}</span>
+              </p>
+            </div>
+          </motion.div>
+        )}
       </div>
     </div>
   );

@@ -5,6 +5,8 @@ echo "=== User Service Starting ==="
 
 cd /app/user_service
 
+export PYTHONPATH=$PYTHONPATH:/app
+
 echo "=== Waiting for database ==="
 python3 /app/wait_for_db.py
 

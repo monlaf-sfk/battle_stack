@@ -150,6 +150,7 @@ async def update_stats(
     best_streak: int = None,
     tournaments_played: int = None,
     success_rate: float = None,
+    email_notifications: bool = None,
     db: AsyncSession = Depends(get_db),
     current_user_id: UUID4 = Depends(get_current_user_id),
 ):
@@ -170,6 +171,23 @@ async def update_stats(
         best_streak=best_streak,
         tournaments_played=tournaments_played,
         success_rate=success_rate,
+        email_notifications=email_notifications,
+    )
+
+
+@router.post(
+    "/notifications",
+    response_model=UserProfile,
+    summary="Update notification preferences"
+)
+async def update_notifications(
+    email_notifications: bool,
+    db: AsyncSession = Depends(get_db),
+    current_user_id: UUID4 = Depends(get_current_user_id),
+):
+    """Update email notification preference for the current user."""
+    return await service.update_notification_preference(
+        db, user_id=current_user_id, email_notifications=email_notifications
     )
 
 

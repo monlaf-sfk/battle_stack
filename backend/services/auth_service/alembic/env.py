@@ -25,28 +25,27 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import models for AUTH SERVICE ONLY
-from shared.app.database import Base
-from shared.app.auth.models import User, AdminAuditLog
+from shared.app.auth.models import User, AdminAuditLog, Base
 
 target_metadata = Base.metadata
 
-def get_url():
+def get_url() -> str:
     """Get database URL from command line or environment variable."""
     # First try to get URL from command line (passed via -x sqlalchemy.url=...)
-    url = context.get_x_argument(as_dictionary=True).get('sqlalchemy.url')
-    if url:
-        return url
+    cmd_line_url: str | None = context.get_x_argument(as_dictionary=True).get('sqlalchemy.url')
+    if cmd_line_url:
+        # Convert async URL to sync for Alembic if it was passed via cmd line and has +asyncpg
+        if '+asyncpg' in cmd_line_url:
+            cmd_line_url = cmd_line_url.replace('+asyncpg', '')
+        return cmd_line_url
     
-    # Fallback to environment variable
-    url = os.getenv('DATABASE_URL', 'postgresql://auth_user:auth_password@auth-db:5432/auth_db')
-    if url:
-        # Convert async URL to sync for Alembic
-        if '+asyncpg' in url:
-            url = url.replace('+asyncpg', '')
-        return url
+    # Fallback to environment variable with a robust default
+    env_url: str = os.getenv('DATABASE_URL', 'postgresql://auth_user:auth_password@auth-db:5432/auth_db')
     
-    # Final fallback to config file
-    return config.get_main_option("sqlalchemy.url")
+    # Convert async URL to sync for Alembic if it came from env var
+    if '+asyncpg' in env_url:
+        env_url = env_url.replace('+asyncpg', '')
+    return env_url
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""

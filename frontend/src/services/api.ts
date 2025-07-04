@@ -228,6 +228,16 @@ export const authApiService = {
     return await authApi.post('/register', userData);
   },
   
+  // Check username availability
+  checkUsernameAvailability: async (username: string) => {
+    return await authApi.get(`/check-username?username=${username}`);
+  },
+
+  // Check email availability
+  checkEmailAvailability: async (email: string) => {
+    return await authApi.get(`/check-email?email=${email}`);
+  },
+  
   // Login user
   login: async (username: string, password: string, rememberMe: boolean = false) => {
     const formData = new URLSearchParams();
@@ -289,6 +299,7 @@ export interface DashboardStats {
   successful_duels: number;
   total_duels: number;
   tournaments_won: number;
+  hours_coded: number;
   progress_data: {
     name: string;
     value: number;
@@ -297,6 +308,7 @@ export interface DashboardStats {
 }
 
 export interface Achievement {
+  id: string;
   name: string;
   status: 'Completed' | 'In Progress' | 'Not Started';
   details: string;

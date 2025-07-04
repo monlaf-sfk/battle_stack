@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CodeEditor } from '../ui/CodeEditor';
 import { Button } from '../ui/Button';
+import { useTranslation } from 'react-i18next';
 
 interface SqlSolverProps {
   problem: {
@@ -11,6 +12,7 @@ interface SqlSolverProps {
 }
 
 const SqlSolver: React.FC<SqlSolverProps> = ({ problem, onSubmit }) => {
+  const { t } = useTranslation(['common', 'duel']);
   const [solution, setSolution] = useState<string>('');
 
   const handleSubmit = () => {
@@ -20,7 +22,7 @@ const SqlSolver: React.FC<SqlSolverProps> = ({ problem, onSubmit }) => {
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 bg-gray-800 text-white rounded-t-lg">
-        <h2 className="text-xl font-bold">SQL Challenge</h2>
+        <h2 className="text-xl font-bold">{t('sqlSolver.title')}</h2>
         <p className="mt-2 text-sm">{problem.description}</p>
       </div>
       <div className="flex-grow">
@@ -31,7 +33,7 @@ const SqlSolver: React.FC<SqlSolverProps> = ({ problem, onSubmit }) => {
         />
       </div>
       <div className="p-4 bg-gray-800 rounded-b-lg flex justify-end">
-        <Button onClick={handleSubmit}>Submit Query</Button>
+        <Button onClick={handleSubmit}>{t('sqlSolver.submitQuery')}</Button>
       </div>
     </div>
   );

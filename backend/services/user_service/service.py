@@ -303,6 +303,7 @@ async def update_user_stats(
     best_streak: Optional[int] = None,
     tournaments_played: Optional[int] = None,
     success_rate: Optional[float] = None,
+    email_notifications: Optional[bool] = None,
 ):
     """Update user statistics."""
     profile = await get_or_create_user_profile(db, user_id=user_id)
@@ -331,6 +332,9 @@ async def update_user_stats(
         profile.tournaments_played = max(tournaments_played, 0)
     if best_streak is not None:
         profile.best_streak = max(profile.best_streak, best_streak)
+    if email_notifications is not None:
+        profile.email_notifications = email_notifications
+
     # Автоматическое вычисление derived stats
     if profile.total_attempts > 0:
         profile.success_rate = profile.tasks_completed / profile.total_attempts
@@ -339,6 +343,17 @@ async def update_user_stats(
     profile.best_streak = max(profile.best_streak, profile.current_streak)
     profile.updated_at = datetime.utcnow()
     await check_and_update_achievements(db, profile)
+    await db.commit()
+    await db.refresh(profile)
+    return profile
+
+
+async def update_notification_preference(db: AsyncSession, *, user_id: uuid.UUID, email_notifications: bool):
+    """Update email notification preference for a user."""
+    profile = await get_or_create_user_profile(db, user_id=user_id)
+    profile.email_notifications = email_notifications
+    profile.updated_at = datetime.utcnow()
+    
     await db.commit()
     await db.refresh(profile)
     return profile

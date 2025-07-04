@@ -196,12 +196,12 @@ export interface AIDeleteMessage {
 
 export type WSMessage =
   | { type: 'duel_state'; user_id: string; data: Duel; timestamp: string }
-  | { type: 'duel_start'; user_id: string; data: Duel; timestamp: string }
+  | { type: 'duel_start'; user_id: string; data: DuelResponse; timestamp: string }
   | { type: 'duel_end'; user_id: string; data: DuelResult | string; timestamp: string }
   | { type: 'code_update'; user_id: string; data: { code: string; language: Language }; timestamp: string }
   | { type: 'ai_progress'; user_id: string; data: { code_chunk: string }; timestamp: string }
   | { type: 'ai_delete'; user_id: string; data: { char_count: number }; timestamp: string }
-  | { type: 'test_result'; user_id: string; data: TestResult; timestamp: string }
+  | { type: 'test_result'; user_id: string; data: TestResultResponse; timestamp: string }
   | { type: 'ai_start'; user_id: string; data: Record<string, never>; timestamp: string };
 
 export interface Notification {
@@ -221,6 +221,7 @@ export interface DuelParticipant {
   rating: number;
   status: ParticipantStatus;
   joined_at: string;
+  is_ai: boolean;
   code_snapshots: Array<{
     language: string;
     code: string;
@@ -259,8 +260,10 @@ export interface DuelResponse {
   problem_id: string;
   player_one_id: string;
   player_two_id?: string | null;
+  player_one_code?: string;
   results?: DuelResult | null;
   finished_at?: string | null;
+  player_one_code_language?: Language;
 }
 
 export interface DuelCreateRequest {
@@ -301,6 +304,7 @@ export interface TestResultResponse {
     test_case: number;
     status: 'passed' | 'failed';
     execution_time_ms: number;
+    memory_usage_mb?: number;
     input: string;
     expected: string;
     actual: string;
@@ -396,4 +400,35 @@ export interface AIDuelCreateRequest {
   difficulty: string;
   language: string;
   category: string;
+}
+
+// Existing AI message interfaces (already part of WSMessage union, but explicitly defined for clarity/import if needed)
+export interface AIProgressMessageData {
+    code_chunk: string;
+}
+
+export interface AIDeleteMessageData {
+    char_count: number;
+}
+
+export interface TestResultResponse {
+  passed: number;
+  failed: number;
+  total_tests: number;
+  percentage: number;
+  execution_time_ms: number;
+  memory_usage_mb: number;
+  error?: string;
+  progress_percentage: number;
+  is_solution_correct?: boolean;
+  test_results: Array<{
+    test_case: number;
+    status: 'passed' | 'failed';
+    execution_time_ms: number;
+    memory_usage_mb?: number;
+    input: string;
+    expected: string;
+    actual: string;
+    error?: string;
+  }>;
 }

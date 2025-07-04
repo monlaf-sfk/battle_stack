@@ -1,11 +1,14 @@
 import type { DuelProblem } from '../../types/duel.types';
+import { useTranslation } from 'react-i18next';
 
 export const FrontendSolver: React.FC<{ problem: DuelProblem }> = () => {
+  const { t } = useTranslation('common');
+
   return (
     <div className="p-4 rounded-lg border border-dashed border-blue-500/30 bg-blue-500/10 text-blue-300">
-      <p className="font-semibold">Frontend Solver (Work in Progress)</p>
+      <p className="font-semibold">{t('frontendSolver.title')}</p>
       <p className="text-sm">
-        This will contain an interactive environment for solving frontend challenges.
+        {t('frontendSolver.description')}
       </p>
     </div>
   );

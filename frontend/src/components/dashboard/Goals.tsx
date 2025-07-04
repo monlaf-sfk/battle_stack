@@ -12,6 +12,7 @@ import { useDashboard } from '../../hooks/useDashboard';
 import { Button } from '../ui/Button';
 import { Progress } from '../ui/Progress';
 import { Input } from '../ui/Input';
+import { useTranslation } from 'react-i18next';
 
 interface Goal {
     id: string;
@@ -54,6 +55,7 @@ const AddGoalModal: React.FC<{
     const [target, setTarget] = useState(1);
     const [type] = useState<'daily' | 'weekly'>('daily');
     const [category] = useState<'tasks' | 'duels' | 'streak'>('tasks');
+    const { t } = useTranslation();
 
     const handleAdd = () => {
         if (text && target > 0) {
@@ -74,22 +76,22 @@ const AddGoalModal: React.FC<{
                 exit={{ scale: 0.9, opacity: 0 }}
                 className="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-md space-y-4"
             >
-                <h3 className="text-lg font-semibold text-white">Добавить новую цель</h3>
+                <h3 className="text-lg font-semibold text-white">{t('dashboard.addGoalTitle')}</h3>
                 <Input
-                    placeholder="Описание цели (например, 'Выиграть 5 дуэлей')"
+                    placeholder={t('dashboard.goalDescription')}
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                 />
                 <Input
                     type="number"
-                    placeholder="Целевое значение"
+                    placeholder={t('dashboard.targetValue')}
                     value={target}
                     onChange={(e) => setTarget(parseInt(e.target.value, 10))}
                     min="1"
                 />
                 <div className="flex gap-4">
-                    <Button onClick={handleAdd} variant="primary">Добавить</Button>
-                    <Button onClick={onClose} variant="ghost">Отмена</Button>
+                    <Button onClick={handleAdd} variant="primary">{t('common.add')}</Button>
+                    <Button onClick={onClose} variant="ghost">{t('common.cancel')}</Button>
                 </div>
             </motion.div>
         </div>
@@ -101,6 +103,7 @@ const Goals: React.FC = () => {
   const { data } = useDashboard();
   const [isModalOpen, setModalOpen] = useState(false);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const { t } = useTranslation();
 
   const stats = data.stats;
 
@@ -112,11 +115,11 @@ const Goals: React.FC = () => {
   const staticGoals: Goal[] = useMemo(() => {
     if (!stats) return [];
     return [
-      { id: 'daily-tasks', text: 'Решить 3 задачи', target: 3, current: stats.tasks_completed, type: 'daily', category: 'tasks'},
-      { id: 'weekly-duels', text: 'Выиграть 5 дуэлей', target: 5, current: stats.successful_duels, type: 'weekly', category: 'duels'},
-      { id: 'weekly-streak', text: 'Поддержать стрик 7 дней', target: 7, current: stats.current_streak, type: 'weekly', category: 'streak'}
+      { id: 'daily-tasks', text: t('dashboard.dailyTasks'), target: 3, current: stats.tasks_completed, type: 'daily', category: 'tasks'},
+      { id: 'weekly-duels', text: t('dashboard.weeklyDuels'), target: 5, current: stats.successful_duels, type: 'weekly', category: 'duels'},
+      { id: 'weekly-streak', text: t('dashboard.weeklyStreak'), target: 7, current: stats.current_streak, type: 'weekly', category: 'streak'}
     ];
-  }, [stats]);
+  }, [stats, t]);
 
   const allGoals = [...staticGoals, ...goals];
   const dailyGoals = allGoals.filter(g => g.type === 'daily');
@@ -128,15 +131,15 @@ const Goals: React.FC = () => {
             <div className="flex justify-between items-center">
                 <CardTitle className="flex items-center gap-2">
                     <Target className="text-green-400" />
-                    Боевые Цели
+                    {t('dashboard.battleGoalsTitle')}
                 </CardTitle>
                 <Button variant="ghost" size="sm" onClick={() => setModalOpen(true)}>
                     <Plus size={16} className="mr-1" />
-                    Добавить
+                    {t('common.add')}
                 </Button>
             </div>
             <CardDescription>
-                Отслеживайте ваши ежедневные и еженедельные задачи.
+                {t('dashboard.battleGoalsSubtitle')}
             </CardDescription>
         </CardHeader>
         <CardContent>
@@ -144,7 +147,7 @@ const Goals: React.FC = () => {
                 <div>
                     <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
                         <Zap size={16} className="text-yellow-400" />
-                        Ежедневные
+                        {t('dashboard.daily')}
                     </h4>
                     <div className="space-y-4">
                         <AnimatePresence>
@@ -157,7 +160,7 @@ const Goals: React.FC = () => {
                 <div className="border-t border-gray-800 pt-4">
                     <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
                         <Trophy size={16} className="text-purple-400" />
-                        Еженедельные
+                        {t('dashboard.weekly')}
                     </h4>
                     <div className="space-y-4">
                          <AnimatePresence>

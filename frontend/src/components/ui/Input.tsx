@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -26,11 +27,12 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     showPasswordToggle = false,
     ...props 
   }, ref) => {
-    const [isFocused] = useState(false);
+    const [isFocused, setIsFocused] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [isTouched, setIsTouched] = useState(false);
     const hasValue = props.value || props.defaultValue;
     const isPasswordType = type === 'password';
+    const { t } = useTranslation('common');
 
     // Handle auto-fill detection
     useEffect(() => {
@@ -42,18 +44,22 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       return () => clearTimeout(timer);
     }, [hasValue, isTouched]);
 
-
+    // Translate label, error, success, and hint messages
+    const translatedLabel = label ? t(label) : label;
+    const translatedError = error ? t(error) : error;
+    const translatedSuccess = success ? t(success) : success;
+    const translatedHint = hint ? t(hint) : hint;
 
     const getStatusColor = () => {
-      if (error) return 'border-red-500 focus:ring-red-500';
-      if (success) return 'border-green-500 focus:ring-green-500';
-      if (error || success) return 'border-arena-accent focus:ring-arena-accent';
+      if (translatedError) return 'border-red-500 focus:ring-red-500';
+      if (translatedSuccess) return 'border-green-500 focus:ring-green-500';
+      if (translatedError || translatedSuccess) return 'border-arena-accent focus:ring-arena-accent';
       return isFocused ? 'border-arena-accent focus:ring-arena-accent' : 'border-arena-border';
     };
 
     const getLabelColor = () => {
-      if (error) return 'text-red-400';
-      if (success) return 'text-green-400';
+      if (translatedError) return 'text-red-400';
+      if (translatedSuccess) return 'text-green-400';
       if (isFocused) return 'text-arena-accent';
       return 'text-arena-text-muted';
     };
@@ -64,20 +70,20 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <motion.label
             className={cn(
-              'absolute left-3 transition-all duration-300 pointer-events-none select-none text-smooth',
+              'absolute transition-all duration-300 pointer-events-none select-none text-smooth',
               'z-10 font-medium',
               getLabelColor(),
               isFocused || hasValue
                 ? 'top-0 -translate-y-1/2 text-xs px-2 bg-arena-dark/90 rounded backdrop-blur-sm'
                 : 'top-1/2 -translate-y-1/2 text-base',
-              icon && !isFocused && !hasValue && 'left-10'
+              icon ? 'left-10' : 'left-3'
             )}
             animate={{
               scale: isFocused || hasValue ? 0.9 : 1,
             }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
-            {label}
+            {translatedLabel}
           </motion.label>
         )}
         
@@ -86,8 +92,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           {icon && (
             <motion.div 
               className={cn(
-                "absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-300",
-                error ? 'text-red-400' : success ? 'text-green-400' : 'text-arena-text-muted'
+                "absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 w-5 h-5 flex items-center justify-center",
+                translatedError ? 'text-red-400' : translatedSuccess ? 'text-green-400' : 'text-arena-text-muted'
               )}
               animate={{ scale: isFocused ? 1.1 : 1 }}
               transition={{ duration: 0.2 }}
@@ -99,14 +105,18 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           {/* Input Field */}
           <input
             ref={ref}
+            type={isPasswordType && showPassword ? 'text' : type}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
             className={cn(
-              'w-full px-4 py-3 rounded-lg border transition-all duration-200',
+              'w-full py-3 rounded-md border transition-all duration-200',
               'focus:outline-none focus:ring-2 focus:ring-arena-accent focus:border-arena-accent',
               'placeholder:text-arena-text-muted',
               variant === 'glass' 
                 ? 'bg-arena-surface/50 border-arena-border backdrop-blur-sm' 
                 : 'bg-arena-surface border-arena-border',
               getStatusColor(),
+              icon ? 'pl-11 pr-4' : 'px-4',
               className
             )}
             {...props}
@@ -121,13 +131,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
               tabIndex={-1}
+              title={showPassword ? t('input.hidePassword') : t('input.showPassword')}
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </motion.button>
           )}
 
           {/* Status Icons */}
-          {(error || success) && (
+          {(translatedError || translatedSuccess) && (
             <motion.div
               className={cn(
                 "absolute right-3 top-1/2 -translate-y-1/2",
@@ -137,15 +148,15 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.2 }}
             >
-              {error && <AlertCircle size={18} className="text-red-400" />}
-              {success && <CheckCircle size={18} className="text-green-400" />}
+              {translatedError && <AlertCircle size={18} className="text-red-400" />}
+              {translatedSuccess && !translatedError && <CheckCircle size={18} className="text-green-400" />}
             </motion.div>
           )}
         </div>
 
         {/* Messages */}
         <AnimatePresence mode="wait">
-          {(error || success || hint) && (
+          {(translatedError || translatedSuccess || translatedHint) && (
             <motion.div
               initial={{ opacity: 0, y: -5, height: 0 }}
               animate={{ opacity: 1, y: 0, height: 'auto' }}
@@ -153,33 +164,33 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               transition={{ duration: 0.2 }}
               className="mt-1 space-y-1"
             >
-              {error && (
+              {translatedError && (
                 <motion.p
                   className="text-sm text-red-400 flex items-center gap-1"
                   initial={{ x: -10 }}
                   animate={{ x: 0 }}
                 >
                   <AlertCircle size={14} />
-                  {error}
+                  {translatedError}
                 </motion.p>
               )}
-              {success && !error && (
+              {translatedSuccess && !translatedError && (
                 <motion.p
                   className="text-sm text-green-400 flex items-center gap-1"
                   initial={{ x: -10 }}
                   animate={{ x: 0 }}
                 >
                   <CheckCircle size={14} />
-                  {success}
+                  {translatedSuccess}
                 </motion.p>
               )}
-              {hint && !error && !success && (
+              {translatedHint && !translatedError && !translatedSuccess && (
                 <motion.p
                   className="text-xs text-arena-text-dim"
                   initial={{ x: -10 }}
                   animate={{ x: 0 }}
                 >
-                  {hint}
+                  {translatedHint}
                 </motion.p>
               )}
             </motion.div>

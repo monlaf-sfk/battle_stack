@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { dashboardApi, type DashboardStats, type Achievement, type AIRecommendation, type NewsItem } from '../services/api';
+import { dashboardApi, duelsApiService, type DashboardStats, type Achievement, type AIRecommendation, type NewsItem } from '../services/api';
 import { useToast } from '../components/ui/Toast';
+import { useAuth } from '../contexts/AuthContext';
 
 interface DashboardData {
   stats: DashboardStats | null;
   achievements: Achievement[];
   recommendations: AIRecommendation[];
   newsItems: NewsItem[];
+  userRank: number | null;
 }
 
 interface UseDashboardReturn {
@@ -19,11 +21,13 @@ interface UseDashboardReturn {
 }
 
 export const useDashboard = (): UseDashboardReturn => {
+  const { user } = useAuth();
   const [data, setData] = useState<DashboardData>({
     stats: null,
     achievements: [],
     recommendations: [],
     newsItems: [],
+    userRank: null,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,18 +39,28 @@ export const useDashboard = (): UseDashboardReturn => {
       setError(null);
       
       // Fetch all dashboard data in parallel
-      const [statsResponse, achievementsResponse, recommendationsResponse, newsResponse] = await Promise.all([
+      const [statsResponse, achievementsResponse, recommendationsResponse, newsResponse, leaderboardResponse] = await Promise.all([
         dashboardApi.getStats(),
         dashboardApi.getAchievements(),
         dashboardApi.getRecommendations(),
         dashboardApi.getNews(),
+        duelsApiService.getPublicLeaderboard(),
       ]);
+
+      let currentUserRank: number | null = null;
+      if (user && leaderboardResponse.data) {
+        const userInLeaderboard = leaderboardResponse.data.find((entry: any) => entry.user_id === user.id);
+        if (userInLeaderboard) {
+          currentUserRank = userInLeaderboard.rank;
+        }
+      }
 
       setData({
         stats: statsResponse.data,
         achievements: achievementsResponse.data,
         recommendations: recommendationsResponse.data,
         newsItems: newsResponse.data,
+        userRank: currentUserRank,
       });
     } catch (err: any) {
       console.error('Failed to fetch dashboard data:', err);
@@ -126,7 +140,7 @@ export const useDashboard = (): UseDashboardReturn => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [user]);
 
   return {
     data,

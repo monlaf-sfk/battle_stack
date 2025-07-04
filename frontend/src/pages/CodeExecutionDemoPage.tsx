@@ -14,11 +14,12 @@ import { codeExecutionService, type SupportedLanguage } from '../services/codeEx
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import LanguageSelector from '../components/coding/LanguageSelector';
-import { CodeEditor } from '../components/ui/CodeEditor';
 import SubmissionResult from '../components/coding/SubmissionResult';
 import { useAuth } from '../contexts/AuthContext';
 import { duelsApiService } from '../services/duelService'; // Import duel service
 import type { DuelProblem, Problem, SubmissionResponse, DuelResponse, Language } from '../types/duel.types';
+import { useTranslation } from 'react-i18next';
+import CodeExecutionPanel from '../components/coding/CodeExecutionPanel';
 
 // Define a type for a Problem in the context of this demo page,
 // combining properties from Problem and DuelProblem as needed.
@@ -35,6 +36,7 @@ const CodeExecutionDemoPage: React.FC = () => {
   const [problem, setProblem] = useState<ProblemForDemo | null>(null);
   const [submissionResult, setSubmissionResult] = useState<SubmissionResponse | null>(null);
   const [currentDuel, setCurrentDuel] = useState<DuelResponse | null>(null); // State for the active duel
+  const { t } = useTranslation();
 
   useEffect(() => {
     const loadData = async () => {
@@ -164,6 +166,10 @@ const CodeExecutionDemoPage: React.FC = () => {
     }
   };
 
+  const handleCodeChange = (newCode: string) => {
+    setCode(newCode);
+  };
+
   return (
     <div className="flex flex-col lg:flex-row h-full lg:h-[calc(100vh-80px)] p-6 space-y-6 lg:space-y-0 lg:space-x-6 bg-arena-dark text-white">
       {/* Problem Description Panel */}
@@ -230,12 +236,13 @@ const CodeExecutionDemoPage: React.FC = () => {
         </CardHeader>
         <CardContent className="flex flex-col flex-1 p-0">
           <div className="flex-grow">
-            <CodeEditor
-              value={code}
-              onChange={setCode}
-              language={language?.id || 'python'}
-              height="100%"
-              readOnly={isLoading}
+            <CodeExecutionPanel
+              problem={problem}
+              onCodeChange={handleCodeChange}
+              initialCode={code}
+              submissionResult={submissionResult}
+              selectedLanguage={language?.id as Language || 'python'}
+              onLanguageChange={handleLanguageChange}
             />
           </div>
 
@@ -251,8 +258,8 @@ const CodeExecutionDemoPage: React.FC = () => {
             <div className="bg-arena-dark p-3 rounded-md min-h-[100px] max-h-[250px] overflow-y-auto text-arena-text whitespace-pre-wrap font-mono text-xs">
               {/* SubmissionResult will now handle all output based on `submissionResult` */}
               <SubmissionResult
-                result={submissionResult}
-                isLoading={isLoading}
+                submission={submissionResult}
+                t={t}
               />
               {/* Re-introducing general loading/empty state for clarity if SubmissionResult doesn't render it */}
               {!isLoading && !submissionResult && (

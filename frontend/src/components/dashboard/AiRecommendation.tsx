@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { dashboardApi, type AIRecommendation } from '../../services/api';
 import { useToast } from '../ui/Toast';
 import { SkeletonText } from '../ui/Skeleton';
+import { useTranslation } from 'react-i18next';
 
 const AiRecommendation: React.FC = () => {
     const [recommendations, setRecommendations] = useState<AIRecommendation[]>([]);
@@ -14,6 +15,7 @@ const AiRecommendation: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { addToast } = useToast();
+    const { t } = useTranslation();
     
     const currentRecommendation = recommendations[currentIndex];
 
@@ -27,11 +29,11 @@ const AiRecommendation: React.FC = () => {
                 setError(null);
             } catch (err: any) {
                 console.error('Failed to fetch recommendations:', err);
-                setError('Failed to load recommendations');
+                setError(t('dashboard.failedToLoadRecommendations'));
                 addToast({
                     type: 'error',
-                    title: 'Data Loading Error',
-                    message: 'Failed to load AI recommendations. Please try again.',
+                    title: t('dashboard.dataLoadingError'),
+                    message: t('dashboard.failedToLoadRecommendations'),
                     duration: 5000
                 });
             } finally {
@@ -40,7 +42,7 @@ const AiRecommendation: React.FC = () => {
         };
 
         fetchRecommendations();
-    }, [addToast]);
+    }, [addToast, t]);
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
@@ -51,8 +53,8 @@ const AiRecommendation: React.FC = () => {
             
             addToast({
                 type: 'info',
-                title: 'Recommendations Updated',
-                message: 'Fresh AI recommendations loaded!',
+                title: t('dashboard.recommendationsUpdated'),
+                message: t('dashboard.freshRecommendationsLoaded'),
                 duration: 3000
             });
         } catch (err) {
@@ -123,20 +125,20 @@ const AiRecommendation: React.FC = () => {
                 <CardHeader className="relative z-10">
                     <CardTitle gradient className="flex items-center">
                         <Brain size={24} className="text-arena-secondary mr-2" />
-                        AI Recommendations
+                        {t('dashboard.aiRecommendationsTitle')}
                     </CardTitle>
                 </CardHeader>
                 
                 <CardContent className="relative z-10 text-center py-8">
                     <Brain size={48} className="mx-auto mb-4 text-arena-text-muted" />
                     <p className="text-arena-text-muted mb-4">
-                        {error || 'No recommendations available'}
+                        {error || t('dashboard.noRecommendations')}
                     </p>
                     <Button 
                         onClick={() => window.location.reload()}
                         variant="glass"
                     >
-                        Try Again
+                        {t('common.tryAgain')}
                     </Button>
                 </CardContent>
             </Card>
@@ -161,7 +163,7 @@ const AiRecommendation: React.FC = () => {
                         >
                             <Brain size={24} className="text-arena-secondary" />
                         </motion.div>
-                        AI Recommendations
+                        {t('dashboard.aiRecommendationsTitle')}
                     </CardTitle>
                     <motion.button
                         onClick={handleRefresh}
@@ -209,10 +211,10 @@ const AiRecommendation: React.FC = () => {
                             {/* Metadata */}
                             <div className="flex items-center gap-3 text-xs">
                                 <span className={`px-2 py-1 rounded-md border ${getDifficultyColor(currentRecommendation.difficulty)}`}>
-                                    {currentRecommendation.difficulty}
+                                    {t(`duel.${currentRecommendation.difficulty.toLowerCase()}`)}
                                 </span>
-                                <span className="text-arena-text-dim">⏱ {currentRecommendation.estimated_time}</span>
-                                <span className="text-green-400">📈 {currentRecommendation.improvement}</span>
+                                <span className="text-arena-text-dim">{t('dashboard.estimatedTime', { time: currentRecommendation.estimated_time })}</span>
+                                <span className="text-green-400">{t('dashboard.expectedImprovement', { percent: currentRecommendation.improvement })}</span>
                             </div>
                         </div>
 
@@ -224,13 +226,13 @@ const AiRecommendation: React.FC = () => {
                                 onClick={() => {
                                     addToast({
                                         type: 'info',
-                                        title: 'Problem Started!',
-                                        message: `Starting "${currentRecommendation.title}" problem.`,
+                                        title: t('dashboard.problemStarted'),
+                                        message: t('dashboard.startingProblem', { title: currentRecommendation.title }),
                                         duration: 3000
                                     });
                                 }}
                             >
-                                Start Problem
+                                {t('dashboard.startProblem')}
                                 <motion.div
                                     className="ml-2 inline-block"
                                     animate={{ x: [0, 5, 0] }}
@@ -245,8 +247,8 @@ const AiRecommendation: React.FC = () => {
                                 onClick={() => {
                                     addToast({
                                         type: 'info',
-                                        title: 'Hint',
-                                        message: 'Focus on understanding the problem before coding!',
+                                        title: t('dashboard.hint'),
+                                        message: t('dashboard.hintMessage'),
                                         duration: 4000
                                     });
                                 }}
@@ -273,21 +275,15 @@ const AiRecommendation: React.FC = () => {
                         </div>
                     </motion.div>
                 </AnimatePresence>
-
-                {/* Additional Info */}
-                {recommendations.length > 1 && (
-                    <motion.div 
-                        className="mt-4 text-center"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.5 }}
-                    >
-                        <p className="text-xs text-arena-text-dim">
-                            {recommendations.length} personalized recommendations available
-                        </p>
-                    </motion.div>
-                )}
             </CardContent>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1, duration: 0.5 }}
+                className="absolute bottom-0 left-0 right-0 p-4 text-center text-xs text-arena-text-muted font-mono"
+            >
+                {t('dashboard.personalizedRecommendations', { count: recommendations.length })}
+            </motion.div>
         </Card>
     );
 };

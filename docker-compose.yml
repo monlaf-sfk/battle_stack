@@ -28,8 +28,8 @@ services:
       POSTGRES_USER: auth_user
       POSTGRES_PASSWORD: auth_password
       POSTGRES_DB: auth_db
-    expose:
-      - "5432"
+    ports:
+      - "5433:5432" 
     volumes:
       - auth_postgres_data:/var/lib/postgresql/data
       - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -43,8 +43,8 @@ services:
       POSTGRES_USER: user_user
       POSTGRES_PASSWORD: user_password
       POSTGRES_DB: user_db
-    expose:
-      - "5432"
+    ports:
+      - "5434:5432" 
     volumes:
       - user_postgres_data:/var/lib/postgresql/data
       - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -59,8 +59,8 @@ services:
       POSTGRES_USER: duels_user
       POSTGRES_PASSWORD: duels_password
       POSTGRES_DB: duels_db
-    expose:
-      - "5432"
+    ports:
+      - "5435:5432" 
     volumes:
       - duels_postgres_data:/var/lib/postgresql/data
       - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -83,6 +83,7 @@ services:
       - UVICORN_LOG_LEVEL=info
       - UVICORN_ACCESS_LOG=true
       - POSTGRES_PASSWORD=auth_password
+      - DATABASE_URL=postgresql+asyncpg://auth_user:auth_password@auth-db:5432/auth_db
     networks:
       - internal
 
@@ -104,6 +105,7 @@ services:
       - POSTGRES_PASSWORD=user_password
       - POSTGRES_USER=user_user
       - POSTGRES_DB=user_db
+      - DATABASE_URL=postgresql+asyncpg://user_user:user_password@user-db:5432/user_db
     networks:
       - internal
 
@@ -125,6 +127,7 @@ services:
       - UVICORN_LOG_LEVEL=info
       - UVICORN_ACCESS_LOG=true
       - POSTGRES_PASSWORD=duels_password
+      - DATABASE_URL=postgresql+asyncpg://duels_user:duels_password@duels-db:5432/duels_db
     networks:
       - internal
 

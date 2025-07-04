@@ -4,10 +4,9 @@ from typing import Dict, List
 
 from sqlalchemy import Column, Integer, DateTime, JSON, String, Boolean, Float
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, declarative_base
 
-from shared.app.database import Base
-
+Base = declarative_base()
 
 class UserProfile(Base):
     __tablename__ = "user_profiles"
@@ -58,6 +57,7 @@ class UserProfile(Base):
     pvp_duels: Mapped[int] = mapped_column(Integer, default=0)
     best_streak: Mapped[int] = mapped_column(Integer, default=0)
     tournaments_played: Mapped[int] = mapped_column(Integer, default=0)
+    email_notifications: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 class UserProgress(Base):

@@ -2,12 +2,14 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, RotateCcw, Swords } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import type { TFunction } from 'i18next';
 
 interface DuelErrorProps {
   message: string;
+  t: TFunction;
 }
 
-export const DuelError: React.FC<DuelErrorProps> = ({ message }) => {
+export const DuelError: React.FC<DuelErrorProps> = ({ message, t }) => {
   const navigate = useNavigate();
   
   return (
@@ -37,7 +39,7 @@ export const DuelError: React.FC<DuelErrorProps> = ({ message }) => {
             transition={{ delay: 0.4 }}
           >
             <h2 className="text-2xl font-bold text-red-400 mb-4 uppercase tracking-wider">
-              Duel Error
+              {t('duel.duelErrorTitle')}
             </h2>
             
             <p className="text-arena-text-muted mb-8 leading-relaxed">
@@ -59,7 +61,7 @@ export const DuelError: React.FC<DuelErrorProps> = ({ message }) => {
               className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium text-sm transition-all glass border border-arena-border hover:border-arena-accent/50"
             >
               <RotateCcw className="w-4 h-4" />
-              <span>Retry</span>
+              <span>{t('common.retry')}</span>
             </motion.button>
             
             <motion.button 
@@ -69,7 +71,7 @@ export const DuelError: React.FC<DuelErrorProps> = ({ message }) => {
               className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium text-sm transition-all bg-gradient-to-r from-arena-accent to-arena-secondary text-arena-dark hover:shadow-arena-glow"
             >
               <Swords className="w-4 h-4" />
-              <span>New Duel</span>
+              <span>{t('duel.newDuel')}</span>
             </motion.button>
           </motion.div>
 
@@ -81,7 +83,7 @@ export const DuelError: React.FC<DuelErrorProps> = ({ message }) => {
             className="mt-6 pt-6 border-t border-arena-border/30"
           >
             <p className="text-xs text-arena-text-dim uppercase tracking-wider">
-              If the problem persists, try refreshing or contact support
+              {t('duel.errorPersistenceMessage')}
             </p>
           </motion.div>
         </div>

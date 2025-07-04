@@ -16,6 +16,7 @@ openai
 httpx
 celery[redis]
 redis
+aioredis
 kombu
 google-auth
 google-auth-oauthlib

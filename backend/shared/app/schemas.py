@@ -64,22 +64,6 @@ class User(UserBase):
             return str(v)
         return v
 
-    @field_validator('created_at', 'updated_at', mode='before')
-    @classmethod
-    def convert_datetime_to_str(cls, v):
-        if isinstance(v, datetime):
-            return v.isoformat()
-        return v
-
-    @field_validator('last_login', mode='before')
-    @classmethod
-    def convert_optional_datetime_to_str(cls, v):
-        if v is None:
-            return None
-        if isinstance(v, datetime):
-            return v.isoformat()
-        return v
-
     class Config:
         from_attributes = True
 

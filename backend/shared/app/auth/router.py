@@ -250,9 +250,9 @@ async def google_oauth_login(
             role=user.role,
             is_active=user.is_active,
             is_verified=user.is_verified,
-            created_at=user.created_at.isoformat() if user.created_at else None,
-            updated_at=user.updated_at.isoformat() if user.updated_at else None,
-            last_login=user.last_login.isoformat() if user.last_login else None,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+            last_login=user.last_login,
             google_picture=user.google_picture,
             oauth_provider=user.oauth_provider
         )

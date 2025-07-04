@@ -70,6 +70,7 @@ class Settings(BaseSettings):
     GOOGLE_OAUTH_REDIRECT_URI: str = os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "http://localhost:3000/auth/google/callback")
     
     CORS_ORIGINS: str | list[str] | None = None
+    REDIS_URL: str = "redis://redis:6379/0"
 
     @model_validator(mode="after")
     def parse_cors_origins(self):

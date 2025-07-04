@@ -70,12 +70,15 @@ function run_alembic() {
         return 1
     fi
     
+    # Export DATABASE_URL for the alembic environment
+    export DATABASE_URL="$db_url"
+
     cd "$service_dir"
     
     case $command in
         status)
-            alembic -c alembic.ini -x sqlalchemy.url="$db_url" current
-            alembic -c alembic.ini -x sqlalchemy.url="$db_url" heads
+            alembic -c alembic.ini current
+            alembic -c alembic.ini heads
             ;;
         create)
             if [ -z "$args" ]; then
@@ -86,14 +89,14 @@ function run_alembic() {
             ;;
         upgrade)
             local target=${args:-"head"}
-            alembic -c alembic.ini -x sqlalchemy.url="$db_url" upgrade $target
+            alembic -c alembic.ini upgrade $target
             ;;
         downgrade)
             local target=${args:--1}
-            alembic -c alembic.ini -x sqlalchemy.url="$db_url" downgrade $target
+            alembic -c alembic.ini downgrade $target
             ;;
         shell)
-            alembic -c alembic.ini -x sqlalchemy.url="$db_url" show current
+            alembic -c alembic.ini show current
             ;;
         *)
             echo -e "${RED}Error: Unknown command '$command'${NC}"
@@ -101,6 +104,8 @@ function run_alembic() {
             ;;
     esac
     
+    unset DATABASE_URL # Unset after command to avoid conflicts
+
     cd - > /dev/null
 }
 

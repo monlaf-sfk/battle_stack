@@ -4,14 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/api';
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { CardContent } from "@/components/ui/Card";
+import { Card, CardContent } from "@/components/ui/Card";
 import { Header } from "@/components/layout/Header";
 import { GoogleOAuthButton } from "@/components/auth/GoogleOAuthButton";
 import { Link } from "react-router-dom";
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Lock, CheckCircle, AlertCircle, UserPlus } from 'lucide-react';
-import { Card } from '../components/ui/Card';
+import { User, Mail, Lock, AlertCircle, UserPlus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface PasswordStrength {
   score: number;
@@ -28,7 +28,10 @@ const RegisterPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>({ score: 0, label: 'Very Weak', color: 'text-red-500' });
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
+  const usernameCheckTimeout = useRef<NodeJS.Timeout | null>(null);
+  const emailCheckTimeout = useRef<NodeJS.Timeout | null>(null);
   const [formValidation, setFormValidation] = useState({
     username: false,
     email: false,
@@ -39,6 +42,7 @@ const RegisterPage = () => {
   const { login } = useAuth();
   const { addToast } = useToast();
   const usernameRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
 
   // Auto-focus username field on mount
   useEffect(() => {
@@ -60,15 +64,81 @@ const RegisterPage = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Debounce username availability check
+  useEffect(() => {
+    if (username.length >= 3) {
+      if (usernameCheckTimeout.current) {
+        clearTimeout(usernameCheckTimeout.current);
+      }
+      usernameCheckTimeout.current = setTimeout(async () => {
+        try {
+          const response = await authApi.get(`/check-username?username=${username}`);
+          setUsernameAvailable(response.data.available);
+          if (!response.data.available) {
+            setError(t('registerPage.usernameTaken'));
+          } else {
+            setError('');
+          }
+        } catch (err) {
+          console.error('Error checking username availability:', err);
+          setUsernameAvailable(null);
+        }
+      }, 500);
+    } else if (username.length > 0) {
+      setUsernameAvailable(false);
+      setError(t('registerPage.usernameTooShort'));
+    } else {
+      setUsernameAvailable(null);
+    }
+    return () => {
+      if (usernameCheckTimeout.current) {
+        clearTimeout(usernameCheckTimeout.current);
+      }
+    };
+  }, [username]);
+
+  // Debounce email availability check
+  useEffect(() => {
+    if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+      if (emailCheckTimeout.current) {
+        clearTimeout(emailCheckTimeout.current);
+      }
+      emailCheckTimeout.current = setTimeout(async () => {
+        try {
+          const response = await authApi.get(`/check-email?email=${email}`);
+          setEmailAvailable(response.data.available);
+          if (!response.data.available) {
+            setError(t('registerPage.emailTaken'));
+          } else {
+            setError('');
+          }
+        } catch (err) {
+          console.error('Error checking email availability:', err);
+          setEmailAvailable(null);
+        }
+      }, 500);
+    } else if (email.length > 0) {
+      setEmailAvailable(false);
+      setError(t('registerPage.emailInvalid'));
+    } else {
+      setEmailAvailable(null);
+    }
+    return () => {
+      if (emailCheckTimeout.current) {
+        clearTimeout(emailCheckTimeout.current);
+      }
+    };
+  }, [email]);
+
   // Update validation when form fields change
   useEffect(() => {
     setFormValidation({
-      username: username.trim().length >= 3,
-      email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+      username: username.trim().length >= 3 && usernameAvailable === true,
+      email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email) && emailAvailable === true,
       password: passwordStrength.score >= 2,
       confirmPassword: password === confirmPassword && confirmPassword.length > 0
     });
-  }, [username, email, password, confirmPassword, passwordStrength]);
+  }, [username, email, password, confirmPassword, passwordStrength, usernameAvailable, emailAvailable]);
 
   const calculatePasswordStrength = (pass: string): PasswordStrength => {
     let score = 0;
@@ -78,11 +148,11 @@ const RegisterPage = () => {
     if (pass.match(/[^a-zA-Z0-9]/)) score++;
 
     const strengths = [
-      { score: 0, label: '', color: '' },
-      { score: 1, label: 'WEAK', color: 'text-red-400' },
-      { score: 2, label: 'FAIR', color: 'text-orange-400' },
-      { score: 3, label: 'GOOD', color: 'text-yellow-400' },
-      { score: 4, label: 'STRONG', color: 'text-green-400' }
+      { score: 0, label: t('registerPage.passwordStrength.veryWeak'), color: '' },
+      { score: 1, label: t('registerPage.passwordStrength.weak'), color: 'text-red-400' },
+      { score: 2, label: t('registerPage.passwordStrength.fair'), color: 'text-orange-400' },
+      { score: 3, label: t('registerPage.passwordStrength.good'), color: 'text-yellow-400' },
+      { score: 4, label: t('registerPage.passwordStrength.strong'), color: 'text-green-400' }
     ];
 
     return strengths[score];
@@ -96,36 +166,36 @@ const RegisterPage = () => {
 
   const validateForm = () => {
     if (!username.trim()) {
-      setError('Username is required');
+      setError(t('registerPage.usernameRequired'));
       usernameRef.current?.focus();
       return false;
     }
     if (username.length < 3) {
-      setError('Username must be at least 3 characters');
+      setError(t('registerPage.usernameTooShort'));
       return false;
     }
     if (!email.trim()) {
-      setError('Email is required');
+      setError(t('registerPage.emailRequired'));
       return false;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Please enter a valid email address');
+    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+      setError(t('registerPage.emailInvalid'));
       return false;
     }
     if (!password) {
-      setError('Password is required');
+      setError(t('registerPage.passwordRequired'));
       return false;
     }
     if (passwordStrength.score < 2) {
-      setError('Password is too weak. Please choose a stronger password.');
+      setError(t('registerPage.passwordTooWeak'));
       return false;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('registerPage.passwordsDoNotMatch'));
       return false;
     }
     if (!acceptTerms) {
-      setError('Please accept the Terms of Service and Privacy Policy');
+      setError(t('registerPage.acceptTerms'));
       return false;
     }
     return true;
@@ -149,13 +219,10 @@ const RegisterPage = () => {
       // Show success toast
       addToast({
         type: 'success',
-        title: 'Account Created',
-        message: 'Account created successfully. Logging you in...',
+        title: t('registerPage.accountCreatedTitle'),
+        message: t('registerPage.accountCreatedMessage'),
         duration: 3000
       });
-
-      // Show success state
-      setShowSuccess(true);
 
       // Log in the user after successful registration
       const formData = new URLSearchParams();
@@ -175,15 +242,15 @@ const RegisterPage = () => {
       }, 1500);
       
     } catch (err: any) {
-      let errorMessage = 'Registration failed. Please try again.';
-      let errorTitle = 'Registration Error';
+      let errorMessage = t('registerPage.registrationFailed');
+      let errorTitle = t('registerPage.registrationErrorTitle');
       
       if (err.response?.status === 409) {
-        errorMessage = 'Username or email already in use. Choose different credentials.';
-        errorTitle = 'Account Conflict';
+        errorMessage = t('registerPage.usernameEmailConflict');
+        errorTitle = t('registerPage.accountConflictTitle');
       } else if (err.response?.status === 422) {
-        errorMessage = 'Invalid information provided. Check your details.';
-        errorTitle = 'Invalid Data';
+        errorMessage = t('registerPage.invalidInfoProvided');
+        errorTitle = t('registerPage.invalidDataTitle');
       } else if (err.response?.data?.detail) {
         errorMessage = err.response.data.detail;
       }
@@ -202,42 +269,6 @@ const RegisterPage = () => {
       setIsLoading(false);
     }
   };
-
-  if (showSuccess) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <motion.div
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="text-center"
-        >
-          <motion.div
-            className="w-28 h-28 mx-auto mb-8 bg-white rounded-lg flex items-center justify-center"
-            animate={{ scale: [1, 1.1, 1], rotate: [0, 360] }}
-            transition={{ duration: 2, repeat: 1 }}
-          >
-            <CheckCircle size={56} className="text-black" />
-          </motion.div>
-          <h2 className="text-4xl font-bold text-white mb-4 font-mono">ACCOUNT CREATED</h2>
-          <p className="text-gray-400 text-lg mb-2 font-mono">YOUR PROFILE HAS BEEN CREATED.</p>
-          <p className="text-gray-500 font-mono">LOGGING YOU IN...</p>
-          <motion.div 
-            className="mt-6 w-64 h-1 mx-auto bg-gray-800 rounded-full overflow-hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            <motion.div
-              className="h-full bg-white"
-              initial={{ width: 0 }}
-              animate={{ width: "100%" }}
-              transition={{ duration: 1.5, ease: "easeOut" }}
-            />
-          </motion.div>
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -262,19 +293,19 @@ const RegisterPage = () => {
               >
                 <motion.div
                   className="inline-flex items-center justify-center w-20 h-20 rounded-lg bg-white mb-6"
-                  animate={{ 
+                  animate={{
                     rotate: [0, -5, 5, 0],
                     scale: [1, 1.05, 1]
                   }}
                   transition={{ duration: 6, repeat: Infinity }}
                 >
-                  <span className="text-2xl font-bold text-black font-mono">BS</span>
+                  <UserPlus size={48} className="text-black" />
                 </motion.div>
                 <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 font-mono">
-                  CREATE ACCOUNT
+                  {t('registerPage.title')}
                 </h1>
                 <p className="text-gray-400 text-lg font-mono">
-                  JOIN BATTLESTACK AND START CODING
+                  {t('registerPage.subtitle')}
                 </p>
               </motion.div>
 
@@ -288,12 +319,12 @@ const RegisterPage = () => {
                   <Input
                     ref={usernameRef}
                     type="text"
-                    label="USERNAME"
+                    label={t('common.username')}
                     icon={<User size={18} />}
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    success={formValidation.username ? 'Username available' : undefined}
+                    success={username.length >= 3 && usernameAvailable === true ? t('registerPage.validUsername') : undefined}
                     autoComplete="username"
                     disabled={isLoading}
                     className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
@@ -307,12 +338,12 @@ const RegisterPage = () => {
                 >
                   <Input
                     type="email"
-                    label="EMAIL"
+                    label={t('common.email')}
                     icon={<Mail size={18} />}
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    success={formValidation.email ? 'Valid email address' : undefined}
+                    success={/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email) && emailAvailable === true ? t('registerPage.validEmail') : undefined}
                     autoComplete="email"
                     disabled={isLoading}
                     className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
@@ -326,7 +357,7 @@ const RegisterPage = () => {
                 >
                   <Input
                     type="password"
-                    label="PASSWORD"
+                    label={t('common.password')}
                     icon={<Lock size={18} />}
                     required
                     value={password}
@@ -334,44 +365,21 @@ const RegisterPage = () => {
                     showPasswordToggle
                     autoComplete="new-password"
                     disabled={isLoading}
-                    success={passwordStrength.score >= 3 ? 'Strong password' : undefined}
+                    success={passwordStrength.score >= 2 ? t('registerPage.strongPassword') : undefined}
                     className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
                   />
-                  {/* Password Strength Indicator */}
-                  {password && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-3 space-y-2"
-                    >
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4].map((level) => (
-                          <motion.div
-                            key={level}
-                            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                              level <= passwordStrength.score
-                                ? passwordStrength.score === 1 ? 'bg-red-400'
-                                : passwordStrength.score === 2 ? 'bg-orange-400'
-                                : passwordStrength.score === 3 ? 'bg-yellow-400'
-                                : 'bg-green-400'
-                                : 'bg-gray-700'
-                            }`}
-                            animate={{ scale: level <= passwordStrength.score ? [1, 1.1, 1] : 1 }}
-                            transition={{ duration: 0.3 }}
-                          />
-                        ))}
+                  {password.length > 0 && (
+                    <div className="flex items-center mt-2 text-sm">
+                      <div className="w-full h-1 bg-gray-700 rounded-full mr-2">
+                        <div
+                          className={`h-full rounded-full ${passwordStrength.color}`}
+                          style={{ width: `${(passwordStrength.score / 4) * 100}%` }}
+                        />
                       </div>
-                      {passwordStrength.label && (
-                        <div className="flex items-center gap-2">
-                          <span className={`text-sm font-medium font-mono ${passwordStrength.color}`}>
-                            SECURITY LEVEL: {passwordStrength.label}
-                          </span>
-                          {passwordStrength.score >= 3 && (
-                            <CheckCircle size={14} className="text-green-400" />
-                          )}
-                        </div>
-                      )}
-                    </motion.div>
+                      <span className={`font-mono ${passwordStrength.color}`}>
+                        {passwordStrength.label}
+                      </span>
+                    </div>
                   )}
                 </motion.div>
 
@@ -382,17 +390,40 @@ const RegisterPage = () => {
                 >
                   <Input
                     type="password"
-                    label="CONFIRM PASSWORD"
+                    label={t('registerPage.confirmPassword')}
                     icon={<Lock size={18} />}
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    success={formValidation.confirmPassword ? 'Passwords match' : undefined}
-                    error={confirmPassword && !formValidation.confirmPassword ? 'Passwords do not match' : undefined}
+                    showPasswordToggle
                     autoComplete="new-password"
                     disabled={isLoading}
+                    success={password === confirmPassword && confirmPassword.length > 0 ? t('registerPage.passwordsMatch') : undefined}
                     className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
                   />
+                </motion.div>
+
+                {/* Terms and Conditions Checkbox */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.7, duration: 0.4 }}
+                  className="flex items-center space-x-2 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    id="acceptTerms"
+                    checked={acceptTerms}
+                    onChange={(e) => setAcceptTerms(e.target.checked)}
+                    className="form-checkbox h-4 w-4 text-white bg-gray-700 border-gray-600 rounded focus:ring-0 focus:outline-none"
+                  />
+                  <label htmlFor="acceptTerms" className="text-gray-400 font-mono">
+                    {t('registerPage.agreeToTerms', {
+                      termsOfService: <Link to="/terms" className="text-white hover:text-gray-300 transition-colors font-bold">{t('common.termsOfService')}</Link>,
+                      and: t('common.and'),
+                      privacyPolicy: <Link to="/privacy" className="text-white hover:text-gray-300 transition-colors font-bold">{t('common.privacyPolicy')}</Link>
+                    })}
+                  </label>
                 </motion.div>
 
                 {/* Error Message */}
@@ -416,34 +447,6 @@ const RegisterPage = () => {
                   )}
                 </AnimatePresence>
 
-                {/* Terms Checkbox */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.7, duration: 0.4 }}
-                  className="flex items-start gap-3"
-                >
-                  <motion.input
-                    type="checkbox"
-                    required
-                    checked={acceptTerms}
-                    onChange={(e) => setAcceptTerms(e.target.checked)}
-                    className="mt-1 w-4 h-4 rounded bg-gray-800 border-gray-700 text-white focus:ring-gray-600 transition-all"
-                    whileTap={{ scale: 0.95 }}
-                  />
-                  <label className="text-sm text-gray-400 font-mono">
-                    I AGREE TO THE{' '}
-                    <Link to="/terms" className="text-white hover:text-gray-300 transition-colors font-medium underline">
-                      TERMS OF SERVICE
-                    </Link>{' '}
-                    AND{' '}
-                    <Link to="/privacy" className="text-white hover:text-gray-300 transition-colors font-medium underline">
-                      PRIVACY POLICY
-                    </Link>
-                  </label>
-                </motion.div>
-
-                {/* Submit Button */}
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
@@ -453,15 +456,13 @@ const RegisterPage = () => {
                     type="submit"
                     className="w-full text-lg py-4 font-bold bg-white text-black hover:bg-gray-200 font-mono"
                     loading={isLoading}
-                    disabled={isLoading || !Object.values(formValidation).every(v => v)}
+                    disabled={isLoading || !formValidation.username || !formValidation.email || !formValidation.password || !formValidation.confirmPassword || !acceptTerms}
                   >
-                    <UserPlus size={20} className="mr-3" />
-                    {isLoading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
+                    {isLoading ? t('common.loading') : t('common.register')}
                   </Button>
                 </motion.div>
               </form>
 
-              {/* Divider */}
               <motion.div
                 initial={{ opacity: 0, scaleX: 0 }}
                 animate={{ opacity: 1, scaleX: 1 }}
@@ -473,51 +474,45 @@ const RegisterPage = () => {
                 </div>
                 <div className="relative flex justify-center text-sm">
                   <span className="px-4 bg-gray-900 text-gray-400 font-mono">
-                    OR CONTINUE WITH
+                    {t('common.continueWith')}
                   </span>
                 </div>
               </motion.div>
 
-              {/* Social Registration */}
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 1.0, duration: 0.4 }}
                 className="space-y-4"
               >
-                {/* 🔐 Google OAuth Button */}
                 <GoogleOAuthButton
-                  variant="signup"
                   onSuccess={() => {
                     addToast({
                       type: 'success',
-                      title: 'Google Registration Successful',
-                      message: 'Account created! Redirecting to dashboard...',
-                      duration: 3000
+                      title: t('registerPage.googleRegisterSuccessTitle'),
+                      message: t('registerPage.googleRegisterSuccessMessage'),
+                      duration: 3000,
                     });
                   }}
                   onError={(error) => {
                     addToast({
                       type: 'error',
-                      title: 'Google Registration Failed',
+                      title: t('registerPage.googleRegisterErrorTitle'),
                       message: error,
-                      duration: 5000
+                      duration: 5000,
                     });
                   }}
                 />
-                
-                {/* GitHub Button (placeholder for future implementation) */}
-                <Button 
-                  className="w-full bg-gray-800 text-white border border-gray-700 hover:border-gray-600 font-mono text-sm uppercase tracking-wider" 
+                <Button
+                  className="w-full bg-gray-800 text-white border border-gray-700 hover:border-gray-600 font-mono text-sm uppercase tracking-wider"
                   disabled={true}
                   type="button"
                 >
                   <img src="https://www.svgrepo.com/show/512120/github-142.svg" alt="GitHub" className="w-5 h-5 mr-3" />
-                  GITHUB (COMING SOON)
+                  {t('common.github')} {t('common.comingSoon')}
                 </Button>
               </motion.div>
 
-              {/* Sign In Link */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -525,12 +520,12 @@ const RegisterPage = () => {
                 className="mt-8 text-center"
               >
                 <p className="text-gray-400 font-mono">
-                  ALREADY HAVE AN ACCOUNT?{' '}
+                  {t('registerPage.alreadyHaveAccount')}{' '}
                   <Link
                     to="/login"
                     className="text-white hover:text-gray-300 transition-colors font-bold"
                   >
-                    LOGIN
+                    {t('common.login')}
                   </Link>
                 </p>
               </motion.div>

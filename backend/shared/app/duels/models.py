@@ -1,9 +1,14 @@
+import enum
 import uuid
-from sqlalchemy import Column, String, DateTime, ForeignKey, Enum as SAEnum, Integer
+from datetime import datetime
+
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
-from shared.app.database import Base
-import enum
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy.orm import declarative_base
+
+Base = declarative_base()
 
 class DuelStatus(str, enum.Enum):
     PENDING = "pending"

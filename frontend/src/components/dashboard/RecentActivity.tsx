@@ -14,6 +14,7 @@ import {
   TrendingDown,
   Minus
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface RecentDuel {
   id: string;
@@ -29,6 +30,7 @@ const RecentActivity: React.FC = () => {
   const [recentDuels, setRecentDuels] = useState<RecentDuel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const fetchRecentActivity = async () => {
@@ -53,14 +55,14 @@ const RecentActivity: React.FC = () => {
         setRecentDuels(transformedDuels);
       } catch (err) {
         console.error('Failed to fetch recent activity:', err);
-        setError('Failed to load recent activity');
+        setError(t('dashboard.failedToLoadRecentActivity'));
       } finally {
         setLoading(false);
       }
     };
 
     fetchRecentActivity();
-  }, []);
+  }, [t]);
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -71,11 +73,11 @@ const RecentActivity: React.FC = () => {
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
     if (diffMins < 60) {
-      return `${diffMins}m ago`;
+      return t('common.timeAgoMinutes', { count: diffMins });
     } else if (diffHours < 24) {
-      return `${diffHours}h ago`;
+      return t('common.timeAgoHours', { count: diffHours });
     } else {
-      return `${diffDays}d ago`;
+      return t('common.timeAgoDays', { count: diffDays });
     }
   };
 
@@ -95,7 +97,7 @@ const RecentActivity: React.FC = () => {
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Clock size={20} className="text-arena-accent" />
-            Recent Activity
+            {t('dashboard.recentActivityTitle')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -117,7 +119,7 @@ const RecentActivity: React.FC = () => {
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Clock size={20} className="text-arena-accent" />
-            Recent Activity
+            {t('dashboard.recentActivityTitle')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -136,10 +138,10 @@ const RecentActivity: React.FC = () => {
           <CardTitle className="flex items-center justify-between text-lg">
             <div className="flex items-center gap-2">
               <Clock size={20} className="text-arena-accent" />
-              Recent Duels
+              {t('dashboard.recentDuels')}
             </div>
             <span className="text-xs text-arena-text-muted bg-arena-surface/50 px-2 py-1 rounded">
-              Global activity
+              {t('dashboard.globalActivity')}
             </span>
           </CardTitle>
         </CardHeader>
@@ -147,7 +149,7 @@ const RecentActivity: React.FC = () => {
           <div className="text-center py-8">
             <Target className="mx-auto mb-3 text-arena-text-muted" size={32} />
             <p className="text-arena-text-muted text-sm">
-              No recent duels yet. Be the first to start a coding battle!
+              {t('dashboard.noRecentDuels')}
             </p>
           </div>
         </CardContent>
@@ -161,10 +163,10 @@ const RecentActivity: React.FC = () => {
         <CardTitle className="flex items-center justify-between text-lg">
           <div className="flex items-center gap-2">
             <Clock size={20} className="text-arena-accent" />
-            Recent Duels
+            {t('dashboard.recentDuels')}
           </div>
           <span className="text-xs text-arena-text-muted bg-arena-surface/50 px-2 py-1 rounded">
-            Global activity
+            {t('dashboard.globalActivity')}
           </span>
         </CardTitle>
       </CardHeader>
@@ -196,14 +198,14 @@ const RecentActivity: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium text-sm text-white truncate">
-                        vs {duel.opponent_name}
+                        {t('dashboard.vs')} {duel.opponent_name}
                       </span>
                       <span className={`text-xs px-2 py-0.5 rounded font-medium ${
                         duel.is_victory 
                           ? 'bg-green-500/20 text-green-400' 
                           : 'bg-red-500/20 text-red-400'
                       }`}>
-                        {duel.is_victory ? 'Victory' : 'Defeat'}
+                        {duel.is_victory ? t('dashboard.victory') : t('dashboard.defeat')}
                       </span>
                     </div>
                     
@@ -222,7 +224,7 @@ const RecentActivity: React.FC = () => {
                       {duel.rating_change && (
                         <div className={`flex items-center gap-1 ${getRatingChangeColor(duel.rating_change)}`}>
                           {getRatingChangeIcon(duel.rating_change)}
-                          {Math.abs(duel.rating_change)} ELO
+                          {Math.abs(duel.rating_change)} {t('dashboard.elo')}
                         </div>
                       )}
                       
@@ -246,7 +248,7 @@ const RecentActivity: React.FC = () => {
         {recentDuels.length >= 5 && (
           <div className="mt-4 text-center">
             <button className="text-xs text-arena-accent hover:text-arena-accent-bright transition-colors">
-              View all activity →
+              {t('dashboard.viewAllActivity')}
             </button>
           </div>
         )}

@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { dashboardApi, type DashboardStats } from '../../services/api';
 import { useToast } from '../ui/Toast';
 import { SkeletonChart, SkeletonText } from '../ui/Skeleton';
+import { useTranslation } from 'react-i18next';
 
 const MetricCard = ({ icon, label, value, delay }: { icon: React.ReactNode, label: string, value: string, delay: number }) => (
     <motion.div
@@ -30,11 +31,12 @@ const MetricCard = ({ icon, label, value, delay }: { icon: React.ReactNode, labe
 );
 
 const CustomTooltip = ({ active, payload }: any) => {
+    const { t } = useTranslation();
     if (active && payload && payload.length) {
         return (
             <div className="glass p-3 rounded-lg shadow-lg border border-arena-border">
                 <p className="text-white font-semibold">{payload[0].name}</p>
-                <p className="text-arena-accent">{`${payload[0].value}% Complete`}</p>
+                <p className="text-arena-accent">{t('dashboard.percentComplete', { percent: payload[0].value })}</p>
             </div>
         );
     }
@@ -46,6 +48,7 @@ const ProgressSummary: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { addToast } = useToast();
+    const { t } = useTranslation();
 
     useEffect(() => {
         const fetchDashboardStats = async () => {
@@ -56,11 +59,11 @@ const ProgressSummary: React.FC = () => {
                 setError(null);
             } catch (err: any) {
                 console.error('Failed to fetch dashboard stats:', err);
-                setError('Failed to load dashboard data');
+                setError(t('dashboard.failedToLoadDashboardData'));
                 addToast({
                     type: 'error',
-                    title: 'Data Loading Error',
-                    message: 'Failed to load dashboard statistics. Please try again.',
+                    title: t('dashboard.dataLoadingError'),
+                    message: t('dashboard.failedToLoadDashboardData'),
                     duration: 5000
                 });
             } finally {
@@ -69,7 +72,7 @@ const ProgressSummary: React.FC = () => {
         };
 
         fetchDashboardStats();
-    }, [addToast]);
+    }, [addToast, t]);
 
     const RADIAN = Math.PI / 180;
     const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
@@ -98,7 +101,7 @@ const ProgressSummary: React.FC = () => {
                 <CardHeader className="relative z-10">
                     <CardTitle gradient>
                         <TrendingUp size={24} className="inline-block mr-2" />
-                        Brief Progress
+                        {t('dashboard.briefProgressTitle')}
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="relative z-10">
@@ -124,18 +127,18 @@ const ProgressSummary: React.FC = () => {
                 <CardHeader className="relative z-10">
                     <CardTitle gradient>
                         <TrendingUp size={24} className="inline-block mr-2" />
-                        Brief Progress
+                        {t('dashboard.briefProgressTitle')}
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="relative z-10 text-center py-8">
                     <p className="text-arena-text-muted mb-4">
-                        {error || 'Failed to load dashboard data'}
+                        {error || t('dashboard.failedToLoadDashboardData')}
                     </p>
                     <button 
                         onClick={() => window.location.reload()}
                         className="text-arena-accent hover:text-arena-accent-hover transition-colors"
                     >
-                        Try Again
+                        {t('common.tryAgain')}
                     </button>
                 </CardContent>
             </Card>
@@ -150,7 +153,7 @@ const ProgressSummary: React.FC = () => {
             <CardHeader className="relative z-10">
                 <CardTitle gradient>
                     <TrendingUp size={24} className="inline-block mr-2" />
-                    Brief Progress
+                    {t('dashboard.briefProgressTitle')}
                 </CardTitle>
             </CardHeader>
             
@@ -159,25 +162,25 @@ const ProgressSummary: React.FC = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                     <MetricCard 
                         icon={<BookOpen size={24} />} 
-                        label="Tasks Completed" 
+                        label={t('dashboard.tasksCompleted')} 
                         value={dashboardData.tasks_completed.toString()} 
                         delay={0.1}
                     />
                     <MetricCard 
                         icon={<Flame size={24} />} 
-                        label="Current Streak" 
-                        value={`🔥 ${dashboardData.current_streak} days`} 
+                        label={t('dashboard.currentStreak')} 
+                        value={`🔥 ${dashboardData.current_streak} ${t('dashboard.days')}`} 
                         delay={0.2}
                     />
                     <MetricCard 
                         icon={<Zap size={24} />} 
-                        label="Successful Duels" 
+                        label={t('dashboard.successfulDuels')} 
                         value={`${dashboardData.successful_duels}/${dashboardData.total_duels}`} 
                         delay={0.3}
                     />
                     <MetricCard 
                         icon={<Award size={24} />} 
-                        label="Tournaments Won" 
+                        label={t('dashboard.tournamentsWon')} 
                         value={dashboardData.tournaments_won.toString()} 
                         delay={0.4}
                     />
@@ -245,7 +248,9 @@ const ProgressSummary: React.FC = () => {
                                 className="w-3 h-3 rounded-full" 
                                 style={{ backgroundColor: item.color }}
                             />
-                            <span className="text-sm text-arena-text-muted">{item.name}</span>
+                            <span className="text-sm text-arena-text-muted">
+                                {t(`dashboard.${item.name.toLowerCase().replace(/ /g, '')}`)}
+                            </span>
                         </motion.div>
                     ))}
                 </motion.div>

@@ -25,6 +25,7 @@ class UserProfileBase(BaseModel):
     pvp_duels: int = 0
     best_streak: int = 0
     tournaments_played: int = 0
+    email_notifications: bool = Field(default=True)
 
 class UserProfileCreate(UserProfileBase):
     user_id: uuid.UUID
@@ -59,6 +60,7 @@ class DashboardStats(BaseModel):
     pvp_duels: int = 0
     best_streak: int = 0
     tournaments_played: int = 0
+    email_notifications: bool = True
 
 class Achievement(BaseModel):
     name: str

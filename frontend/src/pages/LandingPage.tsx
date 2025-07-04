@@ -2,6 +2,8 @@ import { Header } from "@/components/layout/Header";
 import { UserPlus, ListChecks, Code, Trophy, Timer, Shield, Users, Brain, Play } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 const useTypingEffect = (text: string, speed: number, isPlaying: boolean) => {
   const [displayedText, setDisplayedText] = useState("");
@@ -31,58 +33,64 @@ const useTypingEffect = (text: string, speed: number, isPlaying: boolean) => {
   return { displayedText, isDone };
 };
 
-const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 30 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5 }}
-    viewport={{ once: true }}
-    className="group relative"
-    whileHover={{ y: -10 }}
-  >
-    <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 h-full text-center">
-      <motion.div 
-        className="flex items-center justify-center h-16 w-16 rounded-lg bg-white text-black mx-auto mb-6"
-        whileHover={{ scale: 1.1, rotate: 5 }}
-        transition={{ type: "spring", stiffness: 300 }}
-      >
-        {icon}
-      </motion.div>
-      <h3 className="text-xl font-bold text-white mb-4 font-mono">{title}</h3>
-      <p className="text-gray-400 leading-relaxed font-mono text-sm">{description}</p>
-    </div>
-  </motion.div>
-);
-
-const Step = ({ icon, title, children, index }: { icon: React.ReactNode, title: string, children: React.ReactNode, index: number }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 30 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5, delay: index * 0.1 }}
-    viewport={{ once: true }}
-    className="text-center relative group"
-  >
+const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => {
+  const { t } = useTranslation();
+  return (
     <motion.div
-      className="relative"
-      whileHover={{ scale: 1.1 }}
-      transition={{ type: "spring", stiffness: 300 }}
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      viewport={{ once: true }}
+      className="group relative"
+      whileHover={{ y: -10 }}
     >
-      {index < 3 && (
+      <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 h-full text-center">
         <motion.div 
-          className="hidden lg:block absolute top-8 -right-16 w-32 h-0.5 bg-gray-700"
-          initial={{ width: 0 }}
-          whileInView={{ width: "8rem" }}
-          transition={{ delay: (index + 1) * 0.2, duration: 0.8 }}
-        />
-      )}
-      <div className="flex items-center justify-center h-16 w-16 rounded-lg bg-white text-black mx-auto mb-4 group-hover:shadow-xl transition-all duration-300">
-        {icon}
+          className="flex items-center justify-center h-16 w-16 rounded-lg bg-white text-black mx-auto mb-6"
+          whileHover={{ scale: 1.1, rotate: 5 }}
+          transition={{ type: "spring", stiffness: 300 }}
+        >
+          {icon}
+        </motion.div>
+        <h3 className="text-xl font-bold text-white mb-4 font-mono">{t(title)}</h3>
+        <p className="text-gray-400 leading-relaxed font-mono text-sm">{t(description)}</p>
       </div>
     </motion.div>
-    <h3 className="text-xl font-bold text-white mb-3 font-mono">{title}</h3>
-    <p className="text-gray-400 leading-relaxed font-mono text-sm">{children}</p>
-  </motion.div>
-);
+  );
+};
+
+const Step = ({ icon, title, children, index }: { icon: React.ReactNode, title: string, children: React.ReactNode, index: number }) => {
+  const { t } = useTranslation();
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: index * 0.1 }}
+      viewport={{ once: true }}
+      className="text-center relative group"
+    >
+      <motion.div
+        className="relative"
+        whileHover={{ scale: 1.1 }}
+        transition={{ type: "spring", stiffness: 300 }}
+      >
+        {index < 3 && (
+          <motion.div 
+            className="hidden lg:block absolute top-8 -right-16 w-32 h-0.5 bg-gray-700"
+            initial={{ width: 0 }}
+            whileInView={{ width: "8rem" }}
+            transition={{ delay: (index + 1) * 0.2, duration: 0.8 }}
+          />
+        )}
+        <div className="flex items-center justify-center h-16 w-16 rounded-lg bg-white text-black mx-auto mb-4 group-hover:shadow-xl transition-all duration-300">
+          {icon}
+        </div>
+      </motion.div>
+      <h3 className="text-xl font-bold text-white mb-3 font-mono">{t(title)}</h3>
+      <p className="text-gray-400 leading-relaxed font-mono text-sm">{t(children as string)}</p>
+    </motion.div>
+  );
+};
 
 const player1Code = `# CODE WARRIOR 1
 def solve_problem(arr, target):
@@ -137,6 +145,7 @@ const CodePanel = ({ playerName, code, speed, isPlaying, onFinish, isWinner, sta
   stats: { pieces: number, attack: string, speed: string }
 }) => {
   const { displayedText, isDone } = useTypingEffect(code, speed, isPlaying);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (isDone) {
@@ -158,11 +167,11 @@ const CodePanel = ({ playerName, code, speed, isPlaying, onFinish, isWinner, sta
         <div className="bg-gray-800 px-6 py-4 border-b border-gray-700 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${isWinner === true ? 'bg-white' : isWinner === false ? 'bg-gray-600' : 'bg-gray-400'}`}></div>
-            <p className="text-sm font-bold text-white font-mono">{playerName}</p>
+            <p className="text-sm font-bold text-white font-mono">{t(playerName)}</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-xs text-gray-400 bg-gray-800 px-3 py-1 rounded border border-gray-700 font-mono">
-              {isDone ? (isWinner ? 'WINNER' : 'DONE') : 'CODING...'}
+              {isDone ? (isWinner ? t('landingPage.winnerStatus') : t('landingPage.doneStatus')) : t('landingPage.codingStatus')}
             </div>
           </div>
         </div>
@@ -171,15 +180,15 @@ const CodePanel = ({ playerName, code, speed, isPlaying, onFinish, isWinner, sta
         <div className="bg-gray-800 px-6 py-3 border-b border-gray-700">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <div className="text-gray-400 text-xs font-mono">PIECES</div>
+              <div className="text-gray-400 text-xs font-mono">{t('landingPage.pieces')}</div>
               <div className="text-white text-lg font-bold font-mono">{stats.pieces}</div>
             </div>
             <div>
-              <div className="text-gray-400 text-xs font-mono">SPEED</div>
+              <div className="text-gray-400 text-xs font-mono">{t('landingPage.speed')}</div>
               <div className="text-white text-lg font-bold font-mono">{stats.speed}</div>
             </div>
             <div>
-              <div className="text-gray-400 text-xs font-mono">ATTACK</div>
+              <div className="text-gray-400 text-xs font-mono">{t('landingPage.attack')}</div>
               <div className="text-white text-lg font-bold font-mono">{stats.attack}</div>
             </div>
           </div>
@@ -205,6 +214,8 @@ const CodePanel = ({ playerName, code, speed, isPlaying, onFinish, isWinner, sta
 
 const LandingPage = () => {
   const [winner, setWinner] = useState<string | null>(null);
+  const { t } = useTranslation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!winner) {
@@ -243,7 +254,7 @@ const LandingPage = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
               >
-                BATTLESTACK
+                {t('header.title')}
               </motion.h1>
               <motion.p 
                 className="text-xl lg:text-2xl text-gray-400 max-w-4xl mx-auto mb-10 leading-relaxed font-mono"
@@ -251,8 +262,8 @@ const LandingPage = () => {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
               >
-                CODING ARENA WHERE ALGORITHMS MEET BATTLE.<br/>
-                JOIN THE WORLD OF PROGRAMMING AND FIGHT THE BEST DEVELOPERS.
+                {t('landingPage.heroSubtitle1')}<br/>
+                {t('landingPage.heroSubtitle2')}
               </motion.p>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -264,16 +275,18 @@ const LandingPage = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="bg-white text-black text-xl font-bold py-4 px-8 rounded-lg font-mono"
+                  onClick={() => navigate('/quick-duel')}
                 >
-                  ENTER ARENA
+                  {t('landingPage.enterArena')}
                 </motion.button>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="bg-gray-800 text-white text-xl font-bold py-4 px-8 rounded-lg font-mono border border-gray-700 hover:border-gray-600 transition-colors"
+                  onClick={() => navigate('/duel/pve/:duelId')}
                 >
                   <Play size={24} className="mr-3 inline" />
-                  WATCH DEMO
+                  {t('landingPage.watchDemo')}
                 </motion.button>
               </motion.div>
             </motion.div>
@@ -291,32 +304,32 @@ const LandingPage = () => {
               className="text-center mb-16"
             >
               <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6 font-mono">
-                PLATFORM FEATURES
+                {t('landingPage.featuresTitle')}
               </h2>
               <p className="text-xl text-gray-400 max-w-2xl mx-auto font-mono">
-                MODERN TECHNOLOGY FOR PROGRAMMING DUELS
+                {t('landingPage.featuresSubtitle')}
               </p>
             </motion.div>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               <FeatureCard
                 icon={<Timer size={32} />}
-                title="REAL-TIME BATTLES"
-                description="DUELS IN REAL TIME WITH LIVE OPPONENTS FROM AROUND THE WORLD."
+                title="landingPage.realTimeBattlesTitle"
+                description="landingPage.realTimeBattlesDesc"
               />
               <FeatureCard
                 icon={<Brain size={32} />}
-                title="AI COACHING"
-                description="SMART AI ANALYZES YOUR CODE AND GIVES PERSONAL RECOMMENDATIONS."
+                title="landingPage.aiCoachingTitle"
+                description="landingPage.aiCoachingDesc"
               />
               <FeatureCard
                 icon={<Shield size={32} />}
-                title="SKILL VALIDATION"
-                description="GET VERIFIED ACHIEVEMENTS AND PROVE YOUR LEVEL."
+                title="landingPage.skillValidationTitle"
+                description="landingPage.skillValidationDesc"
               />
               <FeatureCard
                 icon={<Users size={32} />}
-                title="DEV COMMUNITY"
-                description="COMMUNITY OF TALENTED DEVELOPERS AND PROGRAMMERS."
+                title="landingPage.devCommunityTitle"
+                description="landingPage.devCommunityDesc"
               />
             </div>
           </div>
@@ -333,24 +346,24 @@ const LandingPage = () => {
               className="text-center mb-16"
             >
               <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6 font-mono">
-                PARTICIPATION ALGORITHM
+                {t('landingPage.howItWorksTitle')}
               </h2>
               <p className="text-xl text-gray-400 max-w-2xl mx-auto font-mono">
-                FOUR STEPS TO PROGRAMMING MASTERY
+                {t('landingPage.howItWorksSubtitle')}
               </p>
             </motion.div>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <Step icon={<UserPlus size={32} />} title="SIGN UP" index={0}>
-                CREATE A DEVELOPER PROFILE AND CHOOSE YOUR TECHNOLOGY STACK.
+              <Step icon={<UserPlus size={32} />} title="landingPage.signUpTitle" index={0}>
+                landingPage.signUpDesc
               </Step>
-              <Step icon={<ListChecks size={32} />} title="CHOOSE LEVEL" index={1}>
-                SELECT PROBLEMS APPROPRIATE TO YOUR PROGRAMMING LEVEL.
+              <Step icon={<ListChecks size={32} />} title="landingPage.chooseLevelTitle" index={1}>
+                landingPage.chooseLevelDesc
               </Step>
-              <Step icon={<Code size={32} />} title="CODE BATTLE" index={2}>
-                FIGHT IN THE CODING ARENA WITH LIMITED TIME.
+              <Step icon={<Code size={32} />} title="landingPage.codeBattleTitle" index={2}>
+                landingPage.codeBattleDesc
               </Step>
-              <Step icon={<Trophy size={32} />} title="WIN & GROW" index={3}>
-                GET FEEDBACK FROM AI AND CLIMB THE RANKINGS.
+              <Step icon={<Trophy size={32} />} title="landingPage.winGrowTitle" index={3}>
+                landingPage.winGrowDesc
               </Step>
             </div>
           </div>
@@ -367,16 +380,16 @@ const LandingPage = () => {
               className="text-center mb-16"
             >
               <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6 font-mono">
-                LIVE CODING BATTLE
+                {t('landingPage.liveBattleTitle')}
               </h2>
               <p className="text-xl text-gray-400 max-w-2xl mx-auto font-mono">
-                WATCH DEVELOPERS BATTLE IN REAL TIME
+                {t('landingPage.liveBattleSubtitle')}
               </p>
             </motion.div>
 
             <div className="grid lg:grid-cols-2 gap-8 mb-8">
               <CodePanel
-                playerName="CODE WARRIOR 1"
+                playerName="landingPage.codeWarrior1"
                 code={player1Code}
                 speed={80}
                 isPlaying={winner === null}
@@ -385,7 +398,7 @@ const LandingPage = () => {
                 stats={player1Stats}
               />
               <CodePanel
-                playerName="AI OPPONENT"
+                playerName="landingPage.aiOpponent"
                 code={player2Code}
                 speed={100}
                 isPlaying={winner === null}
@@ -403,10 +416,10 @@ const LandingPage = () => {
               >
                 <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 max-w-md mx-auto">
                   <h3 className="text-2xl font-bold text-white mb-2 font-mono">
-                    {winner === "Player 1" ? "CODE WARRIOR WINS!" : "AI WINS!"}
+                    {winner === "Player 1" ? t('landingPage.codeWarriorWins') : t('landingPage.aiWins')}
                   </h3>
                   <p className="text-gray-400 font-mono">
-                    BATTLE COMPLETE
+                    {t('landingPage.battleComplete')}
                   </p>
                 </div>
               </motion.div>
@@ -425,17 +438,18 @@ const LandingPage = () => {
               className="bg-gray-900 border border-gray-800 rounded-lg p-12"
             >
               <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6 font-mono">
-                READY TO BATTLE?
+                {t('landingPage.readyToBattleTitle')}
               </h2>
               <p className="text-xl text-gray-400 mb-8 font-mono">
-                JOIN THOUSANDS OF DEVELOPERS IN THE ULTIMATE CODING ARENA
+                {t('landingPage.readyToBattleSubtitle')}
               </p>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="bg-white text-black text-xl font-bold py-4 px-8 rounded-lg font-mono"
+                onClick={() => navigate('/quick-duel')}
               >
-                START CODING NOW
+                {t('landingPage.startCodingNow')}
               </motion.button>
             </motion.div>
           </div>

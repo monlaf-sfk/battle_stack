@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { type ReactNode } from 'react';
 import { authApiService } from '../services/api';
 import { userService } from '../services/userService';
+import { useTranslation } from 'react-i18next';
 
 // Локальные типы для избежания проблем с импортом
 interface User {
@@ -10,12 +11,14 @@ interface User {
   email: string;
   full_name?: string;
   google_picture?: string;
+  profile_picture?: string;
   role: string;
   is_active: boolean;
   is_verified: boolean;
   created_at: string;
   updated_at: string;
   last_login?: string;
+  email_notifications?: boolean;
 }
 
 interface UserPermissions {
@@ -33,6 +36,8 @@ interface AuthContextType {
   login: (accessToken: string, refreshToken: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  currentLanguage: string;
+  changeLanguage: (lang: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -47,6 +52,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     canModerate: false
   });
   const [loading, setLoading] = useState<boolean>(true);
+  const { i18n } = useTranslation();
+  const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
 
   // Helper function to check if JWT token is expired
   const isTokenExpired = (token: string): boolean => {
@@ -181,6 +188,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const initAuth = async () => {
       const token = localStorage.getItem('token');
       const refreshToken = localStorage.getItem('refreshToken');
+      const storedLanguage = localStorage.getItem('language');
+      if (storedLanguage && storedLanguage !== i18n.language) {
+        await i18n.changeLanguage(storedLanguage);
+        setCurrentLanguage(storedLanguage);
+      }
       
       if (token && refreshToken) {
         await refreshUser();
@@ -212,6 +224,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const changeLanguage = async (lang: string) => {
+    await i18n.changeLanguage(lang);
+    setCurrentLanguage(lang);
+    localStorage.setItem('language', lang);
+  };
+
   return (
     <AuthContext.Provider value={{ 
       isAuthenticated, 
@@ -220,7 +238,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       loading, 
       login, 
       logout, 
-      refreshUser 
+      refreshUser, 
+      currentLanguage, 
+      changeLanguage 
     }}>
       {children}
     </AuthContext.Provider>

@@ -8,10 +8,14 @@ import {
 } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
+import { StreakCalendar } from '../components/profile/StreakCalendar';
+import { getLucideIcon } from '../utils/iconMap';
 
 const ProfilePage: React.FC = () => {
   const { data } = useDashboard();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   useEffect(() => {
     // Получаем реальный rank пользователя по user.id
@@ -41,7 +45,7 @@ const ProfilePage: React.FC = () => {
   const totalProblems = data?.stats?.tasks_completed || 0;
   const totalBattles = data?.stats?.total_duels || 0;
   const currentStreak = data?.stats?.current_streak || 0;
-  const hoursPlayed = Math.floor((totalBattles * 8) / 60) + Math.floor(Math.random() * 50); // Estimate
+  const hoursPlayed = data?.stats?.hours_coded || 0;
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
@@ -71,17 +75,17 @@ const ProfilePage: React.FC = () => {
             </motion.button>
           </div>
           
-          <h1 className="text-4xl font-bold mb-4 tracking-wider">{user?.username?.toUpperCase() || "USER"}</h1>
+          <h1 className="text-4xl font-bold mb-4 tracking-wider">{user?.username?.toUpperCase() || t('common.user')}</h1>
           
           <div className="flex items-center justify-center gap-6 text-gray-400">
             <div className="flex items-center gap-2">
               <Crown size={20} />
-              <span className="font-mono">LEVEL {level}</span>
+              <span className="font-mono">{t('profilePage.level')} {level}</span>
             </div>
             <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
             <div className="flex items-center gap-2">
               <Star size={20} />
-              <span className="font-mono">CODE WARRIOR</span>
+              <span className="font-mono">{t('profilePage.codeWarrior')}</span>
             </div>
           </div>
         </motion.div>
@@ -102,7 +106,7 @@ const ProfilePage: React.FC = () => {
             >
               {totalProblems.toLocaleString()}
             </motion.div>
-            <div className="text-gray-400 text-sm tracking-wider">PROBLEMS SOLVED</div>
+            <div className="text-gray-400 text-sm tracking-wider">{t('profilePage.problemsSolved')}</div>
           </div>
           
           <div>
@@ -114,7 +118,7 @@ const ProfilePage: React.FC = () => {
             >
               {totalBattles.toLocaleString()}
             </motion.div>
-            <div className="text-gray-400 text-sm tracking-wider">BATTLES FOUGHT</div>
+            <div className="text-gray-400 text-sm tracking-wider">{t('profilePage.battlesFought')}</div>
           </div>
           
           <div>
@@ -126,7 +130,7 @@ const ProfilePage: React.FC = () => {
             >
               {hoursPlayed.toLocaleString()}
             </motion.div>
-            <div className="text-gray-400 text-sm tracking-wider">HOURS CODED</div>
+            <div className="text-gray-400 text-sm tracking-wider">{t('profilePage.hoursCoded')}</div>
           </div>
         </motion.div>
 
@@ -138,8 +142,8 @@ const ProfilePage: React.FC = () => {
           className="w-full max-w-md mb-12"
         >
           <div className="flex justify-between items-center mb-3 text-sm text-gray-400">
-            <span>LEVEL {level} PROGRESS</span>
-            <span>{xpInCurrentLevel} / 200 XP</span>
+            <span>{t('profilePage.level')} {level} {t('profilePage.progress')}</span>
+            <span>{xpInCurrentLevel} / 200 {t('profilePage.xp')}</span>
           </div>
           <div className="w-full bg-gray-800 rounded-full h-2">
             <motion.div 
@@ -160,24 +164,27 @@ const ProfilePage: React.FC = () => {
         >
           <div>
             <div className="text-2xl font-bold mb-1 font-mono">{winRate}%</div>
-            <div className="text-gray-400 text-xs tracking-wider">WIN RATE</div>
+            <div className="text-gray-400 text-xs tracking-wider">{t('profilePage.winRate')}</div>
           </div>
           
           <div>
             <div className="text-2xl font-bold mb-1 font-mono">{currentStreak}</div>
-            <div className="text-gray-400 text-xs tracking-wider">CURRENT STREAK</div>
+            <div className="text-gray-400 text-xs tracking-wider">{t('profilePage.currentStreak')}</div>
           </div>
           
           <div>
             <div className="text-2xl font-bold mb-1 font-mono">{totalXP.toLocaleString()}</div>
-            <div className="text-gray-400 text-xs tracking-wider">TOTAL XP</div>
+            <div className="text-gray-400 text-xs tracking-wider">{t('profilePage.totalXP')}</div>
           </div>
           
           <div>
-            <div className="text-2xl font-bold mb-1 font-mono">{data?.stats?.total_duels ? `#${(data.stats.total_duels % 100) + 1}` : "-"}</div>
-            <div className="text-gray-400 text-xs tracking-wider">RANK</div>
+            <div className="text-2xl font-bold mb-1 font-mono">{data?.userRank !== null ? `#${data.userRank}` : "-"}</div>
+            <div className="text-gray-400 text-xs tracking-wider">{t('profilePage.rank')}</div>
           </div>
         </motion.div>
+
+        {/* Streak Calendar */}
+        <StreakCalendar currentStreak={currentStreak} />
 
         {/* Recent Achievements */}
         <motion.div
@@ -186,27 +193,37 @@ const ProfilePage: React.FC = () => {
           transition={{ delay: 1.9 }}
           className="mt-16 text-center"
         >
-          <h2 className="text-2xl font-bold mb-6 tracking-wider">RECENT ACHIEVEMENTS</h2>
+          <h2 className="text-2xl font-bold mb-6 tracking-wider">{t('profilePage.recentAchievements')}</h2>
           <div className="flex flex-wrap justify-center gap-4">
-            {data?.achievements?.slice(0, 5).map((ach, index) => (
-              <motion.div 
-                key={index}
-                className="bg-gray-800 rounded-lg p-4 w-56 text-left border border-gray-700"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 2 + index * 0.1 }}
-              >
-                <div className="flex items-center mb-2">
-                  <div className="text-2xl mr-3">{ach.icon}</div>
-                  <div>
-                    <div className="font-bold text-sm">{ach.name}</div>
-                    <div className="text-xs text-gray-400">{new Date(ach.earned_at || 0).toLocaleDateString()}</div>
+            {data?.achievements?.slice(0, 5).map((ach, index) => {
+              const IconComponent = getLucideIcon(ach.icon);
+              return (
+                <motion.div 
+                  key={index}
+                  className="bg-gray-800 rounded-lg p-4 w-56 text-left border border-gray-700"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 2 + index * 0.1 }}
+                >
+                  <div className="flex items-center mb-3">
+                    {IconComponent && <IconComponent size={32} className="text-purple-400 mr-3" />}
+                    <h3 className="text-lg font-bold text-white">{ach.name}</h3>
                   </div>
-                </div>
-                <p className="text-xs text-gray-400">{ach.details}</p>
-              </motion.div>
-            ))}
+                  <p className="text-gray-400 text-sm mb-2">{ach.details}</p>
+                  <span className="text-xs text-gray-500">{t('profilePage.earnedOn')} {new Date(ach.earned_at || '').toLocaleDateString()}</span>
+                </motion.div>
+              );
+            })}
           </div>
+          {data?.achievements && data.achievements.length > 5 && (
+            <motion.button
+              className="mt-8 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold rounded-lg shadow-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {t('profilePage.showAllAchievements')}
+            </motion.button>
+          )}
         </motion.div>
       </div>
 
@@ -218,9 +235,9 @@ const ProfilePage: React.FC = () => {
         className="text-center py-8 text-gray-600 text-xs tracking-wider"
       >
         <div className="flex justify-center gap-6">
-          <a href="#" className="hover:text-gray-400 transition-colors">TERMS OF USE</a>
-          <a href="#" className="hover:text-gray-400 transition-colors">PRIVACY POLICY</a>
-          <a href="#" className="hover:text-gray-400 transition-colors">RULES</a>
+          <a href="#" className="hover:text-gray-400 transition-colors">{t('common.termsOfUse')}</a>
+          <a href="#" className="hover:text-gray-400 transition-colors">{t('common.privacyPolicy')}</a>
+          <a href="#" className="hover:text-gray-400 transition-colors">{t('common.rules')}</a>
         </div>
       </motion.div>
     </div>

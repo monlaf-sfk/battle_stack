@@ -1,5 +1,6 @@
 import { Button } from './Button';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 interface EmptyStateProps {
   icon: React.ReactNode;
@@ -24,6 +25,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   action,
   secondaryAction
 }) => {
+  const { t } = useTranslation('common');
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -34,9 +37,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <div className="w-20 h-20 bg-arena-surface rounded-full flex items-center justify-center mx-auto mb-6">
         {icon}
       </div>
-      <h3 className="text-xl font-semibold text-arena-text mb-2">{title}</h3>
+      <h3 className="text-xl font-semibold text-arena-text mb-2">{t(title)}</h3>
       <p className="text-arena-text-muted mb-6 max-w-md mx-auto">
-        {description}
+        {t(description)}
       </p>
       {(action || secondaryAction) && (
         <div className="flex gap-3 justify-center">
@@ -45,7 +48,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
               onClick={action.onClick}
               variant={action.variant || 'gradient'}
             >
-              {action.label}
+              {t(action.label)}
             </Button>
           )}
           {secondaryAction && (
@@ -53,7 +56,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
               onClick={secondaryAction.onClick}
               variant={secondaryAction.variant || 'ghost'}
             >
-              {secondaryAction.label}
+              {t(secondaryAction.label)}
             </Button>
           )}
         </div>

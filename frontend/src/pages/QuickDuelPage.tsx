@@ -14,20 +14,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Button } from "../components/ui/Button";
 import { Trophy, Zap, Swords, Bot, Users } from 'lucide-react';
 import { motion } from "framer-motion";
+import { useTranslation } from 'react-i18next';
 
 const QuickDuelPage = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const { showNotification } = useNotifications();
-  const [isLoading, setIsLoading] = useState(true);
   const [showAISettingsModal, setShowAISettingsModal] = useState(false);
+  const { t } = useTranslation();
 
   const { duelState } = useDuel();
 
   useEffect(() => {
     const fetchInitialData = async () => {
       if (!user || !user.id) {
-        setIsLoading(false);
         return;
       }
 
@@ -35,14 +35,10 @@ const QuickDuelPage = () => {
           navigate(`/duel/pve/${duelState.duel.id}`);
           return;
       }
-
-      setIsLoading(false); 
     };
 
     if (!loading) {
       fetchInitialData();
-    } else {
-        setIsLoading(true);
     }
   }, [user, loading, navigate, showNotification, duelState.duel]);
 
@@ -50,23 +46,22 @@ const QuickDuelPage = () => {
     if (!user || !user.id) {
         showNotification(
             "error",
-            "Error",
-            "You must be logged in to start a duel."
+            t('common.error'),
+            t('duels.loginToStartDuel')
         );
         return;
     }
     if (duelState.duel && (duelState.duel.status === 'in_progress' || duelState.duel.status === 'pending' || duelState.duel.status === 'generating_problem')) {
         showNotification(
             "info",
-            "Duel in Progress",
-            "You already have an active or pending duel. Please complete it first."
+            t('duels.duelInProgressTitle'),
+            t('duels.duelInProgressMessage')
         );
         setShowAISettingsModal(false);
         navigate(`/duel/pve/${duelState.duel.id}`);
         return;
     }
 
-    setIsLoading(true);
     try {
         const newDuel = await duelService.createAIDuel({
             ...settings,
@@ -77,10 +72,9 @@ const QuickDuelPage = () => {
         console.error("Failed to start AI duel:", error);
         showNotification(
             "error",
-            "Error",
-            "Could not start a new AI duel. Please try again."
+            t('common.error'),
+            t('duels.failedToStartAIDuel')
         );
-        setIsLoading(false);
     }
   };
 
@@ -88,24 +82,24 @@ const QuickDuelPage = () => {
     if (duelState.duel && (duelState.duel.status === 'in_progress' || duelState.duel.status === 'pending' || duelState.duel.status === 'generating_problem')) {
         showNotification(
             "info",
-            "Duel in Progress",
-            "You already have an active or pending duel. Please complete it first."
+            t('duels.duelInProgressTitle'),
+            t('duels.duelInProgressMessage')
         );
         navigate(`/duel/pve/${duelState.duel.id}`);
         return;
     }
     showNotification(
       "info",
-      "Coming Soon!",
-      "Player vs. Player matchmaking is under development."
+      t('duels.comingSoonTitle'),
+      t('duels.pvpComingSoonMessage')
     );
   };
 
-  if (isLoading || loading) {
-    return <DuelLoading />;
+  if (loading) {
+    return <DuelLoading t={t} />;
   }
 
-  const hasActiveDuel = duelState.duel && (duelState.duel.status === 'in_progress' || duelState.duel.status === 'pending' || duelState.duel.status === 'generating_problem');
+  const hasActiveDuel = !!duelState.duel && (duelState.duel.status === 'pending' || duelState.duel.status === 'in_progress');
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-950 to-gray-800 text-white p-4 sm:p-8">
@@ -115,15 +109,15 @@ const QuickDuelPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
       >
-        Choose Your Battle
+        {t('duels.chooseYourBattle')}
       </motion.h1>
       {hasActiveDuel ? (
           <EmptyState
               icon={<Trophy className="w-16 h-16 text-yellow-500" />}
-              title="Duel in Progress"
-              description="You currently have an active or pending duel. Please finish it before starting a new one."
+              title={t('duels.duelInProgressTitle')}
+              description={t('duels.duelInProgressMessage')}
               action={{
-                  label: "Go to Active Duel",
+                  label: t('duels.goToActiveDuel'),
                   onClick: () => navigate(`/duel/pve/${duelState.duel!.id}`),
                   variant: "gradient",
               }}
@@ -137,17 +131,17 @@ const QuickDuelPage = () => {
             >
               <Card variant="glass" hover="lift" className="p-6 flex flex-col items-center text-center h-full">
                 <CardHeader icon={<Bot className="w-12 h-12 text-green-400 mb-4" />}>
-                  <CardTitle gradient>Player vs. AI</CardTitle>
+                  <CardTitle gradient>{t('duels.playerVsAITitle')}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col justify-between">
-                  <CardDescription className="mb-6">Hone your skills against our advanced AI opponent. Practice, learn, and improve at your own pace.</CardDescription>
+                  <CardDescription className="mb-6">{t('duels.playerVsAIDescription')}</CardDescription>
                   <Button
                     variant="gradient"
                     size="lg"
                     onClick={() => setShowAISettingsModal(true)}
                     className="w-full"
                   >
-                    <Zap className="mr-2 h-5 w-5" /> Start AI Duel
+                    <Zap className="mr-2 h-5 w-5" /> {t('duels.startAIDuel')}
                   </Button>
                 </CardContent>
               </Card>
@@ -159,17 +153,17 @@ const QuickDuelPage = () => {
             >
               <Card variant="glass" hover="lift" className="p-6 flex flex-col items-center text-center h-full">
                 <CardHeader icon={<Users className="w-12 h-12 text-blue-400 mb-4" />}>
-                  <CardTitle gradient>Player vs. Player</CardTitle>
+                  <CardTitle gradient>{t('duels.playerVsPlayerTitle')}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col justify-between">
-                  <CardDescription className="mb-6">Challenge a random opponent and climb the global leaderboard. Test your real-time coding prowess!</CardDescription>
+                  <CardDescription className="mb-6">{t('duels.playerVsPlayerDescription')}</CardDescription>
                   <Button
                     variant="secondary"
                     size="lg"
                     onClick={handleJoinQueue}
                     className="w-full"
                   >
-                    <Swords className="mr-2 h-5 w-5" /> Join Matchmaking (Coming Soon)
+                    <Swords className="mr-2 h-5 w-5" /> {t('duels.joinMatchmaking')}
                   </Button>
                 </CardContent>
               </Card>

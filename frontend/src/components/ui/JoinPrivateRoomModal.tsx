@@ -5,6 +5,7 @@ import { Button } from './Button';
 import { useToast } from './Toast';
 import duelsApiService, { createPrivateRoom } from '../../services/duelService';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 interface JoinPrivateRoomModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const { t } = useTranslation(['common', 'duel']);
 
   const handleJoinRoom = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,8 +29,8 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
     if (!roomCode.trim()) {
       addToast({
         type: 'error',
-        title: 'Invalid Room Code',
-        message: 'Please enter a room code'
+        title: t('joinPrivateRoom.invalidRoomCodeTitle'),
+        message: t('joinPrivateRoom.enterRoomCodeMessage'),
       });
       return;
     }
@@ -36,8 +38,8 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
     if (roomCode.length !== 6) {
       addToast({
         type: 'error',
-        title: 'Invalid Room Code',
-        message: 'Room code must be 6 characters long'
+        title: t('joinPrivateRoom.invalidRoomCodeTitle'),
+        message: t('joinPrivateRoom.roomCodeLengthMessage'),
       });
       return;
     }
@@ -49,8 +51,8 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
       
       addToast({
         type: 'success',
-        title: 'Joined Private Room!',
-        message: 'Starting duel...'
+        title: t('joinPrivateRoom.joinedRoomTitle'),
+        message: t('joinPrivateRoom.joinedRoomMessage'),
       });
 
       // Close modal and navigate to duel
@@ -63,20 +65,20 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
       if (error.response?.status === 404) {
         addToast({
           type: 'error',
-          title: 'Room Not Found',
-          message: 'No active room found with this code'
+          title: t('joinPrivateRoom.roomNotFoundTitle'),
+          message: t('joinPrivateRoom.roomNotFoundMessage'),
         });
       } else if (error.response?.data?.detail) {
         addToast({
           type: 'error',
-          title: 'Failed to Join Room',
-          message: error.response.data.detail
+          title: t('joinPrivateRoom.failedToJoinRoomTitle'),
+          message: error.response.data.detail,
         });
       } else {
         addToast({
           type: 'error',
-          title: 'Connection Error',
-          message: 'Please check your connection and try again'
+          title: t('joinPrivateRoom.connectionErrorTitle'),
+          message: t('joinPrivateRoom.connectionErrorMessage'),
         });
       }
     } finally {
@@ -94,8 +96,8 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
         await navigator.clipboard.writeText(duel.room_code);
         addToast({
           type: 'success',
-          title: '🎉 Private room created!',
-          message: `Room code ${duel.room_code} copied to clipboard`
+          title: t('joinPrivateRoom.roomCreatedTitle'),
+          message: t('joinPrivateRoom.roomCodeCopiedMessage', { roomCode: duel.room_code }),
         });
       }
       
@@ -106,8 +108,8 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
       console.error('Failed to create private room:', error);
       addToast({
         type: 'error',
-        title: 'Failed to create room',
-        message: error?.response?.data?.detail || 'Please try again'
+        title: t('joinPrivateRoom.failedToCreateRoomTitle'),
+        message: error?.response?.data?.detail || t('joinPrivateRoom.tryAgainMessage'),
       });
     } finally {
       setIsCreating(false);
@@ -159,8 +161,8 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
                 <Lock className="w-5 h-5 text-blue-400" />
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-white">Private Rooms</h2>
-                <p className="text-sm text-slate-400">Join existing room or create a new one</p>
+                <h2 className="text-xl font-semibold text-white">{t('joinPrivateRoom.title')}</h2>
+                <p className="text-sm text-slate-400">{t('joinPrivateRoom.subtitle')}</p>
               </div>
             </div>
             <Button
@@ -178,21 +180,21 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
           <form onSubmit={handleJoinRoom} className="space-y-6">
             <div>
               <label htmlFor="roomCode" className="block text-sm font-medium text-slate-300 mb-2">
-                Room Code
+                {t('joinPrivateRoom.roomCodeLabel')}
               </label>
               <input
                 id="roomCode"
                 type="text"
                 value={roomCode}
                 onChange={handleInputChange}
-                placeholder="ABC123"
+                placeholder={t('joinPrivateRoom.roomCodePlaceholder')}
                 className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg font-mono tracking-wider"
                 maxLength={6}
                 disabled={isJoining}
                 autoFocus
               />
               <p className="text-xs text-slate-500 mt-1 text-center">
-                {roomCode.length}/6 characters
+                {t('joinPrivateRoom.roomCodeCharCount', { count: roomCode.length })}
               </p>
             </div>
 
@@ -206,12 +208,12 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
                 {isJoining ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Joining...
+                    {t('joinPrivateRoom.joiningButton')}
                   </>
                 ) : (
                   <>
                     <Users className="w-4 h-4 mr-2" />
-                    Join Room
+                    {t('joinPrivateRoom.joinRoomButton')}
                   </>
                 )}
               </Button>
@@ -221,7 +223,7 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
                   <div className="w-full border-t border-slate-700"></div>
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-slate-900 px-2 text-slate-400">or</span>
+                  <span className="bg-slate-900 px-2 text-slate-400">{t('common.or')}</span>
                 </div>
               </div>
               
@@ -235,12 +237,12 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
                 {isCreating ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating...
+                    {t('joinPrivateRoom.creatingButton')}
                   </>
                 ) : (
                   <>
                     <Plus className="w-4 h-4 mr-2" />
-                    Create New Room
+                    {t('joinPrivateRoom.createNewRoomButton')}
                   </>
                 )}
               </Button>
@@ -250,9 +252,9 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
                 variant="ghost"
                 onClick={handleClose}
                 disabled={isJoining || isCreating}
-                className="w-full text-slate-400 hover:text-white"
+                className="w-full text-slate-400 hover:text-white border border-slate-700"
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
             </div>
           </form>

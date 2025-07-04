@@ -1,15 +1,20 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface AntiCopyBlurOverlayProps {
   isBlurred: boolean;
   duration?: number; // in seconds
   onTimeoutComplete?: () => void;
+  message?: string; // Add message prop to replace hardcoded message in TetrisDuelArena.tsx
+  t: any; // Changed TFunction to any
 }
 
 export const AntiCopyBlurOverlay: React.FC<AntiCopyBlurOverlayProps> = ({
   isBlurred,
   duration = 30,
-  onTimeoutComplete
+  onTimeoutComplete,
+  message,
+  t
 }) => {
   const [timeLeft, setTimeLeft] = useState(duration);
   const [isVisible, setIsVisible] = useState(false);
@@ -49,10 +54,10 @@ export const AntiCopyBlurOverlay: React.FC<AntiCopyBlurOverlayProps> = ({
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-red-600 mb-2">
-            🛡️ Подозрительная активность
+            🛡️ {t('duel.suspiciousActivityTitle')}
           </h2>
           <p className="text-gray-700 mb-4">
-            Обнаружено потенциальное копирование кода. Ваш экран временно заблокирован.
+            {message || t('duel.suspiciousActivityMessage')}
           </p>
         </div>
         
@@ -61,7 +66,7 @@ export const AntiCopyBlurOverlay: React.FC<AntiCopyBlurOverlayProps> = ({
             {timeLeft}
           </div>
           <div className="text-sm text-red-500">
-            секунд до разблокировки
+            {t('duel.secondsUntilUnlock', { count: timeLeft })}
           </div>
           <div className="w-full bg-red-200 rounded-full h-2 mt-3">
             <div 
@@ -72,27 +77,28 @@ export const AntiCopyBlurOverlay: React.FC<AntiCopyBlurOverlayProps> = ({
         </div>
 
         <div className="text-xs text-gray-500 space-y-1">
-          <p>• Система защиты от копирования активна</p>
-          <p>• Не пытайтесь обойти защиту</p>
-          <p>• Честная игра - основа соревнования</p>
+          <p>{t('duel.antiCopyProtectionActive')}</p>
+          <p>{t('duel.doNotBypassProtection')}</p>
+          <p>{t('duel.fairPlayIsFoundation')}</p>
         </div>
       </div>
     </div>
   );
 };
 
-// Hook для использования anti-copy защиты
+// Hook for using anti-copy protection
 export const useAntiCopyProtection = () => {
   const [isBlurred, setIsBlurred] = useState(false);
+  const { t } = useTranslation();
 
   const triggerBlur = () => {
     setIsBlurred(true);
-    console.log('🛡️ Anti-copy protection triggered');
+    console.log(t('duel.antiCopyProtectionTriggered'));
   };
 
   const clearBlur = () => {
     setIsBlurred(false);
-    console.log('✅ Anti-copy protection cleared');
+    console.log(t('duel.antiCopyProtectionCleared'));
   };
 
   return {

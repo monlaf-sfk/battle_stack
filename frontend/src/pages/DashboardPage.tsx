@@ -10,9 +10,11 @@ import Goals from '../components/dashboard/Goals';
 import UserProfile from '../components/dashboard/UserProfile';
 import AiRecommendation from '../components/dashboard/AiRecommendation';
 import { Card, CardContent } from '../components/ui/Card';
+import { useTranslation } from 'react-i18next';
 
 const DashboardPage: React.FC = () => {
   const { loading, error } = useDashboard();
+  const { t } = useTranslation();
 
   if (loading) {
     return (
@@ -25,7 +27,7 @@ const DashboardPage: React.FC = () => {
   if (error) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 text-center">
-        <p className="text-red-400">{error}</p>
+        <p className="text-red-400">{t('common.error')}: {error}</p>
       </div>
     );
   }

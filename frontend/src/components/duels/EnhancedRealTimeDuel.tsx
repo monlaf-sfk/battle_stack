@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Book } from 'lucide-react';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const EnhancedRealTimeDuel = () => {
     const { 
@@ -23,6 +24,7 @@ const EnhancedRealTimeDuel = () => {
     } = useDuel();
 
     const [showProblemModal, setShowProblemModal] = useState(false);
+    const { t } = useTranslation();
 
     const handleCodeChange = (language: string, code: string) => {
         if (duelState.duel?.id) {
@@ -43,7 +45,7 @@ const EnhancedRealTimeDuel = () => {
     };
 
     if (!duelState.duel || !duelState.problem) {
-        return <div className="text-center text-gray-400 py-20 text-lg">Loading duel...</div>;
+        return <div className="text-center text-gray-400 py-20 text-lg">{t('duel.loadingDuelMessage')}</div>;
     }
 
     return (
@@ -62,7 +64,7 @@ const EnhancedRealTimeDuel = () => {
                         className="flex items-center justify-between mb-6"
                     >
                         <h2 className="text-3xl font-extrabold text-white gradient-text-safe animate-gradient">
-                            Problem Description
+                            {t('duel.problemDescriptionTitle')}
                         </h2>
                         <Button 
                             variant="glass" 
@@ -70,7 +72,7 @@ const EnhancedRealTimeDuel = () => {
                             onClick={() => setShowProblemModal(true)}
                             className="flex items-center gap-2 hover:shadow-lg transition-all duration-300"
                         >
-                            <Book className="w-4 h-4 text-purple-300" /> Full Problem
+                            <Book className="w-4 h-4 text-purple-300" /> {t('duel.fullProblemButton')}
                         </Button>
                     </motion.div>
                     <motion.div
@@ -80,9 +82,9 @@ const EnhancedRealTimeDuel = () => {
                         className="flex-grow overflow-y-auto custom-scrollbar pr-4 text-gray-300"
                     >
                         {duelState.problem ? (
-                            <ProblemDescription problem={duelState.problem} />
+                            <ProblemDescription problem={duelState.problem} t={t} />
                         ) : (
-                            <p className="text-gray-400 animate-pulse">Generating an exciting challenge...</p>
+                            <p className="text-gray-400 animate-pulse">{t('duel.generatingChallenge')}</p>
                         )}
                     </motion.div>
                 </ResizablePanel>
@@ -96,7 +98,7 @@ const EnhancedRealTimeDuel = () => {
                                 transition={{ delay: 0.6, duration: 0.5 }}
                                 className="text-xl font-bold text-white mb-2 ml-2 gradient-text-secondary"
                             >
-                                Your Code
+                                {t('duel.yourCodeTitle')}
                             </motion.h3>
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
@@ -123,7 +125,7 @@ const EnhancedRealTimeDuel = () => {
                                 transition={{ delay: 1.0, duration: 0.5 }}
                                 className="text-xl font-bold text-white mb-2 ml-2 gradient-text-secondary"
                             >
-                                AI Opponent Code
+                                {t('duel.aiOpponentCodeTitle')}
                             </motion.h3>
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
@@ -136,6 +138,7 @@ const EnhancedRealTimeDuel = () => {
                                     opponentIsTyping={opponentIsTyping}
                                     opponentTestResults={opponentTestResults}
                                     getOpponentProgress={() => aiProgressPercentage}
+                                    t={t}
                                 />
                                 <CodeEditor
                                     value={aiOpponentCode}
@@ -162,14 +165,14 @@ const EnhancedRealTimeDuel = () => {
                     <DialogContent className="sm:max-w-[800px] w-full h-[90vh] flex flex-col bg-gray-900/90 border border-purple-500/50 rounded-xl shadow-2xl">
                         <DialogHeader className="pb-4 border-b border-gray-700/50">
                             <DialogTitle className="gradient-text text-3xl font-extrabold">
-                                {duelState.problem?.title} ({duelState.problem?.difficulty})
+                                {duelState.problem?.title} ({t(`duel.${duelState.problem?.difficulty.toLowerCase()}`)})
                             </DialogTitle>
                         </DialogHeader>
                         <div className="flex-grow overflow-y-auto custom-scrollbar pr-2 text-gray-300">
                             {duelState.problem ? (
-                                <ProblemDescription problem={duelState.problem} />
+                                <ProblemDescription problem={duelState.problem} t={t} />
                             ) : (
-                                <p className="text-gray-400">Loading problem description...</p>
+                                <p className="text-gray-400">{t('duel.loadingProblemDescription')}</p>
                             )}
                         </div>
                     </DialogContent>

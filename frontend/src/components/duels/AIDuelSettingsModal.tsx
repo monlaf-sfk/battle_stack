@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { motion } from "framer-motion";
+import { useTranslation } from 'react-i18next';
 
 export interface AIDuelSettingsModalProps {
   isOpen: boolean;
@@ -19,48 +20,50 @@ export interface AIDuelSettings {
   category: 'algorithms' | 'sql';
 }
 
-const DIFFICULTIES = [
-    { value: 'easy', label: 'Easy', description: 'Beginner-friendly problems', color: 'text-green-500' },
-    { value: 'medium', label: 'Medium', description: 'Challenging, requires some thought', color: 'text-yellow-500' },
-    { value: 'hard', label: 'Hard', description: 'Complex, for experienced coders', color: 'text-red-500' },
-    { value: 'expert', label: 'Expert', description: 'Very difficult, for pros', color: 'text-purple-500' },
-];
-
-const availableThemes = {
-  algorithms: [
-    { value: 'dynamic_programming', label: 'Dynamic Programming', icon: <Code className="w-4 h-4" />  },
-    { value: 'graph_theory', label: 'Graph Theory', icon: <Zap className="w-4 h-4" /> },
-    { value: 'string_manipulation', label: 'String Manipulation', icon: <BookOpen className="w-4 h-4" />  },
-  ],
-  sql: [
-    { value: 'sql', label: 'SQL', icon: <Flame className="w-4 h-4" />  },
-  ],
-};
-
-const languagesForCategory = {
-  algorithms: [
-    { value: 'python', label: 'Python' },
-    { value: 'javascript', label: 'JavaScript' },
-    { value: 'java', label: 'Java' },
-    { value: 'cpp', label: 'C++' },
-    { value: 'rust', label: 'Rust' },
-    { value: 'go', label: 'Go' },
-  ],
-  sql: [
-    { value: 'sql', label: 'SQL' },
-  ]
-};
-
-const categoryOptions = [
-  { value: 'algorithms', label: 'Algorithms', icon: <Code className="w-5 h-5" /> },
-  { value: 'sql', label: 'SQL', icon: <Shield className="w-5 h-5" /> },
-];
-
 export const AIDuelSettingsModal: React.FC<AIDuelSettingsModalProps> = ({
   isOpen,
   onClose,
   onStart,
 }) => {
+  const { t } = useTranslation();
+
+  const DIFFICULTIES = [
+      { value: 'easy', label: t('duel.difficultyEasy'), description: t('duel.difficultyEasyDesc'), color: 'text-green-500' },
+      { value: 'medium', label: t('duel.difficultyMedium'), description: t('duel.difficultyMediumDesc'), color: 'text-yellow-500' },
+      { value: 'hard', label: t('duel.difficultyHard'), description: t('duel.difficultyHardDesc'), color: 'text-red-500' },
+      { value: 'expert', label: t('duel.difficultyExpert'), description: t('duel.difficultyExpertDesc'), color: 'text-purple-500' },
+  ];
+  
+  const availableThemes = {
+    algorithms: [
+      { value: 'dynamic_programming', label: t('duel.themeDynamicProgramming'), icon: <Code className="w-4 h-4" />  },
+      { value: 'graph_theory', label: t('duel.themeGraphTheory'), icon: <Zap className="w-4 h-4" /> },
+      { value: 'string_manipulation', label: t('duel.themeStringManipulation'), icon: <BookOpen className="w-4 h-4" />  },
+    ],
+    sql: [
+      { value: 'sql', label: t('duel.themeSQL'), icon: <Flame className="w-4 h-4" />  },
+    ],
+  };
+  
+  const languagesForCategory = {
+    algorithms: [
+      { value: 'python', label: t('common.python') },
+      { value: 'javascript', label: t('common.javascript') },
+      { value: 'java', label: t('common.java') },
+      { value: 'cpp', label: t('common.cpp') },
+      { value: 'rust', label: t('common.rust') },
+      { value: 'go', label: t('common.go') },
+    ],
+    sql: [
+      { value: 'sql', label: t('common.sql') },
+    ]
+  };
+  
+  const categoryOptions = [
+    { value: 'algorithms', label: t('duel.categoryAlgorithms'), icon: <Code className="w-5 h-5" /> },
+    { value: 'sql', label: t('duel.categorySQL'), icon: <Shield className="w-5 h-5" /> },
+  ];
+
   const [settings, setSettings] = useState<AIDuelSettings>({
     theme: availableThemes.algorithms[0].value,
     difficulty: 'medium',
@@ -92,14 +95,14 @@ export const AIDuelSettingsModal: React.FC<AIDuelSettingsModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-gray-900 border border-gray-700 text-white rounded-2xl shadow-2xl">
         <DialogHeader className="px-6 pt-6">
-          <DialogTitle className="text-3xl font-bold gradient-text-safe mb-2">AI Duel Setup</DialogTitle>
-          <DialogDescription className="text-gray-400">Configure your AI opponent and problem settings.</DialogDescription>
+          <DialogTitle className="text-3xl font-bold gradient-text-safe mb-2">{t('duel.aiDuelSetupTitle')}</DialogTitle>
+          <DialogDescription className="text-gray-400">{t('duel.aiDuelSetupSubtitle')}</DialogDescription>
         </DialogHeader>
 
         <div className="px-6 py-6 space-y-4 flex-1">
           {/* Category Selection */}
           <div>
-            <Label className="block text-lg font-semibold text-gray-200 mb-4">Choose Category</Label>
+            <Label className="block text-lg font-semibold text-gray-200 mb-4">{t('duel.chooseCategory')}</Label>
             <div className="grid grid-cols-2 gap-4">
               {categoryOptions.map((option) => (
                 <motion.div
@@ -124,13 +127,13 @@ export const AIDuelSettingsModal: React.FC<AIDuelSettingsModalProps> = ({
 
           {/* Problem Theme Selection */}
           <div>
-            <Label htmlFor="theme" className="block text-lg font-semibold text-gray-200 mb-4">Problem Theme</Label>
+            <Label htmlFor="theme" className="block text-lg font-semibold text-gray-200 mb-4">{t('duel.problemTheme')}</Label>
             <Select
               value={settings.theme}
               onValueChange={(value) => updateSetting('theme', value)}
             >
               <SelectTrigger className="w-full bg-gray-800 border-gray-700 text-white focus:ring-green-500 data-[state=open]:border-green-500">
-                <SelectValue placeholder="Select a theme" />
+                <SelectValue placeholder={t('duel.selectThemePlaceholder')} />
               </SelectTrigger>
               <SelectContent className="bg-gray-800 border-gray-700 text-white">
                 {availableThemes[settings.category].map((theme) => (
@@ -144,7 +147,7 @@ export const AIDuelSettingsModal: React.FC<AIDuelSettingsModalProps> = ({
   
           {/* Difficulty Selection */}
           <div>
-            <Label className="block text-lg font-semibold text-gray-200 mb-4">Difficulty Level</Label>
+            <Label className="block text-lg font-semibold text-gray-200 mb-4">{t('duel.difficultyLevel')}</Label>
             <div className="grid grid-cols-1 gap-4">
               {DIFFICULTIES.map((difficulty) => (
                 <motion.div
@@ -181,13 +184,13 @@ export const AIDuelSettingsModal: React.FC<AIDuelSettingsModalProps> = ({
   
           {/* Language Selection */}
           <div>
-            <Label htmlFor="language" className="block text-lg font-semibold text-gray-200 mb-4">Programming Language</Label>
+            <Label htmlFor="language" className="block text-lg font-semibold text-gray-200 mb-4">{t('duel.programmingLanguage')}</Label>
             <Select
               value={settings.language}
               onValueChange={(value) => updateSetting('language', value)}
             >
               <SelectTrigger className="w-full bg-gray-800 border-gray-700 text-white focus:ring-green-500 data-[state=open]:border-green-500">
-                <SelectValue placeholder="Select a language" />
+                <SelectValue placeholder={t('duel.selectLanguagePlaceholder')} />
               </SelectTrigger>
               <SelectContent className="bg-gray-800 border-gray-700 text-white">
                 {languagesForCategory[settings.category].map((lang) => (
@@ -199,14 +202,14 @@ export const AIDuelSettingsModal: React.FC<AIDuelSettingsModalProps> = ({
         </div>
 
         <DialogFooter className="flex justify-end border-t border-gray-700 px-6 pb-6">
-          <Button variant="ghost" onClick={onClose} className="mr-4">Cancel</Button>
+          <Button variant="ghost" onClick={onClose} className="mr-4">{t('common.cancel')}</Button>
           <Button
             onClick={handleStartDuel}
             variant="gradient"
             size="lg"
             className="text-white font-bold"
           >
-            Start AI Duel
+            {t('duel.startAIDuel')}
           </Button>
         </DialogFooter>
       </DialogContent>

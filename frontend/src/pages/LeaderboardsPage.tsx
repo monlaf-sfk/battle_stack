@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { duelsApiService } from "../services/duelService";
+import { useTranslation } from 'react-i18next';
 
 interface LeaderboardEntry {
   rank: number;
@@ -16,6 +17,7 @@ const LeaderboardsPage: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -25,7 +27,7 @@ const LeaderboardsPage: React.FC = () => {
         const data = await duelsApiService.getLeaderboard(20);
         setLeaderboard(data || []);
       } catch (err: any) {
-        setError(err?.response?.data?.detail || err.message || "Failed to load leaderboard");
+        setError(err?.response?.data?.detail || err.message || t('leaderboardsPage.failedToLoadLeaderboard'));
       } finally {
         setLoading(false);
       }
@@ -35,20 +37,20 @@ const LeaderboardsPage: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Leaderboard</h1>
-      {loading && <div>Loading...</div>}
-      {error && <div className="text-red-500 mb-4">{error}</div>}
+      <h1 className="text-2xl font-bold mb-4">{t('leaderboardsPage.title')}</h1>
+      {loading && <div>{t('common.loading')}...</div>}
+      {error && <div className="text-red-500 mb-4">{t('common.error')}: {error}</div>}
       {!loading && !error && (
         <div className="overflow-x-auto">
           <table className="min-w-full bg-gray-900 rounded-lg shadow">
             <thead>
               <tr className="text-gray-400 text-left">
                 <th className="py-2 px-4">#</th>
-                <th className="py-2 px-4">Username</th>
-                <th className="py-2 px-4">ELO</th>
-                <th className="py-2 px-4">Wins</th>
-                <th className="py-2 px-4">Win Rate</th>
-                <th className="py-2 px-4">Streak</th>
+                <th className="py-2 px-4 w-fit whitespace-nowrap">{t('common.username')}</th>
+                <th className="py-2 px-4">{t('leaderboardsPage.elo')}</th>
+                <th className="py-2 px-4">{t('leaderboardsPage.wins')}</th>
+                <th className="py-2 px-4">{t('leaderboardsPage.winRate')}</th>
+                <th className="py-2 px-4">{t('leaderboardsPage.streak')}</th>
               </tr>
             </thead>
             <tbody>

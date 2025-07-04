@@ -1,17 +1,18 @@
+import React from 'react';
+import type { TFunction } from 'i18next';
 import type { DuelProblem } from '../../types/duel.types';
 
 export interface ProblemDescriptionProps {
   problem: DuelProblem | null;
+  t: TFunction;
+  className?: string;
 }
 
-export const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem }) => {
+export const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem, t, className }) => {
   if (!problem) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-900 text-gray-400">
-        <div className="text-center">
-          <div className="animate-pulse mb-2">Loading...</div>
-          <p className="text-sm">Fetching problem details</p>
-        </div>
+      <div className={`p-4 bg-gray-800 rounded-lg ${className}`}>
+        <p className="text-gray-400">{t('duel.loadingDuel')}</p>
       </div>
     );
   }
@@ -28,70 +29,64 @@ export const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem 
   const visibleTestCases = problem.test_cases?.filter(tc => !tc.is_hidden) || [];
 
   return (
-    <div className="h-full flex flex-col bg-gray-900 text-gray-300">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-700">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-xl font-bold text-white">{problem.title}</h1>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getDifficultyColor(problem.difficulty)}`}>
-            {problem.difficulty}
-          </span>
-        </div>
+    <div className={`p-6 bg-gray-900/50 rounded-lg border border-gray-700/50 h-full overflow-y-auto ${className}`}>
+      <div className="flex justify-between items-start mb-4">
+        <h2 className="text-2xl font-bold text-white">{problem.title}</h2>
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getDifficultyColor(problem.difficulty)}`}>
+          {t(`duel.${problem.difficulty.toLowerCase()}`)}
+        </span>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Description */}
-        <div className="prose prose-invert prose-sm max-w-none">
-          <p className="text-gray-300 leading-relaxed">{problem.description}</p>
+      <div
+        className="prose prose-invert prose-sm max-w-none text-gray-300"
+        dangerouslySetInnerHTML={{ __html: problem.description }}
+      />
+
+      {/* Constraints */}
+      {problem.constraints && (
+        <div className="bg-gray-800 rounded-lg p-4">
+          <h3 className="font-medium text-yellow-400 mb-2">{t('duel.constraintsTitle')}</h3>
+          <pre className="text-sm text-gray-300 whitespace-pre-wrap">{problem.constraints}</pre>
         </div>
+      )}
 
-        {/* Constraints */}
-        {problem.constraints && (
-          <div className="bg-gray-800 rounded-lg p-4">
-            <h3 className="font-medium text-yellow-400 mb-2">Constraints</h3>
-            <pre className="text-sm text-gray-300 whitespace-pre-wrap">{problem.constraints}</pre>
-          </div>
-        )}
-
-        {/* Examples */}
-        {visibleTestCases.length > 0 && (
-          <div className="bg-gray-800 rounded-lg p-4">
-            <h3 className="font-medium text-green-400 mb-3">Examples</h3>
-            <div className="space-y-3">
-              {visibleTestCases.map((tc, idx) => (
-                <div key={idx} className="bg-gray-900 rounded-md p-3">
-                  <div className="text-sm font-medium text-gray-400 mb-2">Example {idx + 1}</div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <div className="text-xs text-blue-400 mb-1 uppercase">Input</div>
-                      <code className="text-sm text-gray-300 bg-black/50 p-2 rounded block">
-                        {tc.input_data}
-                      </code>
-                    </div>
-                    <div>
-                      <div className="text-xs text-green-400 mb-1 uppercase">Output</div>
-                      <code className="text-sm text-gray-300 bg-black/50 p-2 rounded block">
-                        {tc.expected_output}
-                      </code>
-                    </div>
+      {/* Examples */}
+      {visibleTestCases.length > 0 && (
+        <div className="bg-gray-800 rounded-lg p-4">
+          <h3 className="font-medium text-green-400 mb-3">{t('duel.examplesTitle')}</h3>
+          <div className="space-y-3">
+            {visibleTestCases.map((tc, idx) => (
+              <div key={idx} className="bg-gray-900 rounded-md p-3">
+                <div className="text-sm font-medium text-gray-400 mb-2">{t('duel.exampleNumber', { number: idx + 1 })}</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-blue-400 mb-1 uppercase">{t('duel.inputLabel')}</div>
+                    <code className="text-sm text-gray-300 bg-black/50 p-2 rounded block">
+                      {tc.input_data}
+                    </code>
+                  </div>
+                  <div>
+                    <div className="text-xs text-green-400 mb-1 uppercase">{t('duel.outputLabel')}</div>
+                    <code className="text-sm text-gray-300 bg-black/50 p-2 rounded block">
+                      {tc.expected_output}
+                    </code>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        )}
-
-        {/* Tips */}
-        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-          <h3 className="font-medium text-blue-400 mb-2">💡 Tips</h3>
-          <ul className="text-sm text-gray-400 space-y-1">
-            <li>• Read examples carefully to understand the problem</li>
-            <li>• Check constraints for edge cases</li>
-            <li>• Test your code before submitting</li>
-            <li>• Use Ctrl+Enter to submit quickly</li>
-          </ul>
         </div>
+      )}
+
+      {/* Tips */}
+      <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+        <h3 className="font-medium text-blue-400 mb-2">💡 {t('duel.tipsTitle')}</h3>
+        <ul className="text-sm text-gray-400 space-y-1">
+          <li>• {t('duel.readExamplesTip')}</li>
+          <li>• {t('duel.checkConstraintsTip')}</li>
+          <li>• {t('duel.testCodeTip')}</li>
+          <li>• {t('duel.submitShortcutTip')}</li>
+        </ul>
       </div>
     </div>
   );

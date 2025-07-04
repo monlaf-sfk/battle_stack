@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
 import { useNavigate } from 'react-router-dom';
 import { authApiService } from '../../services/api'; // Import the service
+import { useTranslation } from 'react-i18next';
 
 interface GoogleOAuthButtonProps {
   onSuccess?: () => void;
@@ -38,6 +39,7 @@ export const GoogleOAuthButton: React.FC<GoogleOAuthButtonProps> = ({
 }) => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   
   // Store client ID at component level
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 
@@ -231,7 +233,7 @@ export const GoogleOAuthButton: React.FC<GoogleOAuthButtonProps> = ({
           />
         </svg>
         
-        {text || (variant === 'signup' ? 'CONTINUE WITH GOOGLE' : 'SIGN IN WITH GOOGLE')}
+        {text || (variant === 'signup' ? t('common.continueWithGoogle') : t('common.signInWithGoogle'))}
       </Button>
     </div>
   );

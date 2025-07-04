@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Доступные сервисы
-SERVICES=("auth" "user" "problems" "duels")
+SERVICES=("auth" "user" "duels")
 
 # Функция для вывода справки
 show_help() {

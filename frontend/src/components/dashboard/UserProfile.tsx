@@ -2,15 +2,17 @@ import React from 'react';
 import { Shield, User, Crown } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '../ui/Card';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useDashboard } from '../../hooks/useDashboard';
 import { useAuth } from '../../contexts/AuthContext';
 import { Skeleton } from '../ui/Skeleton';
+import { useTranslation } from 'react-i18next';
 
 const UserProfile: React.FC = () => {
-    const navigate = useNavigate();
+
     const { user, loading: authLoading } = useAuth();
     const { data, loading: dashboardLoading } = useDashboard();
+    const { t } = useTranslation();
 
     const loading = authLoading || dashboardLoading;
 
@@ -41,11 +43,11 @@ const UserProfile: React.FC = () => {
         switch(role) {
             case 'admin':
             case 'super_admin':
-                return { name: 'Admin', icon: <Crown size={14} />, color: 'text-yellow-400' };
+                return { name: t('profilePage.admin'), icon: <Crown size={14} />, color: 'text-yellow-400' };
             case 'moderator':
-                return { name: 'Moderator', icon: <Shield size={14} />, color: 'text-blue-400' };
+                return { name: t('profilePage.moderator'), icon: <Shield size={14} />, color: 'text-blue-400' };
             default:
-                return { name: 'Code Warrior', icon: <User size={14} />, color: 'text-green-400' };
+                return { name: t('profilePage.codeWarrior'), icon: <User size={14} />, color: 'text-green-400' };
         }
     };
     
@@ -54,7 +56,6 @@ const UserProfile: React.FC = () => {
     return (
         <Card 
             className="bg-gray-900 border border-gray-800 hover:border-gray-700 transition-all duration-300 overflow-hidden"
-            onClick={() => navigate('/profile')}
         >
             <div className="h-2 bg-gradient-to-r from-green-400 to-blue-500" />
             <CardContent className="p-6">
@@ -76,7 +77,7 @@ const UserProfile: React.FC = () => {
                     
                     <div className="flex-1">
                         <h2 className="text-xl font-bold text-white flex items-center font-mono truncate">
-                            {user?.username || 'Guest'}
+                            {user?.username || t('common.guest')}
                         </h2>
                         <motion.div 
                             className="flex items-center gap-2 mt-1"
@@ -86,7 +87,7 @@ const UserProfile: React.FC = () => {
                         >
                             <div className={`flex items-center ${roleInfo.color} gap-1`}>
                                 {roleInfo.icon}
-                                <span className="font-semibold text-sm font-mono">{roleInfo.name}</span>
+                                <span className="font-semibold text-sm font-mono">{t(roleInfo.name)}</span>
                             </div>
                         </motion.div>
                     </div>
@@ -102,9 +103,11 @@ const UserProfile: React.FC = () => {
                     <div className="flex justify-between items-center mb-1 text-sm">
                         <span className="font-semibold text-white flex items-center font-mono text-sm gap-1.5">
                             <Crown size={14} className="text-yellow-400" />
-                            Level {level}
+                            {t('profilePage.level', { level: level })}
                         </span>
-                        <span className="text-gray-400 font-mono text-xs">{xpInCurrentLevel} / 200 XP</span>
+                        <span className="text-gray-400 font-mono text-xs">
+                            {t('profilePage.xpProgress', { current: xpInCurrentLevel, total: 200, xp: t('profilePage.xp') })}
+                        </span>
                     </div>
                     <div className="relative">
                         <div className="w-full bg-gray-800 rounded-full h-2.5 overflow-hidden border border-gray-700">
@@ -125,9 +128,9 @@ const UserProfile: React.FC = () => {
                     transition={{ delay: 0.6, staggerChildren: 0.1 }}
                     className="grid grid-cols-3 gap-4"
                 >
-                    <StatItem value={data?.stats?.total_duels || 0} label="Duels" />
-                    <StatItem value={data?.stats?.current_streak || 0} label="Streak" highlightColor="text-orange-400" />
-                    <StatItem value={data?.stats?.successful_duels || 0} label="Wins" highlightColor="text-green-400" />
+                    <StatItem value={data?.stats?.total_duels || 0} label={t('dashboard.duelsStat', { value: data?.stats?.total_duels || 0, duels: t('dashboard.totalDuels') })} />
+                    <StatItem value={data?.stats?.current_streak || 0} label={t('dashboard.streakStat', { value: data?.stats?.current_streak || 0, streak: t('dashboard.streak') })} highlightColor="text-orange-400" />
+                    <StatItem value={data?.stats?.successful_duels || 0} label={t('dashboard.winsStat', { value: data?.stats?.successful_duels || 0, wins: t('dashboard.wins') })} highlightColor="text-green-400" />
                 </motion.div>
             </CardContent>
             <CardFooter className="p-4 bg-gray-900/50 border-t border-gray-800">
@@ -137,9 +140,9 @@ const UserProfile: React.FC = () => {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.7 }}
                 >
-                    <div className="text-gray-400 text-sm font-mono hover:text-white transition-colors">
-                        View Full Profile →
-                    </div>
+                    <Link to="/profile" className="text-gray-400 text-sm font-mono hover:text-white transition-colors">
+                        {t('dashboard.viewFullProfileLink', { text: t('dashboard.viewFullProfile') })}
+                    </Link>
                 </motion.div>
             </CardFooter>
         </Card>

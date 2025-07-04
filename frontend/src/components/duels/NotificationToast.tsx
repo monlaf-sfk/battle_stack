@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Notification } from '../../types/duel.types';
+import { useTranslation } from 'react-i18next';
 
 interface NotificationToastProps {
   notifications: Notification[];
@@ -11,6 +12,8 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
   notifications, 
   onRemove 
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="fixed top-4 right-4 z-50 space-y-2">
       <AnimatePresence>
@@ -42,7 +45,7 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
                 onClick={() => onRemove(notification.id)}
                 className="flex-shrink-0 text-gray-400 hover:text-white transition-colors"
               >
-                ×
+                {t('common.close')}
               </button>
             </div>
           </motion.div>

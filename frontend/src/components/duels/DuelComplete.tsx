@@ -4,23 +4,38 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../ui/Card
 import { Button } from '../ui/Button';
 import { Trophy, ShieldOff, BarChart, Home, Repeat } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import type { DuelResult } from '../../types/duel.types';
+import type { TestResultResponse } from '../../types/duel.types';
+import { useAuth } from '../../contexts/AuthContext';
 
 export interface DuelCompleteProps {
-  result: DuelResult;
-  currentUserId: string;
+  results: {
+    playerScore: number | undefined;
+    opponentScore: number | undefined;
+    userTestResults: TestResultResponse | null;
+    opponentTestResults: TestResultResponse | null;
+  };
+  onRematch: () => void;
+  t: any;
 }
 
-export const DuelComplete: React.FC<DuelCompleteProps> = ({ result, currentUserId }) => {
-  const { winner_id, player_one_result, player_two_result } = result;
-  
-  const isWinner = winner_id === currentUserId;
-  const currentUserResult = player_one_result?.player_id === currentUserId ? player_one_result : player_two_result;
-  const opponentResult = player_one_result?.player_id !== currentUserId ? player_one_result : player_two_result;
-
+export const DuelComplete: React.FC<DuelCompleteProps> = ({ results, onRematch, t }) => {
+  const { user } = useAuth();
   const navigate = useNavigate();
-  
-  const title = isWinner ? 'Victory' : 'Defeat';
+  if (!results) {
+    return null; // or a loading/error state
+  }
+
+  const { playerScore, opponentScore } = results;
+
+  const winner_id = playerScore !== undefined && opponentScore !== undefined 
+    ? (playerScore > opponentScore ? user?.id : (playerScore < opponentScore ? 'opponent' : null))
+    : null;
+
+  const isWinner = winner_id === user?.id;
+  const currentUserResult = playerScore !== undefined ? { player_id: user?.id, score: playerScore, time_taken_seconds: 0, submission_count: 0, is_winner: isWinner } : null;
+  const opponentResult = opponentScore !== undefined ? { player_id: 'opponent', score: opponentScore, time_taken_seconds: 0, submission_count: 0, is_winner: !isWinner } : null;
+
+  const title = isWinner ? t('duel.victory') : t('duel.defeat');
   const Icon = isWinner ? Trophy : ShieldOff;
   const iconColor = isWinner ? 'text-yellow-400' : 'text-red-400';
   const borderColor = isWinner ? 'border-yellow-400/30' : 'border-red-400/30';
@@ -48,7 +63,7 @@ export const DuelComplete: React.FC<DuelCompleteProps> = ({ result, currentUserI
             </motion.div>
             <CardTitle className={`text-4xl font-bold gradient-text mt-4 ${iconColor}`}>{title}</CardTitle>
             <p className="text-arena-text-muted mt-2">
-              {winner_id ? `Winner: ${winner_id}` : "It's a draw!"}
+              {winner_id ? t('duel.winner', { winner: winner_id === user?.id ? user?.username : t('duel.opponent') }) : t('duel.draw')}
             </p>
           </CardHeader>
 
@@ -56,31 +71,31 @@ export const DuelComplete: React.FC<DuelCompleteProps> = ({ result, currentUserI
             <div className="bg-arena-surface/50 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-arena-text mb-3 flex items-center gap-2">
                 <BarChart size={20} />
-                Duel Summary
+                {t('duel.duelSummary')}
               </h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="bg-arena-dark/50 p-3 rounded-md">
-                  <p className="text-arena-text-muted">Outcome</p>
+                  <p className="text-arena-text-muted">{t('duel.outcome')}</p>
                   <p className={`font-bold text-lg ${iconColor}`}>{title}</p>
                 </div>
                 <div className="bg-arena-dark/50 p-3 rounded-md">
-                  <p className="text-arena-text-muted">Opponent</p>
-                  <p className="font-bold text-lg text-arena-text truncate">{opponentResult?.player_id || 'AI'}</p>
+                  <p className="text-arena-text-muted">{t('duel.opponent')}</p>
+                  <p className="font-bold text-lg text-arena-text truncate">{opponentResult?.player_id || t('common.ai')}</p>
                 </div>
                 <div className="bg-arena-dark/50 p-3 rounded-md">
-                  <p className="text-arena-text-muted">Score Gained</p>
+                  <p className="text-arena-text-muted">{t('duel.scoreGained')}</p>
                   <p className={`font-bold text-lg ${isWinner ? 'text-green-400' : 'text-red-400'}`}>
                     {currentUserResult?.score !== undefined 
                       ? (isWinner ? `+${currentUserResult.score}` : `-${Math.round(Math.abs(currentUserResult.score) / 2)}`) 
-                      : 'N/A'}
+                      : t('common.notApplicable')}
                   </p>
                 </div>
                 <div className="bg-arena-dark/50 p-3 rounded-md">
-                  <p className="text-arena-text-muted">Time Taken</p>
+                  <p className="text-arena-text-muted">{t('duel.timeTaken')}</p>
                   <p className="font-bold text-lg text-arena-text">
                     {currentUserResult?.time_taken_seconds !== undefined 
-                      ? `${currentUserResult.time_taken_seconds.toFixed(2)}s` 
-                      : 'N/A'}
+                      ? t('duel.timeInSeconds', { time: currentUserResult.time_taken_seconds.toFixed(2) }) 
+                      : t('common.notApplicable')}
                   </p>
                 </div>
               </div>
@@ -89,8 +104,8 @@ export const DuelComplete: React.FC<DuelCompleteProps> = ({ result, currentUserI
             <div className="text-center">
               <p className="text-arena-text-muted text-sm">
                 {isWinner 
-                  ? "Your code has proven its might. Well done!"
-                  : "Every defeat is a lesson. Analyze your mistakes and come back stronger."}
+                  ? t('duel.victoryMessageDetail')
+                  : t('duel.defeatMessageDetail')}
               </p>
             </div>
           </CardContent>
@@ -102,15 +117,15 @@ export const DuelComplete: React.FC<DuelCompleteProps> = ({ result, currentUserI
               className="w-full"
             >
               <Home size={16} className="mr-2" />
-              Go to Dashboard
+              {t('duel.goToDashboard')}
             </Button>
             <Button
-              onClick={() => navigate('/quick-duel')}
+              onClick={() => onRematch?.()}
               variant="gradient"
               className="w-full"
             >
               <Repeat size={16} className="mr-2" />
-              Play Again
+              {t('duel.playAgain')}
             </Button>
           </CardFooter>
         </Card>

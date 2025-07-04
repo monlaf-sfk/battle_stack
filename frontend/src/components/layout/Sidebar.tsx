@@ -5,13 +5,15 @@ import { getMenuItems } from "./menuItems.tsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDashboard } from "../../hooks/useDashboard";
 import { Flame, Zap, Crown, Lock } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 
 const Sidebar = () => {
   const { isSidebarOpen, setSidebarOpen } = useLayout();
   const { data } = useDashboard();
+  const { t } = useTranslation();
 
   const isDesktopCollapsed = !isSidebarOpen;
-  const menuItems = getMenuItems();
+  const menuItems = getMenuItems(t);
 
   return (
     <>
@@ -99,7 +101,7 @@ const Sidebar = () => {
                 animate={{ opacity: isSidebarOpen ? 1 : 0 }}
                 transition={{ duration: 0.3 }}
               >
-                BATTLESTACK
+                {t('sidebar.title')}
               </motion.span>
             </NavLink>
           </motion.div>
@@ -120,7 +122,7 @@ const Sidebar = () => {
                       {data?.stats?.current_streak || 0}
                     </span>
                   </div>
-                  <div className="text-xs text-gray-400 font-mono">STREAK</div>
+                  <div className="text-xs text-gray-400 font-mono">{t('sidebar.streak')}</div>
                 </div>
                 
                 <div className="bg-gray-900 rounded-lg p-3 border border-gray-800">
@@ -130,7 +132,7 @@ const Sidebar = () => {
                       {data?.stats ? (data.stats.tasks_completed * 25) : 0}
                     </span>
                   </div>
-                  <div className="text-xs text-gray-400 font-mono">XP</div>
+                  <div className="text-xs text-gray-400 font-mono">{t('sidebar.xp')}</div>
                 </div>
               </div>
               
@@ -139,7 +141,7 @@ const Sidebar = () => {
                 <div className="flex items-center justify-center gap-2">
                   <Crown size={16} className="text-white" />
                   <span className="text-white font-mono text-sm font-bold">
-                    RANK #{Math.floor(Math.random() * 1000) + 1}
+                    {t('sidebar.rank')} #{data?.userRank !== null ? data.userRank : t('common.notApplicable')}
                   </span>
                 </div>
               </div>
@@ -183,7 +185,7 @@ const Sidebar = () => {
                             "flex items-center gap-3 rounded-lg py-3 px-3 transition-all duration-200 relative group font-mono text-sm cursor-not-allowed opacity-60",
                             { "justify-center": isDesktopCollapsed }
                           )}
-                          title="Coming soon"
+                          title={t('common.comingSoon')}
                         >
                           {item.icon}
                           <span className={clsx("font-medium tracking-wide", { "sr-only": isDesktopCollapsed })}>
@@ -191,7 +193,7 @@ const Sidebar = () => {
                           </span>
                           <Lock size={16} className="ml-2 text-gray-400" />
                           <span className="absolute right-3 text-xs text-gray-400 hidden group-hover:block bg-gray-900 px-2 py-1 rounded shadow-lg z-10">
-                            Coming soon
+                            {t('common.comingSoon')}
                           </span>
                         </div>
                       ) : (

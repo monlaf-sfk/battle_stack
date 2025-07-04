@@ -3,6 +3,7 @@ import type { DuelProblem, TestResult } from '../../types/duel.types';
 import { CodeEditor, LanguageSelector } from '../ui/CodeEditor';
 import { Button } from '../ui/Button';
 import { CheckCircle, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface AlgorithmSolverProps {
   problem: DuelProblem | null;
@@ -25,6 +26,7 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
   testResults,
   submissionResult,
 }) => {
+  const { t } = useTranslation();
   const [language, setLanguage] = useState('python');
   const [code, setCode] = useState(() => {
     // Get initial code from problem's starter code or code templates
@@ -52,10 +54,13 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
     onCodeChange(newLanguage, newCode);
   };
 
-  const handleLocalCodeChange = (newCode: string) => {
-    setCode(newCode);
-    onCodeChange(language, newCode);
+  const handleLocalCodeChange = (newCode: string | undefined) => {
+    const code = newCode || '';
+    setCode(code);
+    onCodeChange(language, code);
   };
+
+  const editorHeight = submissionResult ? 'calc(100% - 120px)' : '100%';
 
   return (
     <div className="h-full flex flex-col">
@@ -69,14 +74,16 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
       </div>
 
       <div className="space-y-6">
-        <CodeEditor
-          value={code}
-          onChange={handleLocalCodeChange}
-          language={language}
-          height="400px"
-          theme="vs-dark"
-          className="border border-arena-border rounded-lg overflow-hidden"
-        />
+        <div className="flex-grow">
+          <CodeEditor
+            value={code}
+            language={language}
+            onChange={handleLocalCodeChange}
+            height={editorHeight}
+            theme="vs-dark"
+            className="border border-arena-border rounded-lg overflow-hidden"
+          />
+        </div>
 
         <div className="flex gap-3">
           <Button
@@ -88,10 +95,10 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
             {isRunning ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-arena-accent border-t-transparent mr-2"></div>
-                Running Tests...
+                {t('coding.runningTests')}...
               </>
             ) : (
-              'Run Tests'
+              t('coding.runTests')
             )}
           </Button>
 
@@ -104,10 +111,10 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
             {isSubmitting ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-arena-dark border-t-transparent mr-2"></div>
-                Submitting...
+                {t('coding.submitting')}...
               </>
             ) : (
-              'Submit Solution'
+              t('coding.submitSolution')
             )}
           </Button>
         </div>
@@ -115,14 +122,14 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
         <div className="flex-1 overflow-y-auto p-4">
           {testResults && testResults.length > 0 && (
             <div className="mb-4">
-              <h3 className="text-lg font-semibold mb-2 text-white">Test Results</h3>
+              <h3 className="text-lg font-semibold mb-2 text-white">{t('coding.testResults')}</h3>
               <div className="space-y-2">
                 {testResults.map((result, index) => (
                   <div key={index} className={`p-2 rounded-md text-sm flex items-center gap-2 ${
                     result.is_correct ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'
                   }`}>
                     {result.is_correct ? <CheckCircle size={16} /> : <XCircle size={16} />}
-                    <span>Test Case {index + 1}: {result.is_correct ? 'Passed' : 'Failed'}</span>
+                    <span>{t('coding.testCase', { number: index + 1 })}: {result.is_correct ? t('common.passed') : t('common.failed')}</span>
                   </div>
                 ))}
               </div>
@@ -134,10 +141,10 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
               submissionResult.is_correct ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'
             }`}>
               <h3 className="font-bold mb-1">
-                {submissionResult.is_correct ? 'Solution Accepted!' : 'Solution Incorrect'}
+                {submissionResult.is_correct ? t('coding.solutionAccepted') : t('coding.solutionIncorrect')}
               </h3>
-              <p>Passed {submissionResult.passed}/{submissionResult.total} test cases.</p>
-              {submissionResult.error && <p className="mt-1">Error: {submissionResult.error}</p>}
+              <p>{t('coding.passedTestCases', { passed: submissionResult.passed, total: submissionResult.total })}</p>
+              {submissionResult.error && <p className="mt-1">{t('common.error')}: {submissionResult.error}</p>}
             </div>
           )}
         </div>
@@ -153,10 +160,10 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
             {isRunning ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-arena-accent border-t-transparent mr-2"></div>
-                Running Tests...
+                {t('coding.runningTests')}...
               </>
             ) : (
-              'Run Tests'
+              t('coding.runTests')
             )}
           </Button>
 
@@ -169,10 +176,10 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
             {isSubmitting ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-arena-dark border-t-transparent mr-2"></div>
-                Submitting...
+                {t('coding.submitting')}...
               </>
             ) : (
-              'Submit Solution'
+              t('coding.submitSolution')
             )}
           </Button>
         </div>

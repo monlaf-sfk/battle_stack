@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -15,41 +15,33 @@ import {
   Code, 
   Crown, 
   Sword,
-  Key,
   ChevronRight
 } from 'lucide-react';
-import JoinPrivateRoomModal from '../ui/JoinPrivateRoomModal';
+import { useTranslation } from 'react-i18next';
 
 const QuickActions: React.FC = () => {
   const navigate = useNavigate();
   const { permissions } = useAuth();
-  const [showJoinModal, setShowJoinModal] = useState(false);
+  const { t } = useTranslation();
+
 
   const mainActions = [
     {
       id: 'quick-match',
-      title: 'Quick Match',
-      description: 'Jump into a duel',
+      title: t('dashboard.quickMatch'),
+      description: t('dashboard.jumpIntoDuel'),
       icon: <Sword size={24} />,
       variant: 'gradient' as const,
       onClick: () => navigate('/quick-duel'),
     },
     {
       id: 'problems',
-      title: 'Practice',
-      description: 'Hone your skills',
+      title: t('dashboard.practice'),
+      description: t('dashboard.honeSkills'),
       icon: <Code size={24} />,
       variant: 'glass' as const,
       onClick: () => navigate('/problems'),
     },
-    {
-      id: 'join-room',
-      title: 'Join Room',
-      description: 'Enter a private room code',
-      icon: <Key size={24} />,
-      variant: 'glass' as const,
-      onClick: () => setShowJoinModal(true),
-    }
   ];
 
   return (
@@ -57,10 +49,10 @@ const QuickActions: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Zap className="text-yellow-400" />
-            Quick Actions
+            {t('dashboard.quickActionsTitle')}
           </CardTitle>
           <CardDescription>
-            Your command center for duels and practice.
+            {t('dashboard.quickActionsSubtitle')}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col h-full">
@@ -77,11 +69,11 @@ const QuickActions: React.FC = () => {
                   variant={action.variant}
                   className="w-full justify-between h-auto py-4 px-5 group"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-1">
                     <div className="p-3 rounded-lg bg-gray-800/60 group-hover:bg-gray-700/80 transition-colors">
                       {action.icon}
                     </div>
-                    <div className="text-left">
+                    <div className="text-left flex-1">
                       <div className="font-semibold text-base text-white">
                         {action.title}
                       </div>
@@ -92,7 +84,7 @@ const QuickActions: React.FC = () => {
                   </div>
                   <ChevronRight 
                     size={20} 
-                    className="text-gray-500 group-hover:text-white transition-colors" 
+                    className="text-gray-500 group-hover:text-white transition-colors flex-shrink-0" 
                   />
                 </Button>
               </motion.div>
@@ -115,10 +107,10 @@ const QuickActions: React.FC = () => {
                     <Crown className="text-yellow-500" />
                     <div className="text-left">
                       <div className="font-semibold text-base text-white">
-                        Admin Panel
+                        {t('dashboard.adminPanel')}
                       </div>
                        <div className="text-sm text-gray-400">
-                        Manage problems & users
+                        {t('dashboard.manageProblemsUsers')}
                       </div>
                     </div>
                   </div>
@@ -127,10 +119,6 @@ const QuickActions: React.FC = () => {
             </div>
           )}
         </CardContent>
-        <JoinPrivateRoomModal 
-            isOpen={showJoinModal} 
-            onClose={() => setShowJoinModal(false)} 
-        />
     </Card>
   );
 };

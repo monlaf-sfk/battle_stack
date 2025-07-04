@@ -24,28 +24,27 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import models for DUELS SERVICE ONLY
-from shared.app.database import Base
-from shared.app.duels.models import Duel, PlayerRating
+from shared.app.duels.models import Duel, PlayerRating, Base
 
 target_metadata = Base.metadata
 
-def get_url():
+def get_url() -> str:
     """Get database URL from command line or environment variable."""
     # First try to get URL from command line (passed via -x sqlalchemy.url=...)
-    url = context.get_x_argument(as_dictionary=True).get('sqlalchemy.url')
-    if url:
-        return url
+    cmd_line_url: str | None = context.get_x_argument(as_dictionary=True).get('sqlalchemy.url')
+    if cmd_line_url:
+        # Convert async URL to sync for Alembic if it was passed via cmd line and has +asyncpg
+        if '+asyncpg' in cmd_line_url:
+            cmd_line_url = cmd_line_url.replace('+asyncpg', '')
+        return cmd_line_url
     
-    # Fallback to environment variable
-    url = os.getenv('DATABASE_URL', 'postgresql://duels_user:duels_password@duels-db:5432/duels_db')
-    if url:
-        # Convert async URL to sync for Alembic
-        if '+asyncpg' in url:
-            url = url.replace('+asyncpg', '')
-        return url
+    # Fallback to environment variable with a robust default
+    env_url: str = os.getenv('DATABASE_URL', 'postgresql://duels_user:duels_password@duels-db:5432/duels_db')
     
-    # Final fallback to config file
-    return config.get_main_option("sqlalchemy.url")
+    # Convert async URL to sync for Alembic if it came from env var
+    if '+asyncpg' in env_url:
+        env_url = env_url.replace('+asyncpg', '')
+    return env_url
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
@@ -63,6 +62,7 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
     # Override the sqlalchemy.url in the configuration
+    # This part can stay as it will now get a guaranteed string from get_url()
     config_section = config.get_section(config.config_ini_section, {})
     config_section['sqlalchemy.url'] = get_url()
     

@@ -1,14 +1,15 @@
 import React, { useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
-import { Sun, Moon, Languages, Check, ChevronDown } from "lucide-react";
+import { Sun, Moon, ChevronDown } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 
 interface CodeEditorProps {
   value: string;
-  onChange?: (value: string) => void;
+  onChange?: (value: string | undefined) => void;
   language?: string;
   height?: string | number;
   width?: string | number;
-  theme?: 'vs-dark' | 'vs-light' | 'hc-black';
+  theme?: string;
   readOnly?: boolean;
   className?: string;
   loading?: React.ReactNode;
@@ -42,6 +43,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 }) => {
   const editorRef = useRef<any>(null);
   const [editorError, setEditorError] = useState<string | null>(null);
+  const { t } = useTranslation(['common', 'coding']);
 
   const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
@@ -114,13 +116,13 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       }
     } catch (error) {
       console.error('Monaco Editor theme configuration failed:', error);
-      setEditorError('Failed to configure editor theme');
+      setEditorError(t('codeEditor.themeConfigFailed'));
     }
   };
 
   const handleEditorChange = (value: string | undefined) => {
     if (onChange) {
-      onChange(value || '');
+      onChange(value);
     }
   };
 
@@ -131,7 +133,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       }
     } catch (error) {
       console.error('Monaco Editor beforeMount error:', error);
-      setEditorError('Monaco Editor failed to initialize');
+      setEditorError(t('codeEditor.initializationFailed'));
     }
   };
 
@@ -176,7 +178,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     <div className="flex items-center justify-center h-full bg-arena-dark border border-arena-border rounded-lg">
       <div className="flex flex-col items-center gap-3">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-arena-accent border-t-transparent"></div>
-        <span className="text-arena-text-muted text-sm">Loading editor...</span>
+        <span className="text-arena-text-muted text-sm">{t('codeEditor.loading')}</span>
       </div>
     </div>
   );
@@ -186,10 +188,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-2 bg-arena-surface/50 border-b border-arena-border">
         <span className="text-xs text-arena-text-muted">
-          Fallback Editor ({language})
+          {t('codeEditor.fallbackEditor', { language })}
         </span>
         <span className="text-xs text-yellow-400">
-          Monaco Editor unavailable
+          {t('codeEditor.monacoUnavailable')}
         </span>
       </div>
       <textarea
@@ -203,7 +205,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           lineHeight: '1.5',
           tabSize: 4,
         }}
-        placeholder={`// Write your ${language} code here...`}
+        placeholder={t('codeEditor.writeCodePlaceholder', { language })}
         spellCheck={false}
       />
     </div>
@@ -266,45 +268,25 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   onSelectLanguage,
   languages,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleSelect = (language: string) => {
     onSelectLanguage(language);
-    setIsOpen(false);
   };
-  
-  // Close dropdown when clicking outside
-  // ... (useOnClickOutside hook can be used here)
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 text-sm font-mono rounded-md bg-arena-surface/50 text-arena-text hover:bg-arena-surface transition-colors"
+    <div className="relative">
+      <select
+        value={selectedLanguage}
+        onChange={(e) => handleSelect(e.target.value)}
+        className="appearance-none bg-arena-dark border border-arena-border text-arena-text pr-8 rounded-md pl-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-arena-accent focus:border-transparent"
       >
-        <Languages size={16} />
-        <span className="capitalize">{selectedLanguage}</span>
-        <ChevronDown size={16} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-48 bg-arena-surface rounded-md shadow-lg z-10 border border-arena-border">
-          <ul className="py-1">
-            {languages.map((lang) => (
-              <li key={lang}>
-                <button
-                  onClick={() => handleSelect(lang)}
-                  className="w-full text-left px-3 py-2 text-sm font-mono text-arena-text hover:bg-arena-accent/20 flex items-center justify-between"
-                >
-                  <span className="capitalize">{lang}</span>
-                  {selectedLanguage === lang && <Check size={16} className="text-arena-accent" />}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        {languages.map((lang) => (
+          <option key={lang} value={lang}>
+            {lang}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-arena-text-muted pointer-events-none w-4 h-4" />
     </div>
   );
 };
@@ -316,6 +298,7 @@ interface ThemeToggleProps {
 }
 
 export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onToggleTheme }) => {
+  const { t } = useTranslation('common');
   const toggle = () => {
     onToggleTheme(theme === 'vs-dark' ? 'vs-light' : 'vs-dark');
   };
@@ -323,10 +306,10 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, onToggleTheme }
   return (
     <button
       onClick={toggle}
-      className="p-2 rounded-md bg-arena-surface/50 text-arena-text hover:bg-arena-surface transition-colors"
-      aria-label="Toggle theme"
+      className="p-2 rounded-md hover:bg-arena-secondary/30 transition-colors text-arena-text-muted hover:text-white"
+      title={t('themeToggle.toggleTheme')}
     >
-      {theme === 'vs-dark' ? <Sun size={16} /> : <Moon size={16} />}
+      {theme === 'vs-dark' ? <Sun size={18} /> : <Moon size={18} />}
     </button>
   );
 }; 

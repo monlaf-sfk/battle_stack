@@ -3,6 +3,7 @@ import { Megaphone, Trophy, Zap, X, ChevronRight, Gift } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SkeletonText } from '../ui/Skeleton';
 import { useDashboard } from '../../hooks/useDashboard';
+import { useTranslation } from 'react-i18next';
 
 const iconMap: Record<string, React.ReactNode> = {
     trophy: <Trophy size={28} className="text-white" />,
@@ -15,6 +16,7 @@ const NewsBanner: React.FC = () => {
     const [isVisible, setIsVisible] = useState(true);
     const { data, loading } = useDashboard();
     const newsItems = data?.newsItems || [];
+    const { t } = useTranslation();
     
     useEffect(() => {
         if (newsItems && newsItems.length > 1) {
@@ -110,7 +112,7 @@ const NewsBanner: React.FC = () => {
                                                 animate={{ scale: 1 }}
                                                 transition={{ delay: 0.2 }}
                                             >
-                                                NEW
+                                                {t('common.new')}
                                             </motion.span>
                                         </h4>
                                         <p className="text-white/90 text-sm mt-1">
@@ -125,7 +127,7 @@ const NewsBanner: React.FC = () => {
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                 >
-                                    <span className="text-white font-medium text-sm">Read more</span>
+                                    <span className="text-white font-medium text-sm">{t('common.readMore')}</span>
                                     <ChevronRight size={16} className="text-white" />
                                 </motion.button>
                             </div>

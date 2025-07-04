@@ -2,10 +2,12 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -16,9 +18,9 @@ export function Header() {
   }, []);
 
   const navLinks = [
-    { href: '#features', label: 'FEATURES' },
-    { href: '#how-it-works', label: 'HOW IT WORKS' },
-    { href: '#live-battle', label: 'LIVE DEMO' },
+    { href: '#features', label: t('header.features') },
+    { href: '#how-it-works', label: t('header.howItWorks') },
+    { href: '#live-battle', label: t('header.liveDemo') },
   ];
 
   return (
@@ -49,7 +51,7 @@ export function Header() {
                 <div className="absolute inset-0 bg-green-500/20 blur-xl group-hover:bg-green-500/40 transition-colors duration-300" />
               </motion.div>
               <span className="text-2xl font-bold text-white font-mono tracking-wider">
-                BATTLESTACK
+                {t('header.title')}
               </span>
             </Link>
           </motion.div>
@@ -78,7 +80,7 @@ export function Header() {
                   whileTap={{ scale: 0.95 }}
                   className="text-white/70 hover:text-white font-mono px-4 py-2 rounded-lg border border-white/20 hover:border-green-400/50 transition-all duration-300"
                 >
-                  LOG IN
+                  {t('common.login')}
                 </motion.button>
               </Link>
               <Link to="/register">
@@ -87,7 +89,7 @@ export function Header() {
                   whileTap={{ scale: 0.95 }}
                   className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-mono px-6 py-2 rounded-lg shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all duration-300"
                 >
-                  SIGN UP
+                  {t('common.signUp')}
                 </motion.button>
               </Link>
             </div>
@@ -127,12 +129,12 @@ export function Header() {
             <div className="pt-4 space-y-2">
               <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
                 <button className="w-full text-white/70 hover:text-white font-mono px-4 py-2 rounded-lg border border-white/20 hover:border-green-400/50 transition-all duration-300">
-                  LOG IN
+                  {t('common.login')}
                 </button>
               </Link>
               <Link to="/register" onClick={() => setIsMobileMenuOpen(false)}>
                 <button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-mono px-6 py-2 rounded-lg shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all duration-300">
-                  SIGN UP
+                  {t('common.signUp')}
                 </button>
               </Link>
             </div>

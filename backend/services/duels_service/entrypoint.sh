@@ -5,6 +5,8 @@ echo "=== Duels Service Starting ==="
 
 cd /app/duels_service
 
+export PYTHONPATH=$PYTHONPATH:/app
+
 echo "=== Waiting for database ==="
 python3 /app/wait_for_db.py
 

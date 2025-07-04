@@ -21,47 +21,47 @@ interface MenuSection {
   items: MenuItem[];
 }
 
-export const getMenuItems = (): MenuSection[] => {
+export const getMenuItems = (t: any): MenuSection[] => {
   const baseItems: MenuSection[] = [
     {
-      section: "MAIN",
+      section: t('sidebar.mainSection'),
       items: [
         {
           icon: <LayoutDashboard size={20} />,
-          text: "Dashboard",
+          text: t('sidebar.dashboard'),
           path: "/dashboard",
         },
-        { icon: <Swords size={20} />, text: "Quick Duel", path: "/quick-duel" },
+        { icon: <Swords size={20} />, text: t('sidebar.quickDuel'), path: "/quick-duel" },
       ],
     },
     {
-      section: "COMPETITION",
+      section: t('sidebar.competitionSection'),
       items: [
         {
           icon: <Trophy size={20} />,
-          text: "Leaderboards",
+          text: t('sidebar.leaderboards'),
           path: "/leaderboards",
         },
         {
           icon: <Gamepad2 size={20} />,
-          text: "Tournaments",
+          text: t('sidebar.tournaments'),
           path: "/tournaments",
           locked: true,
         },
       ],
     },
     {
-      section: "LEARNING",
+      section: t('sidebar.learningSection'),
       items: [
-        { icon: <BookOpen size={20} />, text: "Practice", path: "/practice", locked: true },
-        { icon: <BrainCircuit size={20} />, text: "AI Tutor", path: "/ai-tutor", locked: true },
+        { icon: <BookOpen size={20} />, text: t('sidebar.practice'), path: "/practice", locked: true },
+        { icon: <BrainCircuit size={20} />, text: t('sidebar.aiTutor'), path: "/ai-tutor", locked: true },
       ],
     },
     {
-      section: "PERSONAL",
+      section: t('sidebar.personalSection'),
       items: [
-        { icon: <User size={20} />, text: "Profile", path: "/profile" },
-        { icon: <Settings size={20} />, text: "Settings", path: "/settings", locked: true },
+        { icon: <User size={20} />, text: t('sidebar.profile'), path: "/profile" },
+        { icon: <Settings size={20} />, text: t('sidebar.settings'), path: "/settings", locked: true },
       ],
     },
   ];
@@ -70,4 +70,4 @@ export const getMenuItems = (): MenuSection[] => {
 };
 
 // For backward compatibility
-export const menuItems = getMenuItems(); 
+export const menuItems = getMenuItems(() => ""); 

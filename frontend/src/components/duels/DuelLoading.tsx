@@ -1,12 +1,16 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Swords } from 'lucide-react';
+import type { TFunction } from 'i18next';
 
 interface DuelLoadingProps {
   message?: string;
+  t: TFunction;
 }
 
-export const DuelLoading: React.FC<DuelLoadingProps> = ({ message = "Loading duel..." }) => {
+export const DuelLoading: React.FC<DuelLoadingProps> = ({ message, t }) => {
+  const displayMessage = message || t('duel.loadingDuel');
+
   return (
     <div className="min-h-screen bg-arena-dark flex items-center justify-center font-mono">
       <motion.div 
@@ -40,7 +44,7 @@ export const DuelLoading: React.FC<DuelLoadingProps> = ({ message = "Loading due
           transition={{ delay: 0.4 }}
         >
           <h2 className="text-2xl font-bold text-arena-text mb-3 uppercase tracking-wider">
-            BATTLESTACK
+            {t('common.appName').toUpperCase()}
           </h2>
           
           <motion.p 
@@ -49,7 +53,7 @@ export const DuelLoading: React.FC<DuelLoadingProps> = ({ message = "Loading due
             transition={{ delay: 0.6 }}
             className="text-arena-text-muted uppercase tracking-wider mb-6"
           >
-            {message}
+            {displayMessage}
           </motion.p>
 
           {/* Progress Indicators */}
@@ -88,7 +92,7 @@ export const DuelLoading: React.FC<DuelLoadingProps> = ({ message = "Loading due
             animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 2, repeat: Infinity }}
           >
-            INITIALIZING ARENA...
+            {t('duel.initializingArena').toUpperCase()}...
           </motion.div>
         </motion.div>
       </motion.div>

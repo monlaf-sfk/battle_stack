@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check, Circle, ChevronRight } from 'lucide-react';
+import { Check, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 export interface ProgressProps {
   value: number;
@@ -24,6 +25,7 @@ export const Progress: React.FC<ProgressProps> = ({
   label,
   animated = true,
 }) => {
+  const { t } = useTranslation('common');
   const percentage = Math.min(Math.max((value / max) * 100, 0), 100);
 
   const sizeClasses = {
@@ -44,7 +46,7 @@ export const Progress: React.FC<ProgressProps> = ({
     <div className={cn('space-y-2', className)}>
       {(showLabel || label) && (
         <div className="flex justify-between items-center text-sm">
-          <span className="text-arena-text-muted">{label || 'Progress'}</span>
+          <span className="text-arena-text-muted">{t(label || 'progress.title')}</span>
           <span className="text-arena-text-primary font-medium">{Math.round(percentage)}%</span>
         </div>
       )}
@@ -87,6 +89,8 @@ export const StepProgress: React.FC<StepProgressProps> = ({
   showLabels = true,
   animated = true,
 }) => {
+  const { t } = useTranslation('common');
+
   if (variant === 'vertical') {
     return (
       <div className={cn('space-y-4', className)}>
@@ -136,11 +140,11 @@ export const StepProgress: React.FC<StepProgressProps> = ({
                     'font-medium',
                     isActive ? 'text-arena-text-primary' : 'text-arena-text-muted'
                   )}>
-                    {step.title}
+                    {t(step.title)}
                   </h4>
                   {step.description && (
                     <p className="text-sm text-arena-text-muted mt-1">
-                      {step.description}
+                      {t(step.description)}
                     </p>
                   )}
                 </div>
@@ -233,11 +237,11 @@ export const StepProgress: React.FC<StepProgressProps> = ({
                       'text-sm font-medium',
                       isActive ? 'text-arena-text-primary' : 'text-arena-text-muted'
                     )}>
-                      {step.title}
+                      {t(step.title)}
                     </p>
                     {step.description && (
                       <p className="text-xs text-arena-text-muted mt-1">
-                        {step.description}
+                        {t(step.description)}
                       </p>
                     )}
                   </motion.div>
@@ -248,14 +252,11 @@ export const StepProgress: React.FC<StepProgressProps> = ({
                 <motion.div
                   className={cn(
                     'flex-1 h-0.5 mx-4 rounded-full',
-                    isCompleted || (index < currentStep)
-                      ? 'bg-green-500'
-                      : 'bg-arena-surface'
+                    isCompleted ? 'bg-green-500' : 'bg-arena-surface'
                   )}
-                  initial={animated ? { scaleX: 0 } : false}
-                  animate={{ scaleX: 1 }}
+                  initial={animated ? { width: 0 } : false}
+                  animate={{ width: '100%' }}
                   transition={{ delay: index * 0.1 + 0.3, duration: 0.5 }}
-                  style={{ transformOrigin: 'left' }}
                 />
               )}
             </React.Fragment>
@@ -289,116 +290,93 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
   label,
   animated = true,
 }) => {
-  const percentage = Math.min(Math.max((value / max) * 100, 0), 100);
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (percentage / 100) * circumference;
+  const { t } = useTranslation('common');
+  const circumference = 2 * Math.PI * (size / 2 - strokeWidth / 2);
+  const offset = circumference - (value / max) * circumference;
 
   const variantColors = {
-    default: '#00ff88',
-    gradient: 'url(#gradient)',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
+    default: 'stroke-arena-accent',
+    gradient: 'stroke-url(#gradient-progress)',
+    success: 'stroke-green-500',
+    warning: 'stroke-yellow-500',
+    error: 'stroke-red-500',
   };
 
   return (
-    <div className={cn('relative inline-flex items-center justify-center', className)}>
-      <svg
-        width={size}
-        height={size}
-        className="transform -rotate-90"
-      >
+    <div
+      className={cn(
+        'relative flex items-center justify-center',
+        className
+      )}
+      style={{ width: size, height: size }}
+    >
+      <svg className="-rotate-90" width={size} height={size}>
         <defs>
-          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style={{ stopColor: '#00ff88', stopOpacity: 1 }} />
-            <stop offset="100%" style={{ stopColor: '#8b5cf6', stopOpacity: 1 }} />
+          <linearGradient id="gradient-progress" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#00ff88" />
+            <stop offset="100%" stopColor="#00ccff" />
           </linearGradient>
         </defs>
-        
         <circle
+          className="text-arena-surface"
+          strokeWidth={strokeWidth}
+          stroke="currentColor"
+          fill="transparent"
+          r={size / 2 - strokeWidth / 2}
           cx={size / 2}
           cy={size / 2}
-          r={radius}
-          stroke="rgba(255, 255, 255, 0.1)"
-          strokeWidth={strokeWidth}
-          fill="transparent"
         />
-        
         <motion.circle
+          className={cn(variantColors[variant])}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          stroke="currentColor"
+          fill="transparent"
+          r={size / 2 - strokeWidth / 2}
           cx={size / 2}
           cy={size / 2}
-          r={radius}
-          stroke={variantColors[variant]}
-          strokeWidth={strokeWidth}
-          fill="transparent"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: offset }}
-          transition={animated ? { duration: 1, ease: 'easeOut' } : { duration: 0 }}
+          initial={{ strokeDasharray: circumference, strokeDashoffset: circumference }}
+          animate={{
+            strokeDashoffset: animated ? offset : circumference - (value / max) * circumference,
+          }}
+          transition={animated ? { duration: 0.8, ease: 'easeOut' } : { duration: 0 }}
         />
       </svg>
-      
-      {showLabel && (
-        <motion.div
-          className="absolute inset-0 flex flex-col items-center justify-center"
-          initial={animated ? { opacity: 0, scale: 0.5 } : false}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.5, duration: 0.3 }}
-        >
-          <span className="text-xl font-bold text-arena-text-primary">
-            {Math.round(percentage)}%
+      {(showLabel || label) && (
+        <div className="absolute flex flex-col items-center">
+          <span className="text-arena-text-primary text-xl font-bold">
+            {Math.round((value / max) * 100)}%
           </span>
-          {label && (
-            <span className="text-xs text-arena-text-muted mt-1">
-              {label}
-            </span>
-          )}
-        </motion.div>
+          {label && <span className="text-arena-text-muted text-xs mt-1">{t(label)}</span>}
+        </div>
       )}
     </div>
   );
 };
 
-// Animated loading progress for specific tasks
 export const TaskProgress: React.FC<{
   task: string;
   progress: number;
   total?: number;
   className?: string;
 }> = ({ task, progress, total = 100, className }) => {
+  const { t } = useTranslation('common');
   const percentage = (progress / total) * 100;
-  
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={cn('glass border rounded-xl p-6', className)}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-medium text-arena-text-primary">{task}</h3>
-        <span className="text-sm text-arena-text-muted">
-          {progress}/{total}
-        </span>
-      </div>
-      
-      <div className="space-y-3">
-        <Progress value={percentage} animated />
-        
-        <div className="flex justify-between text-sm text-arena-text-muted">
-          <span>In Progress...</span>
-          <span>{Math.round(percentage)}% Complete</span>
+    <div className={cn('flex items-center gap-3', className)}>
+      <div className="relative w-16 h-16">
+        <CircularProgress value={progress} max={total} size={64} strokeWidth={6} showLabel={false} />
+        <div className="absolute inset-0 flex items-center justify-center text-arena-text-primary text-sm font-semibold">
+          {Math.round(percentage)}%
         </div>
       </div>
-      
-      <motion.div
-        className="mt-4 flex justify-center"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-      >
-        <Circle size={16} className="text-arena-accent" />
-      </motion.div>
-    </motion.div>
+      <div className="flex-1">
+        <p className="text-arena-text-primary font-medium text-lg">{t(task)}</p>
+        <p className="text-arena-text-muted text-sm">
+          {t('taskProgress.completed', { completed: progress, total: total })}
+        </p>
+      </div>
+    </div>
   );
 }; 

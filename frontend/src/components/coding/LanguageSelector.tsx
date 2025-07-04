@@ -1,11 +1,12 @@
 /**
  * 🎨 LANGUAGE SELECTOR COMPONENT
- * Компонент для выбора языка программирования в стиле TETR.IO
+ * Component for selecting the programming language, inspired by TETR.IO style.
  */
 
 import React, { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { codeExecutionService, type SupportedLanguage } from '../../services/codeExecutionService';
+import { useTranslation } from 'react-i18next';
 
 interface LanguageSelectorProps {
   selectedLanguage: string;
@@ -23,6 +24,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   const [languages, setLanguages] = useState<SupportedLanguage[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
 
   useEffect(() => {
     loadLanguages();
@@ -34,13 +36,13 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
       const supportedLanguages = await codeExecutionService.getSupportedLanguages();
       setLanguages(supportedLanguages);
       
-      // Если текущий язык не выбран, выбираем Python по умолчанию
+      // If current language is not selected, default to Python
       if (!selectedLanguage && supportedLanguages.length > 0) {
         const defaultLang = supportedLanguages.find(lang => lang.id === 'python') || supportedLanguages[0];
         onLanguageChange(defaultLang.id);
       }
     } catch (error) {
-      console.error('Failed to load languages:', error);
+      console.error(t('coding.failedToLoadLanguages'), error);
     } finally {
       setLoading(false);
     }
@@ -99,13 +101,13 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
           <span className="text-xl">{getLanguageIcon(selectedLanguage)}</span>
           <div className="flex flex-col">
             <span className="text-white font-medium">
-              {selectedLang?.name || 'Select Language'}
+              {selectedLang?.name || t('coding.selectLanguage')}
             </span>
             <span className="text-gray-400 text-sm">
               {selectedLang?.extension || ''}
               {selectedLang?.supports_classes && (
                 <span className="ml-2 text-xs bg-blue-600 text-white px-2 py-0.5 rounded">
-                  OOP
+                  {t('coding.oop')}
                 </span>
               )}
             </span>
@@ -150,7 +152,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                     <span className="text-sm opacity-75">{language.extension}</span>
                     {language.supports_classes && (
                       <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded">
-                        OOP
+                        {t('coding.oop')}
                       </span>
                     )}
                   </div>

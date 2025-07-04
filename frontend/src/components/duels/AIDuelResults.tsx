@@ -1,5 +1,15 @@
 import React from 'react';
 import { Target, RotateCcw, Home, Eye } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { getLucideIcon } from '../../utils/iconMap';
+
+interface Achievement {
+  name: string;
+  status: string;
+  details: string;
+  icon: string;
+  earned_at?: string; // Assuming it comes as a string from backend for simplicity in this interface
+}
 
 interface AIDuelResultsProps {
   duelResult: {
@@ -22,7 +32,7 @@ interface AIDuelResultsProps {
     };
     xpGained?: number;
     ratingChange?: number;
-    achievements?: string[];
+    achievements?: Achievement[]; // Updated to match backend schema
   };
   onRematch: () => void;
   onReviewCode: () => void;
@@ -45,18 +55,18 @@ const getResultIcon = (isVictory: boolean) => {
   return isVictory ? '🎉' : '💪';
 };
 
-const getResultMessage = (isVictory: boolean) => {
+const getResultMessage = (isVictory: boolean, t: any) => {
   if (isVictory) {
     return {
-      title: 'Victory!',
-      subtitle: 'You defeated the AI opponent',
-      message: 'Excellent problem-solving skills!'
+      title: t('duel.victoryTitle'),
+      subtitle: t('duel.victorySubtitle'),
+      message: t('duel.victoryMessage')
     };
   } else {
     return {
-      title: 'Defeat',
-      subtitle: 'AI opponent performed better',
-      message: 'Great effort! Learn and try again!'
+      title: t('duel.defeatTitle'),
+      subtitle: t('duel.defeatSubtitle'),
+      message: t('duel.defeatMessage')
     };
   }
 };
@@ -68,7 +78,8 @@ export const AIDuelResults: React.FC<AIDuelResultsProps> = ({
   onBackToDashboard
 }) => {
   const { isVictory, playerStats, aiStats, problem, xpGained, ratingChange, achievements } = duelResult;
-  const resultInfo = getResultMessage(isVictory);
+  const { t } = useTranslation();
+  const resultInfo = getResultMessage(isVictory, t);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex items-center justify-center p-4">
@@ -95,7 +106,7 @@ export const AIDuelResults: React.FC<AIDuelResultsProps> = ({
               <Target className="w-5 h-5 mr-2" />
               <span className="font-medium">{problem.title}</span>
               <span className="ml-2 px-2 py-1 bg-white bg-opacity-20 rounded text-sm font-medium">
-                {problem.difficulty}
+                {t(`duel.${problem.difficulty.toLowerCase()}`)}
               </span>
             </div>
           </div>
@@ -103,7 +114,7 @@ export const AIDuelResults: React.FC<AIDuelResultsProps> = ({
 
         {/* Stats Comparison */}
         <div className="p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">📊 Performance Comparison</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">{t('duel.performanceComparison')}</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
             {/* Player Stats */}
@@ -112,28 +123,28 @@ export const AIDuelResults: React.FC<AIDuelResultsProps> = ({
                 <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-3">
                   <span className="text-2xl text-white">👤</span>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">You</h3>
+                <h3 className="text-xl font-bold text-gray-900">{t('duel.you')}</h3>
               </div>
               
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Tests Passed</span>
+                  <span className="text-gray-600">{t('duel.testsPassedStat')}</span>
                   <span className="font-bold text-lg">
                     {playerStats.testsPassed}/{playerStats.totalTests}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Total Time</span>
+                  <span className="text-gray-600">{t('duel.totalTime')}</span>
                   <span className="font-bold text-lg">
                     {formatTime(playerStats.totalTime)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Attempts</span>
+                  <span className="text-gray-600">{t('duel.attempts')}</span>
                   <span className="font-bold text-lg">{playerStats.attempts}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Success Rate</span>
+                  <span className="text-gray-600">{t('duel.successRate')}</span>
                   <span className="font-bold text-lg">
                     {Math.round((playerStats.testsPassed / playerStats.totalTests) * 100)}%
                   </span>
@@ -147,28 +158,28 @@ export const AIDuelResults: React.FC<AIDuelResultsProps> = ({
                 <div className="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-3">
                   <span className="text-2xl text-white">🤖</span>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">AI Opponent</h3>
+                <h3 className="text-xl font-bold text-gray-900">{t('duel.aiOpponent')}</h3>
               </div>
               
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Tests Passed</span>
+                  <span className="text-gray-600">{t('duel.testsPassedStat')}</span>
                   <span className="font-bold text-lg">
                     {aiStats.testsPassed}/{aiStats.totalTests}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Total Time</span>
+                  <span className="text-gray-600">{t('duel.totalTime')}</span>
                   <span className="font-bold text-lg">
                     {formatTime(aiStats.totalTime)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Attempts</span>
+                  <span className="text-gray-600">{t('duel.attempts')}</span>
                   <span className="font-bold text-lg">{aiStats.attempts}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Success Rate</span>
+                  <span className="text-gray-600">{t('duel.successRate')}</span>
                   <span className="font-bold text-lg">
                     {Math.round((aiStats.testsPassed / aiStats.totalTests) * 100)}%
                   </span>
@@ -180,14 +191,14 @@ export const AIDuelResults: React.FC<AIDuelResultsProps> = ({
           {/* Rewards Section */}
           {(xpGained || ratingChange || achievements?.length) && (
             <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 border border-yellow-200 mb-8">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">🎁 Rewards & Progress</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">{t('duel.rewardsProgress')}</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                 {xpGained && (
                   <div className="bg-white rounded-lg p-4 shadow-sm">
                     <div className="text-2xl mb-2">⚡</div>
                     <div className="font-bold text-lg text-blue-600">+{xpGained} XP</div>
-                    <div className="text-sm text-gray-600">Experience Points</div>
+                    <div className="text-sm text-gray-600">{t('duel.xpGained')}</div>
                   </div>
                 )}
                 
@@ -197,7 +208,7 @@ export const AIDuelResults: React.FC<AIDuelResultsProps> = ({
                     <div className={`font-bold text-lg ${ratingChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {ratingChange > 0 ? '+' : ''}{ratingChange}
                     </div>
-                    <div className="text-sm text-gray-600">Rating Change</div>
+                    <div className="text-sm text-gray-600">{t('duel.ratingChange')}</div>
                   </div>
                 )}
                 
@@ -205,7 +216,7 @@ export const AIDuelResults: React.FC<AIDuelResultsProps> = ({
                   <div className="bg-white rounded-lg p-4 shadow-sm">
                     <div className="text-2xl mb-2">🏆</div>
                     <div className="font-bold text-lg text-purple-600">{achievements.length}</div>
-                    <div className="text-sm text-gray-600">New Achievements</div>
+                    <div className="text-sm text-gray-600">{t('duel.newAchievements')}</div>
                   </div>
                 )}
               </div>
@@ -213,16 +224,17 @@ export const AIDuelResults: React.FC<AIDuelResultsProps> = ({
               {/* Achievement Details */}
               {achievements && achievements.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-yellow-200">
-                  <h4 className="font-semibold mb-2">🏆 Unlocked Achievements:</h4>
+                  <h4 className="font-semibold mb-2">{t('duel.unlockedAchievements')}</h4>
                   <div className="flex flex-wrap gap-2">
-                    {achievements.map((achievement, index) => (
-                      <span
-                        key={index}
-                        className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium"
-                      >
-                        {achievement}
-                      </span>
-                    ))}
+                    {achievements.map((achievement, index) => {
+                      const IconComponent = getLucideIcon(achievement.icon);
+                      return (
+                        <span key={index} className="badge badge-lg bg-purple-100 text-purple-800 font-medium px-3 py-1 rounded-full flex items-center gap-1">
+                          {IconComponent && <IconComponent size={16} />}
+                          {achievement.name}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -230,29 +242,24 @@ export const AIDuelResults: React.FC<AIDuelResultsProps> = ({
           )}
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex justify-center gap-4 mt-8">
             <button
               onClick={onRematch}
-              className="flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="btn btn-primary bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
             >
-              <RotateCcw className="w-5 h-5 mr-2" />
-              Rematch vs AI
+              <RotateCcw size={20} /> {t('duel.rematch')}
             </button>
-            
             <button
               onClick={onReviewCode}
-              className="flex items-center justify-center px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+              className="btn btn-ghost border border-gray-300 text-gray-800 font-bold py-3 px-6 rounded-full hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
             >
-              <Eye className="w-5 h-5 mr-2" />
-              Review Code
+              <Eye size={20} /> {t('duel.reviewCode')}
             </button>
-            
             <button
               onClick={onBackToDashboard}
-              className="flex items-center justify-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+              className="btn btn-ghost border border-gray-300 text-gray-800 font-bold py-3 px-6 rounded-full hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
             >
-              <Home className="w-5 h-5 mr-2" />
-              Back to Dashboard
+              <Home size={20} /> {t('duel.backToDashboard')}
             </button>
           </div>
         </div>
