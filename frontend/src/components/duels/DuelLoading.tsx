@@ -9,7 +9,7 @@ interface DuelLoadingProps {
 }
 
 export const DuelLoading: React.FC<DuelLoadingProps> = ({ message, t }) => {
-  const displayMessage = message || t('duel.loadingDuel');
+  const displayMessage = message || t('duels.loadingDuel');
 
   return (
     <div className="min-h-screen bg-arena-dark flex items-center justify-center font-mono">
@@ -92,7 +92,7 @@ export const DuelLoading: React.FC<DuelLoadingProps> = ({ message, t }) => {
             animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 2, repeat: Infinity }}
           >
-            {t('duel.initializingArena').toUpperCase()}...
+            {t('duels.initializingArena').toUpperCase()}...
           </motion.div>
         </motion.div>
       </motion.div>

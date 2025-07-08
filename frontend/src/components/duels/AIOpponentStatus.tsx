@@ -29,8 +29,8 @@ export const AIOpponentStatus: React.FC<AIOpponentStatusProps> = ({
             <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
             <div className="absolute inset-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
           </div>
-          <span className="text-red-300 font-bold text-lg">🤖 {t('duel.aiOpponent').toUpperCase()}</span>
-          {opponentIsTyping && <span className="text-gray-400 text-sm">{t('duel.typing')}...</span>}
+          <span className="text-red-300 font-bold text-lg">🤖 {t('duels.aiOpponent').toUpperCase()}</span>
+          {opponentIsTyping && <span className="text-gray-400 text-sm">{t('duels.typing')}...</span>}
         </div>
         <div className="text-sm text-gray-300">
             {Math.round(progress)}%
@@ -38,7 +38,7 @@ export const AIOpponentStatus: React.FC<AIOpponentStatusProps> = ({
       </div>
       {opponentTestResults && (
         <div className="mt-2 text-xs text-gray-400">
-            {t('duel.testsPassed', {passed: opponentTestResults.passed, total: opponentTestResults.total_tests})}
+            {t('duels.testsPassed', {passed: opponentTestResults.passed, total: opponentTestResults.total_tests})}
         </div>
       )}
     </div>

@@ -12,7 +12,7 @@ export const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem,
   if (!problem) {
     return (
       <div className={`p-4 bg-gray-800 rounded-lg ${className}`}>
-        <p className="text-gray-400">{t('duel.loadingDuel')}</p>
+        <p className="text-gray-400">{t('duels.loadingDuel')}</p>
       </div>
     );
   }
@@ -45,7 +45,7 @@ export const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem,
       {/* Constraints */}
       {problem.constraints && (
         <div className="bg-gray-800 rounded-lg p-4">
-          <h3 className="font-medium text-yellow-400 mb-2">{t('duel.constraintsTitle')}</h3>
+          <h3 className="font-medium text-yellow-400 mb-2">{t('duels.constraintsTitle')}</h3>
           <pre className="text-sm text-gray-300 whitespace-pre-wrap">{problem.constraints}</pre>
         </div>
       )}
@@ -53,20 +53,20 @@ export const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem,
       {/* Examples */}
       {visibleTestCases.length > 0 && (
         <div className="bg-gray-800 rounded-lg p-4">
-          <h3 className="font-medium text-green-400 mb-3">{t('duel.examplesTitle')}</h3>
+          <h3 className="font-medium text-green-400 mb-3">{t('duels.examplesTitle')}</h3>
           <div className="space-y-3">
             {visibleTestCases.map((tc, idx) => (
               <div key={idx} className="bg-gray-900 rounded-md p-3">
-                <div className="text-sm font-medium text-gray-400 mb-2">{t('duel.exampleNumber', { number: idx + 1 })}</div>
+                <div className="text-sm font-medium text-gray-400 mb-2">{t('duels.exampleNumber', { number: idx + 1 })}</div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <div className="text-xs text-blue-400 mb-1 uppercase">{t('duel.inputLabel')}</div>
+                    <div className="text-xs text-blue-400 mb-1 uppercase">{t('duels.inputLabel')}</div>
                     <code className="text-sm text-gray-300 bg-black/50 p-2 rounded block">
                       {tc.input_data}
                     </code>
                   </div>
                   <div>
-                    <div className="text-xs text-green-400 mb-1 uppercase">{t('duel.outputLabel')}</div>
+                    <div className="text-xs text-green-400 mb-1 uppercase">{t('duels.outputLabel')}</div>
                     <code className="text-sm text-gray-300 bg-black/50 p-2 rounded block">
                       {tc.expected_output}
                     </code>
@@ -80,12 +80,12 @@ export const ProblemDescription: React.FC<ProblemDescriptionProps> = ({ problem,
 
       {/* Tips */}
       <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-        <h3 className="font-medium text-blue-400 mb-2">💡 {t('duel.tipsTitle')}</h3>
+        <h3 className="font-medium text-blue-400 mb-2">💡 {t('duels.tipsTitle')}</h3>
         <ul className="text-sm text-gray-400 space-y-1">
-          <li>• {t('duel.readExamplesTip')}</li>
-          <li>• {t('duel.checkConstraintsTip')}</li>
-          <li>• {t('duel.testCodeTip')}</li>
-          <li>• {t('duel.submitShortcutTip')}</li>
+          <li>• {t('duels.readExamplesTip')}</li>
+          <li>• {t('duels.checkConstraintsTip')}</li>
+          <li>• {t('duels.testCodeTip')}</li>
+          <li>• {t('duels.submitShortcutTip')}</li>
         </ul>
       </div>
     </div>

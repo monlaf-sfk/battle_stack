@@ -45,7 +45,7 @@ const EnhancedRealTimeDuel = () => {
     };
 
     if (!duelState.duel || !duelState.problem) {
-        return <div className="text-center text-gray-400 py-20 text-lg">{t('duel.loadingDuelMessage')}</div>;
+        return <div className="text-center text-gray-400 py-20 text-lg">{t('duels.loadingDuelMessage')}</div>;
     }
 
     return (
@@ -64,7 +64,7 @@ const EnhancedRealTimeDuel = () => {
                         className="flex items-center justify-between mb-6"
                     >
                         <h2 className="text-3xl font-extrabold text-white gradient-text-safe animate-gradient">
-                            {t('duel.problemDescriptionTitle')}
+                            {t('duels.problemDescriptionTitle')}
                         </h2>
                         <Button 
                             variant="glass" 
@@ -72,7 +72,7 @@ const EnhancedRealTimeDuel = () => {
                             onClick={() => setShowProblemModal(true)}
                             className="flex items-center gap-2 hover:shadow-lg transition-all duration-300"
                         >
-                            <Book className="w-4 h-4 text-purple-300" /> {t('duel.fullProblemButton')}
+                            <Book className="w-4 h-4 text-purple-300" /> {t('duels.fullProblemButton')}
                         </Button>
                     </motion.div>
                     <motion.div
@@ -84,7 +84,7 @@ const EnhancedRealTimeDuel = () => {
                         {duelState.problem ? (
                             <ProblemDescription problem={duelState.problem} t={t} />
                         ) : (
-                            <p className="text-gray-400 animate-pulse">{t('duel.generatingChallenge')}</p>
+                            <p className="text-gray-400 animate-pulse">{t('duels.generatingChallenge')}</p>
                         )}
                     </motion.div>
                 </ResizablePanel>
@@ -98,7 +98,7 @@ const EnhancedRealTimeDuel = () => {
                                 transition={{ delay: 0.6, duration: 0.5 }}
                                 className="text-xl font-bold text-white mb-2 ml-2 gradient-text-secondary"
                             >
-                                {t('duel.yourCodeTitle')}
+                                {t('duels.yourCodeTitle')}
                             </motion.h3>
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
@@ -125,7 +125,7 @@ const EnhancedRealTimeDuel = () => {
                                 transition={{ delay: 1.0, duration: 0.5 }}
                                 className="text-xl font-bold text-white mb-2 ml-2 gradient-text-secondary"
                             >
-                                {t('duel.aiOpponentCodeTitle')}
+                                {t('duels.aiOpponentCodeTitle')}
                             </motion.h3>
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
@@ -172,7 +172,7 @@ const EnhancedRealTimeDuel = () => {
                             {duelState.problem ? (
                                 <ProblemDescription problem={duelState.problem} t={t} />
                             ) : (
-                                <p className="text-gray-400">{t('duel.loadingProblemDescription')}</p>
+                                <p className="text-gray-400">{t('duels.loadingProblemDescription')}</p>
                             )}
                         </div>
                     </DialogContent>

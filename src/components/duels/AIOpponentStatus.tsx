@@ -29,11 +29,11 @@ export const AIOpponentStatus: React.FC<AIOpponentStatusProps> = ({
             <div className="absolute inset-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
           </div>
           <span className="text-red-300 font-bold text-lg">
-            🤖 {t('duel.aiOpponent', 'AI OPPONENT').toUpperCase()}
+            🤖 {t('duels.aiOpponent', 'AI OPPONENT').toUpperCase()}
           </span>
           {opponentIsTyping && (
             <span className="text-gray-400 text-sm animate-pulse">
-              {t('duel.aiTyping', 'AI is typing...')}
+              {t('duels.aiTyping', 'AI is typing...')}
             </span>
           )}
         </div>

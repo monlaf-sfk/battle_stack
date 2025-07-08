@@ -26,7 +26,7 @@ export const DuelComplete: React.FC<DuelCompleteProps> = ({ results, currentUser
 
   const navigate = useNavigate();
   
-  const title = isWinner ? t('duel.victory') : t('duel.defeat');
+  const title = isWinner ? t('duels.victory') : t('duels.defeat');
 
   return (
     <motion.div
@@ -46,10 +46,10 @@ export const DuelComplete: React.FC<DuelCompleteProps> = ({ results, currentUser
           <div className="text-center">
             <div className="flex items-center justify-center">
               <div className="bg-arena-dark/50 p-3 rounded-md">
-                <p className="text-arena-text-muted">{t('duel.opponent')}</p>
+                <p className="text-arena-text-muted">{t('duels.opponent')}</p>
                 <p className="font-bold text-lg text-arena-text truncate">{opponentResult?.player_id ? (opponentResult.player_id === 'ai' ? t('common.ai') : opponentResult.player_id) : t('common.ai')}</p>
               </div>
               <div className="bg-arena-dark/50 p-3 rounded-md">
-                <p className="text-arena-text-muted">{t('duel.scoreGained')}</p>
+                <p className="text-arena-text-muted">{t('duels.scoreGained')}</p>
   // ... existing code ...
 } 

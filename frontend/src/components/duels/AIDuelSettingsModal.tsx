@@ -28,20 +28,20 @@ export const AIDuelSettingsModal: React.FC<AIDuelSettingsModalProps> = ({
   const { t } = useTranslation();
 
   const DIFFICULTIES = [
-      { value: 'easy', label: t('duel.difficultyEasy'), description: t('duel.difficultyEasyDesc'), color: 'text-green-500' },
-      { value: 'medium', label: t('duel.difficultyMedium'), description: t('duel.difficultyMediumDesc'), color: 'text-yellow-500' },
-      { value: 'hard', label: t('duel.difficultyHard'), description: t('duel.difficultyHardDesc'), color: 'text-red-500' },
-      { value: 'expert', label: t('duel.difficultyExpert'), description: t('duel.difficultyExpertDesc'), color: 'text-purple-500' },
+      { value: 'easy', label: t('duels.difficultyEasy'), description: t('duels.difficultyEasyDesc'), color: 'text-green-500' },
+      { value: 'medium', label: t('duels.difficultyMedium'), description: t('duels.difficultyMediumDesc'), color: 'text-yellow-500' },
+      { value: 'hard', label: t('duels.difficultyHard'), description: t('duels.difficultyHardDesc'), color: 'text-red-500' },
+      { value: 'expert', label: t('duels.difficultyExpert'), description: t('duels.difficultyExpertDesc'), color: 'text-purple-500' },
   ];
   
   const availableThemes = {
     algorithms: [
-      { value: 'dynamic_programming', label: t('duel.themeDynamicProgramming'), icon: <Code className="w-4 h-4" />  },
-      { value: 'graph_theory', label: t('duel.themeGraphTheory'), icon: <Zap className="w-4 h-4" /> },
-      { value: 'string_manipulation', label: t('duel.themeStringManipulation'), icon: <BookOpen className="w-4 h-4" />  },
+      { value: 'dynamic_programming', label: t('duels.themeDynamicProgramming'), icon: <Code className="w-4 h-4" />  },
+      { value: 'graph_theory', label: t('duels.themeGraphTheory'), icon: <Zap className="w-4 h-4" /> },
+      { value: 'string_manipulation', label: t('duels.themeStringManipulation'), icon: <BookOpen className="w-4 h-4" />  },
     ],
     sql: [
-      { value: 'sql', label: t('duel.themeSQL'), icon: <Flame className="w-4 h-4" />  },
+      { value: 'sql', label: t('duels.themeSQL'), icon: <Flame className="w-4 h-4" />  },
     ],
   };
   
@@ -60,8 +60,8 @@ export const AIDuelSettingsModal: React.FC<AIDuelSettingsModalProps> = ({
   };
   
   const categoryOptions = [
-    { value: 'algorithms', label: t('duel.categoryAlgorithms'), icon: <Code className="w-5 h-5" /> },
-    { value: 'sql', label: t('duel.categorySQL'), icon: <Shield className="w-5 h-5" /> },
+    { value: 'algorithms', label: t('duels.categoryAlgorithms'), icon: <Code className="w-5 h-5" /> },
+    { value: 'sql', label: t('duels.categorySQL'), icon: <Shield className="w-5 h-5" /> },
   ];
 
   const [settings, setSettings] = useState<AIDuelSettings>({
@@ -95,14 +95,14 @@ export const AIDuelSettingsModal: React.FC<AIDuelSettingsModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-gray-900 border border-gray-700 text-white rounded-2xl shadow-2xl">
         <DialogHeader className="px-6 pt-6">
-          <DialogTitle className="text-3xl font-bold gradient-text-safe mb-2">{t('duel.aiDuelSetupTitle')}</DialogTitle>
-          <DialogDescription className="text-gray-400">{t('duel.aiDuelSetupSubtitle')}</DialogDescription>
+          <DialogTitle className="text-3xl font-bold gradient-text-safe mb-2">{t('duels.aiDuelSetupTitle')}</DialogTitle>
+          <DialogDescription className="text-gray-400">{t('duels.aiDuelSetupSubtitle')}</DialogDescription>
         </DialogHeader>
 
         <div className="px-6 py-6 space-y-4 flex-1">
           {/* Category Selection */}
           <div>
-            <Label className="block text-lg font-semibold text-gray-200 mb-4">{t('duel.chooseCategory')}</Label>
+            <Label className="block text-lg font-semibold text-gray-200 mb-4">{t('duels.chooseCategory')}</Label>
             <div className="grid grid-cols-2 gap-4">
               {categoryOptions.map((option) => (
                 <motion.div
@@ -127,13 +127,13 @@ export const AIDuelSettingsModal: React.FC<AIDuelSettingsModalProps> = ({
 
           {/* Problem Theme Selection */}
           <div>
-            <Label htmlFor="theme" className="block text-lg font-semibold text-gray-200 mb-4">{t('duel.problemTheme')}</Label>
+            <Label htmlFor="theme" className="block text-lg font-semibold text-gray-200 mb-4">{t('duels.problemTheme')}</Label>
             <Select
               value={settings.theme}
               onValueChange={(value) => updateSetting('theme', value)}
             >
               <SelectTrigger className="w-full bg-gray-800 border-gray-700 text-white focus:ring-green-500 data-[state=open]:border-green-500">
-                <SelectValue placeholder={t('duel.selectThemePlaceholder')} />
+                <SelectValue placeholder={t('duels.selectThemePlaceholder')} />
               </SelectTrigger>
               <SelectContent className="bg-gray-800 border-gray-700 text-white">
                 {availableThemes[settings.category].map((theme) => (
@@ -147,7 +147,7 @@ export const AIDuelSettingsModal: React.FC<AIDuelSettingsModalProps> = ({
   
           {/* Difficulty Selection */}
           <div>
-            <Label className="block text-lg font-semibold text-gray-200 mb-4">{t('duel.difficultyLevel')}</Label>
+            <Label className="block text-lg font-semibold text-gray-200 mb-4">{t('duels.difficultyLevel')}</Label>
             <div className="grid grid-cols-1 gap-4">
               {DIFFICULTIES.map((difficulty) => (
                 <motion.div
@@ -184,13 +184,13 @@ export const AIDuelSettingsModal: React.FC<AIDuelSettingsModalProps> = ({
   
           {/* Language Selection */}
           <div>
-            <Label htmlFor="language" className="block text-lg font-semibold text-gray-200 mb-4">{t('duel.programmingLanguage')}</Label>
+            <Label htmlFor="language" className="block text-lg font-semibold text-gray-200 mb-4">{t('duels.programmingLanguage')}</Label>
             <Select
               value={settings.language}
               onValueChange={(value) => updateSetting('language', value)}
             >
               <SelectTrigger className="w-full bg-gray-800 border-gray-700 text-white focus:ring-green-500 data-[state=open]:border-green-500">
-                <SelectValue placeholder={t('duel.selectLanguagePlaceholder')} />
+                <SelectValue placeholder={t('duels.selectLanguagePlaceholder')} />
               </SelectTrigger>
               <SelectContent className="bg-gray-800 border-gray-700 text-white">
                 {languagesForCategory[settings.category].map((lang) => (
@@ -209,7 +209,7 @@ export const AIDuelSettingsModal: React.FC<AIDuelSettingsModalProps> = ({
             size="lg"
             className="text-white font-bold"
           >
-            {t('duel.startAIDuel')}
+            {t('duels.startAIDuel')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -37,11 +37,11 @@ export const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
     attack: Math.round((participant?.tests_passed || 0) * 0.65) + Math.floor(Math.random() * 10),
     kos: participant?.is_winner ? 1 : 0,
     speed: isPlayer 
-      ? t('duel.playerSpeed', { speed: (0.55 + Math.random() * 0.20).toFixed(2) })
-      : t('duel.aiSpeed', { speed: (0.45 + Math.random() * 0.15).toFixed(2) }),
+      ? t('duels.playerSpeed', { speed: (0.55 + Math.random() * 0.20).toFixed(2) })
+      : t('duels.aiSpeed', { speed: (0.45 + Math.random() * 0.15).toFixed(2) }),
     pps: isPlayer
-      ? t('duel.playerPps', { pps: (11.10 + Math.random() * 3).toFixed(2) })
-      : t('duel.aiPps', { pps: (8.30 + Math.random() * 2).toFixed(2) })
+      ? t('duels.playerPps', { pps: (11.10 + Math.random() * 3).toFixed(2) })
+      : t('duels.aiPps', { pps: (8.30 + Math.random() * 2).toFixed(2) })
   });
 
   const playerStats = getPlayerStats(currentPlayer, true);
@@ -211,7 +211,7 @@ export const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
                 : 'bg-black/60 text-gray-300 border border-gray-500'
             }`}
           >
-            {t('duel.problemToggle').toUpperCase()}
+            {t('duels.problemToggle').toUpperCase()}
           </motion.button>
         </div>
 
@@ -219,7 +219,7 @@ export const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
         <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-50">
           <div className="bg-black/80 backdrop-blur-sm rounded-xl px-6 py-3 border border-white/20">
             <div className="text-center">
-              <div className="text-white/60 font-mono text-sm mb-1">{t('duel.timeRemaining')}</div>
+              <div className="text-white/60 font-mono text-sm mb-1">{t('duels.timeRemaining')}</div>
               <div className="font-mono text-white text-3xl font-bold tracking-wider">
                 {formatTime(timeRemaining)}
               </div>
@@ -240,7 +240,7 @@ export const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
             {/* Left HOLD Box */}
             <div className="flex flex-col gap-4">
               <div className="bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <div className="text-white font-mono text-sm font-bold mb-2 text-center">{t('duel.hold')}</div>
+                <div className="text-white font-mono text-sm font-bold mb-2 text-center">{t('duels.hold')}</div>
                 <div className="w-16 h-16 bg-black/60 rounded border border-gray-600/30 flex items-center justify-center">
                   {renderMiniPiece(getRandomPiece())}
                 </div>
@@ -257,19 +257,19 @@ export const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
                 <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-gray-300 font-mono">
                   <div className="flex items-center gap-1">
                     <Trophy size={14} className="text-yellow-400" />
-                    {t('duel.pieces')}: <span className="font-bold text-white">{playerStats.pieces}</span>
+                    {t('duels.pieces')}: <span className="font-bold text-white">{playerStats.pieces}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    ⚡ {t('duel.attack')}: <span className="font-bold text-white">{playerStats.attack}</span>
+                    ⚡ {t('duels.attack')}: <span className="font-bold text-white">{playerStats.attack}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    ⚔️ {t('duel.kos')}: <span className="font-bold text-white">{playerStats.kos}</span>
+                    ⚔️ {t('duels.kos')}: <span className="font-bold text-white">{playerStats.kos}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    🚀 {t('duel.speed')}: <span className="font-bold text-white">{playerStats.speed}</span>
+                    🚀 {t('duels.speed')}: <span className="font-bold text-white">{playerStats.speed}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    🎯 {t('duel.pps')}: <span className="font-bold text-white">{playerStats.pps}</span>
+                    🎯 {t('duels.pps')}: <span className="font-bold text-white">{playerStats.pps}</span>
                   </div>
                 </div>
               </div>
@@ -286,7 +286,7 @@ export const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
             {/* Right NEXT Box */}
             <div className="flex flex-col gap-4">
               <div className="bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <div className="text-white font-mono text-sm font-bold mb-2 text-center">{t('duel.next')}</div>
+                <div className="text-white font-mono text-sm font-bold mb-2 text-center">{t('duels.next')}</div>
                 <div className="w-16 h-16 bg-black/60 rounded border border-gray-600/30 flex items-center justify-center">
                   {renderMiniPiece(getRandomPiece())}
                 </div>
@@ -303,19 +303,19 @@ export const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
                 <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-gray-300 font-mono">
                   <div className="flex items-center gap-1">
                     <Trophy size={14} className="text-yellow-400" />
-                    {t('duel.pieces')}: <span className="font-bold text-white">{participants.find(p => p.user_id !== currentUser?.id)?.tests_passed || 0}</span>
+                    {t('duels.pieces')}: <span className="font-bold text-white">{participants.find(p => p.user_id !== currentUser?.id)?.tests_passed || 0}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    ⚡ {t('duel.attack')}: <span className="font-bold text-white">{getPlayerStats(participants.find(p => p.user_id !== currentUser?.id)).attack}</span>
+                    ⚡ {t('duels.attack')}: <span className="font-bold text-white">{getPlayerStats(participants.find(p => p.user_id !== currentUser?.id)).attack}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    ⚔️ {t('duel.kos')}: <span className="font-bold text-white">{getPlayerStats(participants.find(p => p.user_id !== currentUser?.id)).kos}</span>
+                    ⚔️ {t('duels.kos')}: <span className="font-bold text-white">{getPlayerStats(participants.find(p => p.user_id !== currentUser?.id)).kos}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    🚀 {t('duel.speed')}: <span className="font-bold text-white">{getPlayerStats(participants.find(p => p.user_id !== currentUser?.id)).speed}</span>
+                    🚀 {t('duels.speed')}: <span className="font-bold text-white">{getPlayerStats(participants.find(p => p.user_id !== currentUser?.id)).speed}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    🎯 {t('duel.pps')}: <span className="font-bold text-white">{getPlayerStats(participants.find(p => p.user_id !== currentUser?.id)).pps}</span>
+                    🎯 {t('duels.pps')}: <span className="font-bold text-white">{getPlayerStats(participants.find(p => p.user_id !== currentUser?.id)).pps}</span>
                   </div>
                 </div>
               </div>
@@ -334,11 +334,11 @@ export const FullTetrisDuel: React.FC<FullTetrisDuelProps> = ({
               <Trophy size={80} className="text-yellow-400 mx-auto mb-4" />
               <h2 className="text-5xl font-bold text-white mb-4">
                 {currentUser?.id === participants.find(p => p.is_winner)?.user_id 
-                  ? t('duel.youWin') 
-                  : t('duel.youLose')}
+                  ? t('duels.youWin') 
+                  : t('duels.youLose')}
               </h2>
               <p className="text-xl text-gray-300">
-                {t('duel.finalScore')}: <span className="font-bold">{currentPlayer?.tests_passed}</span>
+                {t('duels.finalScore')}: <span className="font-bold">{currentPlayer?.tests_passed}</span>
               </p>
             </div>
           </motion.div>

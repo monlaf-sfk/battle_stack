@@ -12,7 +12,7 @@ export const DuelLoading: React.FC<DuelLoadingProps> = ({
   message,
   t
 }) => {
-  const displayMessage = message || t('duel.loadingDuel');
+  const displayMessage = message || t('duels.loadingDuel');
 
   return (
 // ... existing code ...

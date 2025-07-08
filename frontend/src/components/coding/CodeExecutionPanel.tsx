@@ -114,7 +114,7 @@ const CodeExecutionPanel: React.FC<CodeExecutionPanelProps> = ({
             <span>{t('coding.consoleOutput').toUpperCase()}</span>
             {(submissionResult && submissionResult.passed !== undefined && submissionResult.total !== undefined) && (
               <span className="text-xs text-arena-text-muted">
-                {t('duel.testsPassed', { passed: submissionResult.passed, total: submissionResult.total })}
+                {t('duels.testsPassed', { passed: submissionResult.passed, total: submissionResult.total })}
               </span>
             )}
           </div>

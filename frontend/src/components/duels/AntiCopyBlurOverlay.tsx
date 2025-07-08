@@ -54,10 +54,10 @@ export const AntiCopyBlurOverlay: React.FC<AntiCopyBlurOverlayProps> = ({
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-red-600 mb-2">
-            🛡️ {t('duel.suspiciousActivityTitle')}
+            🛡️ {t('duels.suspiciousActivityTitle')}
           </h2>
           <p className="text-gray-700 mb-4">
-            {message || t('duel.suspiciousActivityMessage')}
+            {message || t('duels.suspiciousActivityMessage')}
           </p>
         </div>
         
@@ -66,7 +66,7 @@ export const AntiCopyBlurOverlay: React.FC<AntiCopyBlurOverlayProps> = ({
             {timeLeft}
           </div>
           <div className="text-sm text-red-500">
-            {t('duel.secondsUntilUnlock', { count: timeLeft })}
+            {t('duels.secondsUntilUnlock', { count: timeLeft })}
           </div>
           <div className="w-full bg-red-200 rounded-full h-2 mt-3">
             <div 
@@ -77,9 +77,9 @@ export const AntiCopyBlurOverlay: React.FC<AntiCopyBlurOverlayProps> = ({
         </div>
 
         <div className="text-xs text-gray-500 space-y-1">
-          <p>{t('duel.antiCopyProtectionActive')}</p>
-          <p>{t('duel.doNotBypassProtection')}</p>
-          <p>{t('duel.fairPlayIsFoundation')}</p>
+          <p>{t('duels.antiCopyProtectionActive')}</p>
+          <p>{t('duels.doNotBypassProtection')}</p>
+          <p>{t('duels.fairPlayIsFoundation')}</p>
         </div>
       </div>
     </div>
@@ -93,12 +93,12 @@ export const useAntiCopyProtection = () => {
 
   const triggerBlur = () => {
     setIsBlurred(true);
-    console.log(t('duel.antiCopyProtectionTriggered'));
+    console.log(t('duels.antiCopyProtectionTriggered'));
   };
 
   const clearBlur = () => {
     setIsBlurred(false);
-    console.log(t('duel.antiCopyProtectionCleared'));
+    console.log(t('duels.antiCopyProtectionCleared'));
   };
 
   return {

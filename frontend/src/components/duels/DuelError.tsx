@@ -39,7 +39,7 @@ export const DuelError: React.FC<DuelErrorProps> = ({ message, t }) => {
             transition={{ delay: 0.4 }}
           >
             <h2 className="text-2xl font-bold text-red-400 mb-4 uppercase tracking-wider">
-              {t('duel.duelErrorTitle')}
+              {t('duels.duelErrorTitle')}
             </h2>
             
             <p className="text-arena-text-muted mb-8 leading-relaxed">
@@ -71,7 +71,7 @@ export const DuelError: React.FC<DuelErrorProps> = ({ message, t }) => {
               className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium text-sm transition-all bg-gradient-to-r from-arena-accent to-arena-secondary text-arena-dark hover:shadow-arena-glow"
             >
               <Swords className="w-4 h-4" />
-              <span>{t('duel.newDuel')}</span>
+              <span>{t('duels.newDuel')}</span>
             </motion.button>
           </motion.div>
 
@@ -83,7 +83,7 @@ export const DuelError: React.FC<DuelErrorProps> = ({ message, t }) => {
             className="mt-6 pt-6 border-t border-arena-border/30"
           >
             <p className="text-xs text-arena-text-dim uppercase tracking-wider">
-              {t('duel.errorPersistenceMessage')}
+              {t('duels.errorPersistenceMessage')}
             </p>
           </motion.div>
         </div>

@@ -102,9 +102,9 @@ const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ problemIdParam }) => 
     }
   };
 
-  if (duelState.isConnecting) return <DuelLoading message={t('duel.initializingArena')} t={t} />;
+  if (duelState.isConnecting) return <DuelLoading message={t('duels.initializingArena')} t={t} />;
   if (duelState.error) return <DuelError message={duelState.error} t={t} />;
-  if (!currentDuel) return <DuelLoading message={t('duel.loadingDuel')} t={t}/>;
+  if (!currentDuel) return <DuelLoading message={t('duels.loadingDuel')} t={t}/>;
 
   if (duelState.isCompleted && duelState.duelResult) {
     return <DuelComplete results={{
@@ -132,7 +132,7 @@ const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ problemIdParam }) => 
 
   return (
     <div className="flex h-screen bg-gray-900 text-white font-sans" onCopy={triggerBlur}>
-      <AntiCopyBlurOverlay isBlurred={isBlurred} t={t} message={t('duel.potentialCodeCopy')} />
+      <AntiCopyBlurOverlay isBlurred={isBlurred} t={t} message={t('duels.potentialCodeCopy')} />
 
       {/* Problem Description */}
       <div className="w-1/3 p-4 border-r border-gray-800 flex flex-col">
@@ -150,11 +150,11 @@ const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ problemIdParam }) => 
           <div className="flex space-x-2">
             <Button variant="secondary" onClick={onTest} disabled={isRunning}>
               <Play size={16} className="mr-2" />
-              {isRunning ? t('duel.executing') : t('duel.run')}
+              {isRunning ? t('duels.executing') : t('duels.run')}
             </Button>
             <Button variant="primary" onClick={onSubmit} disabled={isSubmitting}>
               <Send size={16} className="mr-2" />
-              {isSubmitting ? t('duel.submitting') : t('duel.submit')}
+              {isSubmitting ? t('duels.submitting') : t('duels.submit')}
             </Button>
           </div>
         </div>
@@ -171,7 +171,7 @@ const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ problemIdParam }) => 
         {/* Console */}
         <div className="h-1/3 border-t-2 border-gray-800 flex flex-col">
           <div className="bg-gray-800 p-2 text-sm font-semibold text-gray-300">
-            {t('duel.consoleOutput')}
+            {t('duels.consoleOutput')}
           </div>
           <div className="p-4 overflow-auto flex-grow bg-gray-900">
             <SubmissionResult submission={userSubmissionResult()} t={t} />
@@ -198,7 +198,7 @@ const TetrisDuelArena: React.FC<TetrisDuelArenaProps> = ({ problemIdParam }) => 
           />
         ) : (
           <div className="flex-grow flex items-center justify-center">
-            <p className="text-gray-500">{t('duel.waitingForOpponent')}</p>
+            <p className="text-gray-500">{t('duels.waitingForOpponent')}</p>
           </div>
         )}
       </div>
