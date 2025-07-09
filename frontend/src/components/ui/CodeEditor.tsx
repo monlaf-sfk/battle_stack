@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
-import { Sun, Moon, ChevronDown } from "lucide-react";
+import { Sun, Moon } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 
 interface CodeEditorProps {
@@ -254,41 +254,6 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       </div>
     );
   }
-};
-
-// Language selector component
-interface LanguageSelectorProps {
-  selectedLanguage: string;
-  onSelectLanguage: (language: string) => void;
-  languages: string[];
-}
-
-export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
-  selectedLanguage,
-  onSelectLanguage,
-  languages,
-}) => {
-
-  const handleSelect = (language: string) => {
-    onSelectLanguage(language);
-  };
-
-  return (
-    <div className="relative">
-      <select
-        value={selectedLanguage}
-        onChange={(e) => handleSelect(e.target.value)}
-        className="appearance-none bg-arena-dark border border-arena-border text-arena-text pr-8 rounded-md pl-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-arena-accent focus:border-transparent"
-      >
-        {languages.map((lang) => (
-          <option key={lang} value={lang}>
-            {lang}
-          </option>
-        ))}
-      </select>
-      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-arena-text-muted pointer-events-none w-4 h-4" />
-    </div>
-  );
 };
 
 // Theme toggle component

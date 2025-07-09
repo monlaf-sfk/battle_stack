@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
-import { duelsApiService } from "../services/duelService";
+import { duelsApiService } from "../services/api"; // Corrected import path
+import type { LeaderboardEntry } from "../services/api"; // Corrected import path
 import { useTranslation } from 'react-i18next';
 
-interface LeaderboardEntry {
-  rank: number;
-  user_id: string;
-  username: string;
-  elo_rating: number;
-  total_matches: number;
-  wins: number;
-  win_rate: number;
-  current_streak: number;
-}
+// Removed local interface definition for LeaderboardEntry as it's now imported from api.ts
+// interface LeaderboardEntry {
+//   rank: number;
+//   user_id: string;
+//   username: string;
+//   elo_rating: number;
+//   total_matches: number;
+//   wins: number;
+//   win_rate: number;
+//   current_streak: number;
+// }
 
 const LeaderboardsPage: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -24,8 +26,8 @@ const LeaderboardsPage: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await duelsApiService.getLeaderboard(20);
-        setLeaderboard(data || []);
+        const response = await duelsApiService.getLeaderboard(20);
+        setLeaderboard(response.data || []); // Access .data property
       } catch (err: any) {
         setError(err?.response?.data?.detail || err.message || t('leaderboardsPage.failedToLoadLeaderboard'));
       } finally {

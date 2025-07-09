@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock, Loader2, Plus, Users } from 'lucide-react';
 import { Button } from './Button';
 import { useToast } from './Toast';
-import duelsApiService, { createPrivateRoom } from '../../services/duelService';
+import { duelsApiService } from '@/services/duelService';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface JoinPrivateRoomModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { t } = useTranslation(['common', 'duel']);
 
   const handleJoinRoom = async (e: React.FormEvent) => {
@@ -44,10 +46,19 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
       return;
     }
 
+    if (!user?.id) {
+        addToast({
+            type: 'error',
+            title: t('common.error'),
+            message: t('common.loginToContinue'),
+        });
+        navigate('/login');
+        return;
+    }
+
+    setIsJoining(true);
     try {
-      setIsJoining(true);
-      
-      const duel = await duelsApiService.joinRoom(roomCode.toUpperCase());
+      const duel = await duelsApiService.joinRoom(roomCode.toUpperCase(), user.id);
       
       addToast({
         type: 'success',
@@ -87,9 +98,19 @@ const JoinPrivateRoomModal: React.FC<JoinPrivateRoomModalProps> = ({
   };
 
   const handleCreateRoom = async () => {
+    if (!user?.id) {
+        addToast({
+            type: 'error',
+            title: t('common.error'),
+            message: t('common.loginToContinue'),
+        });
+        navigate('/login');
+        return;
+    }
+
     setIsCreating(true);
     try {
-      const duel = await createPrivateRoom('medium', 'algorithm');
+      const duel = await duelsApiService.createPrivateRoom(user.id, 'medium', 'algorithms');
       
       // Copy to clipboard
       if (duel.room_code) {

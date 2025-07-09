@@ -10,12 +10,13 @@ import Editor from '@monaco-editor/react';
 import { useTranslation } from 'react-i18next';
 
 // Import only necessary types and interfaces
-import type { Problem, DuelProblem, Language, SubmissionResponse } from '../../types/duel.types';
+import type { Problem } from '../../services/api';
+import type { SupportedLanguage as Language, SubmissionResponse } from '../../services/codeExecutionService';
 import SubmissionResult from './SubmissionResult'; // Ensure SubmissionResultProps accepts testResults
 
 interface CodeExecutionPanelProps {
   // `problem` is now passed as a prop, containing problem metadata
-  problem: Problem | DuelProblem | null;
+  problem: Problem | null;
   // `onCodeChange` to notify the parent component of code changes
   onCodeChange: (code: string) => void;
   // `initialCode` to set the initial code in the editor
@@ -72,7 +73,7 @@ const CodeExecutionPanel: React.FC<CodeExecutionPanelProps> = ({
 
   // Determine language for Monaco Editor based on `selectedLanguage` prop
   const getMonacoLanguage = (language: Language) => {
-    switch (language) {
+    switch (language.id) {
       case 'python':
         return 'python';
       case 'javascript':
@@ -112,9 +113,9 @@ const CodeExecutionPanel: React.FC<CodeExecutionPanelProps> = ({
         <div className="bg-arena-surface/40 p-4 rounded-t-lg relative">
           <div className="font-mono text-sm text-arena-text-dim mb-2 flex justify-between items-center">
             <span>{t('coding.consoleOutput').toUpperCase()}</span>
-            {(submissionResult && submissionResult.passed !== undefined && submissionResult.total !== undefined) && (
+            {(submissionResult && submissionResult.passed_tests !== undefined && submissionResult.total_tests !== undefined) && (
               <span className="text-xs text-arena-text-muted">
-                {t('duels.testsPassed', { passed: submissionResult.passed, total: submissionResult.total })}
+                {t('coding.testsPassed', { passed: submissionResult.passed_tests, total: submissionResult.total_tests })}
               </span>
             )}
           </div>

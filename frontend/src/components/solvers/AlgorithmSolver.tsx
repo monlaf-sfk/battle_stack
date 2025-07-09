@@ -1,19 +1,21 @@
 import { useState } from 'react';
-import type { DuelProblem, TestResult } from '../../types/duel.types';
-import { CodeEditor, LanguageSelector } from '../ui/CodeEditor';
+import type { Problem } from '../../services/api'; // Import Problem
+import type { TestCaseResult, SupportedLanguage, SubmissionResponse } from '../../services/codeExecutionService'; // Import new types
+import { CodeEditor } from '../ui/CodeEditor';
+import LanguageSelector from '../coding/LanguageSelector'; // Use the new LanguageSelector
 import { Button } from '../ui/Button';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface AlgorithmSolverProps {
-  problem: DuelProblem | null;
-  onCodeChange: (language: string, code: string) => void;
+  problem: Problem | null; // Change from DuelProblem to Problem
+  onCodeChange: (languageId: string, code: string) => void; // Keep languageId as string for onCodeChange
   onSubmit: () => void;
   onRunTests: () => void;
   isRunning: boolean;
   isSubmitting: boolean;
-  testResults: TestResult[];
-  submissionResult?: TestResult;
+  testResults: TestCaseResult[]; // Change from TestResult[] to TestCaseResult[]
+  submissionResult?: SubmissionResponse; // Change from TestResult to SubmissionResponse
 }
 
 export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
@@ -27,37 +29,36 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
   submissionResult,
 }) => {
   const { t } = useTranslation();
-  const [language, setLanguage] = useState('python');
+  const [language, setLanguage] = useState<SupportedLanguage | null>(null); // State to hold SupportedLanguage object
   const [code, setCode] = useState(() => {
     // Get initial code from problem's starter code or code templates
-    if (problem?.starter_code && problem.starter_code[language]) {
-      return problem.starter_code[language];
+    // Default to python if no language selected yet
+    const initialLanguageId = 'python'; 
+    const initialCodeFromProblem = problem?.starter_code?.[initialLanguageId] || '';
+    // If no starter code, check code templates for the initial language
+    if (!initialCodeFromProblem && problem?.code_templates && problem.code_templates.length > 0) {
+        const template = problem.code_templates.find(t => t.language === initialLanguageId);
+        return template?.template_code || '';
     }
-    if (problem?.code_templates && problem.code_templates.length > 0) {
-      const template = problem.code_templates.find(t => t.language === language);
-      return template?.template_code || '';
-    }
-    return '';
+    return initialCodeFromProblem;
   });
 
-  const handleLanguageChange = (newLanguage: string) => {
-    setLanguage(newLanguage);
-    // Get starter code for the new language
-    let newCode = '';
-    if (problem?.starter_code && problem.starter_code[newLanguage]) {
-      newCode = problem.starter_code[newLanguage];
-    } else if (problem?.code_templates && problem.code_templates.length > 0) {
-      const template = problem.code_templates.find(t => t.language === newLanguage);
-      newCode = template?.template_code || '';
-    }
+  // Effect to set initial language once languages are loaded or problem changes
+  useState<boolean>(true); // Dummy state to trigger update after problem/languages load
+
+  const handleLanguageChange = (selectedLang: SupportedLanguage) => { // Accepts SupportedLanguage object
+    setLanguage(selectedLang);
+    const newCode = problem?.starter_code?.[selectedLang.id] || '';
     setCode(newCode);
-    onCodeChange(newLanguage, newCode);
+    onCodeChange(selectedLang.id, newCode); // Pass language.id as string to parent
   };
 
   const handleLocalCodeChange = (newCode: string | undefined) => {
-    const code = newCode || '';
-    setCode(code);
-    onCodeChange(language, code);
+    const currentCode = newCode || '';
+    setCode(currentCode);
+    if (language) {
+        onCodeChange(language.id, currentCode); // Pass current language.id
+    }
   };
 
   const editorHeight = submissionResult ? 'calc(100% - 120px)' : '100%';
@@ -67,9 +68,9 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
       {/* Language Selector */}
       <div className="mb-4">
         <LanguageSelector
-          selectedLanguage={language}
-          onSelectLanguage={handleLanguageChange}
-          languages={['python', 'javascript', 'typescript', 'java', 'cpp']}
+          selectedLanguage={language || { id: 'python', name: 'Python', extension: '.py', supports_classes: true }} // Provide a default object
+          onLanguageChange={handleLanguageChange}
+          // languages={['python', 'javascript', 'typescript', 'java', 'cpp']} // Removed, LanguageSelector fetches internally
         />
       </div>
 
@@ -77,7 +78,7 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
         <div className="flex-grow">
           <CodeEditor
             value={code}
-            language={language}
+            language={language?.id || 'python'} // Use language.id
             onChange={handleLocalCodeChange}
             height={editorHeight}
             theme="vs-dark"
@@ -88,7 +89,7 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
         <div className="flex gap-3">
           <Button
             onClick={onRunTests}
-            disabled={isRunning || !code.trim()}
+            disabled={isRunning || !code.trim() || !language}
             variant="ghost"
             className="flex-1 border border-arena-border hover:border-arena-accent/40"
           >
@@ -104,7 +105,7 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
 
           <Button
             onClick={onSubmit}
-            disabled={isSubmitting || !code.trim()}
+            disabled={isSubmitting || !code.trim() || !language}
             variant="gradient"
             className="flex-1 font-semibold"
           >
@@ -126,10 +127,10 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
               <div className="space-y-2">
                 {testResults.map((result, index) => (
                   <div key={index} className={`p-2 rounded-md text-sm flex items-center gap-2 ${
-                    result.is_correct ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'
+                    result.passed ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'
                   }`}>
-                    {result.is_correct ? <CheckCircle size={16} /> : <XCircle size={16} />}
-                    <span>{t('coding.testCase', { number: index + 1 })}: {result.is_correct ? t('common.passed') : t('common.failed')}</span>
+                    {result.passed ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                    <span>{t('coding.testCase', { number: index + 1 })}: {result.passed ? t('common.passed') : t('common.failed')}</span>
                   </div>
                 ))}
               </div>
@@ -138,13 +139,13 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
 
           {submissionResult && (
             <div className={`p-3 rounded-md text-sm ${
-              submissionResult.is_correct ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'
+              submissionResult.accepted ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'
             }`}>
               <h3 className="font-bold mb-1">
-                {submissionResult.is_correct ? t('coding.solutionAccepted') : t('coding.solutionIncorrect')}
+                {submissionResult.accepted ? t('coding.solutionAccepted') : t('coding.solutionIncorrect')}
               </h3>
-              <p>{t('coding.passedTestCases', { passed: submissionResult.passed, total: submissionResult.total })}</p>
-              {submissionResult.error && <p className="mt-1">{t('common.error')}: {submissionResult.error}</p>}
+              <p>{t('coding.passedTestCases', { passed: submissionResult.passed_tests, total: submissionResult.total_tests })}</p>
+              {submissionResult.error_message && <p className="mt-1">{t('common.error')}: {submissionResult.error_message}</p>}
             </div>
           )}
         </div>
@@ -153,7 +154,7 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
         <div className="flex justify-end gap-3 p-4 border-t border-gray-700">
           <Button
             onClick={onRunTests}
-            disabled={isRunning || !code.trim()}
+            disabled={isRunning || !code.trim() || !language}
             variant="ghost"
             className="flex-1 border border-arena-border hover:border-arena-accent/40"
           >
@@ -169,7 +170,7 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
 
           <Button
             onClick={onSubmit}
-            disabled={isSubmitting || !code.trim()}
+            disabled={isSubmitting || !code.trim() || !language}
             variant="gradient"
             className="flex-1 font-semibold"
           >

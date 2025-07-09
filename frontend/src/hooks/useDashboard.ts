@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { dashboardApi, duelsApiService, type DashboardStats, type Achievement, type AIRecommendation, type NewsItem } from '../services/api';
+import { dashboardApi /*, duelsApiService*/, type DashboardStats, type Achievement, type AIRecommendation, type NewsItem } from '../services/api';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -39,21 +39,21 @@ export const useDashboard = (): UseDashboardReturn => {
       setError(null);
       
       // Fetch all dashboard data in parallel
-      const [statsResponse, achievementsResponse, recommendationsResponse, newsResponse, leaderboardResponse] = await Promise.all([
+      const [statsResponse, achievementsResponse, recommendationsResponse, newsResponse/*, leaderboardResponse*/] = await Promise.all([
         dashboardApi.getStats(),
         dashboardApi.getAchievements(),
         dashboardApi.getRecommendations(),
         dashboardApi.getNews(),
-        duelsApiService.getPublicLeaderboard(),
+        // duelsApiService.getPublicLeaderboard(),
       ]);
 
       let currentUserRank: number | null = null;
-      if (user && leaderboardResponse.data) {
-        const userInLeaderboard = leaderboardResponse.data.find((entry: any) => entry.user_id === user.id);
-        if (userInLeaderboard) {
-          currentUserRank = userInLeaderboard.rank;
-        }
-      }
+      // if (user && leaderboardResponse.data) {
+      //   const userInLeaderboard = leaderboardResponse.data.find((entry: any) => entry.user_id === user.id);
+      //   if (userInLeaderboard) {
+      //     currentUserRank = userInLeaderboard.rank;
+      //   }
+      // }
 
       setData({
         stats: statsResponse.data,

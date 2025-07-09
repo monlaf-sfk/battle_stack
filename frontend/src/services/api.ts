@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import type { SubmissionResponse } from './codeExecutionService'; // Import SubmissionResponse
 
 const authApi = axios.create({
   baseURL: '/api/v1/auth',
@@ -31,7 +32,7 @@ const addAuthInterceptor = (api: AxiosInstance) => {
 addAuthInterceptor(authApi);
 addAuthInterceptor(userApi);
 addAuthInterceptor(problemsApi);
-addAuthInterceptor(duelsApi);
+addAuthInterceptor(duelsApi); // Make sure duelsApi is added to interceptors
 
 // Dashboard API endpoints
 export const dashboardApi = {
@@ -126,19 +127,21 @@ export const problemsApiService = {
   },
   
   // Run tests for a problem
-  runTests: async (slug: string, language: string, code: string) => {
-    return await problemsApi.post(`/problems/${slug}/run`, {
+  runTests: async (slug: string, language: string, code: string): Promise<SubmissionResponse> => {
+    const response = await problemsApi.post<SubmissionResponse>(`/problems/${slug}/run`, {
       language,
       code
     });
+    return response.data; // Return only the data
   },
   
   // Submit solution
-  submitSolution: async (slug: string, language: string, code: string) => {
-    return await problemsApi.post(`/problems/${slug}/submit`, {
+  submitSolution: async (slug: string, language: string, code: string): Promise<SubmissionResponse> => {
+    const response = await problemsApi.post<SubmissionResponse>(`/problems/${slug}/submit`, {
       language,
       code
     });
+    return response.data; // Return only the data
   },
 
   // Get random problem
@@ -156,8 +159,10 @@ export const duelsApiService = {
   },
   
   // Get leaderboard
-  getLeaderboard: async () => {
-    return await duelsApi.get('/leaderboard');
+  getLeaderboard: async (limit?: number) => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    return await duelsApi.get(`/leaderboard?${params.toString()}`);
   },
   
   // Get duel history
@@ -166,11 +171,13 @@ export const duelsApiService = {
   },
   
   // Get recent matches (public)
-  getRecentMatches: async () => {
+  getRecentMatches: async (limit?: number) => {
     const publicDuelsApi = axios.create({
       baseURL: '/api/v1/duels',
     });
-    return await publicDuelsApi.get('/recent-matches');
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    return await publicDuelsApi.get(`/matches/recent?${params.toString()}`);
   },
   
   // Get public leaderboard
@@ -395,26 +402,33 @@ export const profileApi = {
   getPublicProfile: (username: string) => userApi.get(`/profile/${username}`),
 };
 
-export interface Duel {
-  id: string;
-  problem_id: string;
-  status: 'pending' | 'in_progress' | 'finished' | 'cancelled' | 'error';
-  player_one_id: string;
-  player_two_id?: string;
-  player_one_code?: string;
-  player_two_code?: string;
-  results?: any;
-  created_at: string;
-  started_at?: string;
-  finished_at?: string;
+export interface LeaderboardEntry {
+  rank: number;
+  user_id: string;
+  username: string;
+  elo_rating: number;
+  total_matches: number;
+  wins: number;
+  win_rate: number;
+  current_streak: number;
 }
 
-export interface Recommendation {
-  title: string;
-  description: string;
-  difficulty: 'Easy' | 'Medium' | 'Hard';
-  estimated_time: string;
-  improvement: string;
+export interface MatchHistoryItem {
+  id: string;
+  duel_id: string;
+  opponent_name: string;
+  is_victory: boolean;
+  rating_change: number | null;
+  problem_title: string;
+  played_at: string;
 }
+
+// export interface Recommendation {
+//   title: string;
+//   description: string;
+//   difficulty: 'Easy' | 'Medium' | 'Hard';
+//   estimated_time: string;
+//   improvement: string;
+// }
 
 export { authApi, userApi, problemsApi, duelsApi };

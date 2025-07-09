@@ -72,7 +72,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile.auth
     env_file:
-      - ./backend/.env.auth
+      - ./backend/services/auth_service/.env.auth
     depends_on:
       - redis
       - auth-db
@@ -92,7 +92,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile.user
     env_file:
-      - ./backend/.env.user
+      - ./backend/services/user_service/.env.user
     depends_on:
       - redis
       - user-db
@@ -114,7 +114,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile.duels
     env_file:
-      - ./backend/.env.duels
+      - ./backend/services/duels_service/.env.duels
     depends_on:
       - redis
       - duels-db
@@ -123,7 +123,6 @@ services:
     entrypoint: /app/duels_service/entrypoint.sh
     environment:
       - JUDGE0_URL=http://104.248.241.191:2358
-      - JUDGE0_API_KEY=
       - UVICORN_LOG_LEVEL=info
       - UVICORN_ACCESS_LOG=true
       - POSTGRES_PASSWORD=duels_password

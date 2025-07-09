@@ -275,7 +275,7 @@ const LandingPage = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="bg-white text-black text-xl font-bold py-4 px-8 rounded-lg font-mono"
-                  onClick={() => navigate('/quick-duel')}
+                  onClick={() => navigate('/duels')}
                 >
                   {t('landingPage.enterArena')}
                 </motion.button>
@@ -283,7 +283,7 @@ const LandingPage = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="bg-gray-800 text-white text-xl font-bold py-4 px-8 rounded-lg font-mono border border-gray-700 hover:border-gray-600 transition-colors"
-                  onClick={() => navigate('/duel/pve/:duelId')}
+                  onClick={() => navigate('/code-execution-demo')}
                 >
                   <Play size={24} className="mr-3 inline" />
                   {t('landingPage.watchDemo')}
@@ -447,7 +447,7 @@ const LandingPage = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="bg-white text-black text-xl font-bold py-4 px-8 rounded-lg font-mono"
-                onClick={() => navigate('/quick-duel')}
+                onClick={() => navigate('/duels')}
               >
                 {t('landingPage.startCodingNow')}
               </motion.button>

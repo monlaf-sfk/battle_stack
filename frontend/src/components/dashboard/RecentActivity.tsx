@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { duelsApiService } from '../../services/duelService';
-import type { MatchHistoryItem } from '../../types/duel.types';
+import { duelsApiService } from '../../services/api'; // Corrected import path
+import type { MatchHistoryItem } from '../../services/api'; // Corrected import path
 import { 
   Clock, 
   Trophy, 
-  Zap, 
   Target, 
   ChevronRight,
   Calendar,
@@ -16,18 +15,8 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-interface RecentDuel {
-  id: string;
-  opponent_name: string;
-  is_victory: boolean;
-  solve_time?: string;
-  problem_title: string;
-  rating_change?: number;
-  played_at: string;
-}
-
 const RecentActivity: React.FC = () => {
-  const [recentDuels, setRecentDuels] = useState<RecentDuel[]>([]);
+  const [recentDuels, setRecentDuels] = useState<MatchHistoryItem[]>([]); // Changed type to MatchHistoryItem[]
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
@@ -39,14 +28,16 @@ const RecentActivity: React.FC = () => {
         setError(null);
 
         // Fetch from public duels endpoint
-        const publicMatches = await duelsApiService.getMatchHistory(5);
+        const response = await duelsApiService.getRecentMatches(5);
+        const publicMatches = response.data; // Access .data property
         
         // Transform the data to match RecentDuel interface
         const transformedDuels = Array.isArray(publicMatches) ? publicMatches.map((item: MatchHistoryItem) => ({
-          id: item.id,
+          id: item.duel_id, // Use duel_id for the key
+          duel_id: item.duel_id,
           opponent_name: item.opponent_name,
           is_victory: item.is_victory,
-          solve_time: item.solve_time,
+          // solve_time: item.solve_time, // This property is not in MatchHistoryItem, consider adding if needed in backend
           problem_title: item.problem_title,
           rating_change: item.rating_change,
           played_at: item.played_at
@@ -81,13 +72,13 @@ const RecentActivity: React.FC = () => {
     }
   };
 
-  const getRatingChangeColor = (change?: number) => {
-    if (!change || change === 0) return 'text-arena-text-muted';
+  const getRatingChangeColor = (change?: number | null) => { // Updated type to allow null
+    if (change === null || change === undefined || change === 0) return 'text-arena-text-muted';
     return change > 0 ? 'text-green-400' : 'text-red-400';
   };
 
-  const getRatingChangeIcon = (change?: number) => {
-    if (!change || change === 0) return <Minus size={12} />;
+  const getRatingChangeIcon = (change?: number | null) => { // Updated type to allow null
+    if (change === null || change === undefined || change === 0) return <Minus size={12} />;
     return change > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />;
   };
 
@@ -214,14 +205,14 @@ const RecentActivity: React.FC = () => {
                     </p>
                     
                     <div className="flex items-center gap-3 mt-2 text-xs text-arena-text-muted">
-                      {duel.solve_time && (
-                        <div className="flex items-center gap-1">
-                          <Zap size={10} />
-                          {duel.solve_time}
-                        </div>
-                      )}
+                      {/* {duel.solve_time && ( */}
+                        {/* <div className="flex items-center gap-1"> */}
+                          {/* <Zap size={10} /> */}
+                          {/* {duel.solve_time} */}
+                        {/* </div> */}
+                      {/* )} */}
                       
-                      {duel.rating_change && (
+                      {duel.rating_change !== null && duel.rating_change !== undefined && ( // Check for null/undefined
                         <div className={`flex items-center gap-1 ${getRatingChangeColor(duel.rating_change)}`}>
                           {getRatingChangeIcon(duel.rating_change)}
                           {Math.abs(duel.rating_change)} {t('dashboard.elo')}

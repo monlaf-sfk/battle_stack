@@ -1,7 +1,7 @@
-import type { DuelProblem } from '../../types/duel.types';
+import type { Problem } from '../../services/api';
 import { useTranslation } from 'react-i18next';
 
-export const FrontendSolver: React.FC<{ problem: DuelProblem }> = () => {
+export const FrontendSolver: React.FC<{ problem: Problem }> = () => {
   const { t } = useTranslation('common');
 
   return (

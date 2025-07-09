@@ -1,16 +1,17 @@
 import React from 'react';
 import { AlgorithmSolver } from './AlgorithmSolver';
 import SqlSolver from './SqlSolver';
-import type { DuelProblem, TestResult } from '@/types/duel.types';
+import type { Problem } from '@/services/api'; // Import Problem from api.ts
+import type { TestCaseResult } from '@/services/codeExecutionService'; // Import TestCaseResult
 
 interface SolverDispatcherProps {
-  problem: DuelProblem;
+  problem: Problem; // Change from DuelProblem to Problem
   onCodeChange: (language: string, code: string) => void;
   onSubmit: () => void;
   onRunTests?: () => void;
   isRunning?: boolean;
   isSubmitting?: boolean;
-  testResults?: TestResult[];
+  testResults?: TestCaseResult[]; // Change from TestResult[] to TestCaseResult[]
 }
 
 const SolverDispatcher: React.FC<SolverDispatcherProps> = ({ 

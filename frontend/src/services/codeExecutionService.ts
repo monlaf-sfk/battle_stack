@@ -75,7 +75,7 @@ export interface CodeRunResult {
  * 🎯 ОСНОВНОЙ КЛАСС СЕРВИСА
  */
 export class CodeExecutionService {
-  private baseUrl = 'http://localhost:8003/api/v1/problems';
+  private baseUrl = '/api/v1/problems';
 
   /**
    * 📋 Получить список поддерживаемых языков программирования

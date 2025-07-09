@@ -9,8 +9,8 @@ import { codeExecutionService, type SupportedLanguage } from '../../services/cod
 import { useTranslation } from 'react-i18next';
 
 interface LanguageSelectorProps {
-  selectedLanguage: string;
-  onLanguageChange: (languageId: string) => void;
+  selectedLanguage: SupportedLanguage; // Change from string to SupportedLanguage
+  onLanguageChange: (language: SupportedLanguage) => void; // Change to pass full object
   className?: string;
   disabled?: boolean;
 }
@@ -36,10 +36,12 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
       const supportedLanguages = await codeExecutionService.getSupportedLanguages();
       setLanguages(supportedLanguages);
       
-      // If current language is not selected, default to Python
-      if (!selectedLanguage && supportedLanguages.length > 0) {
+      // Ensure selectedLanguage is valid or set a default if initially empty/invalid
+      if (!selectedLanguage || !supportedLanguages.some(lang => lang.id === selectedLanguage.id)) {
         const defaultLang = supportedLanguages.find(lang => lang.id === 'python') || supportedLanguages[0];
-        onLanguageChange(defaultLang.id);
+        if (defaultLang) {
+          onLanguageChange(defaultLang);
+        }
       }
     } catch (error) {
       console.error(t('coding.failedToLoadLanguages'), error);
@@ -48,7 +50,8 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
     }
   };
 
-  const selectedLang = languages.find(lang => lang.id === selectedLanguage);
+  // selectedLang is no longer needed as selectedLanguage is already the object
+  // const selectedLang = languages.find(lang => lang.id === selectedLanguage);
 
   const getLanguageIcon = (languageId: string): string => {
     const icons: Record<string, string> = {
@@ -98,14 +101,14 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
         disabled={disabled}
       >
         <div className="flex items-center space-x-3">
-          <span className="text-xl">{getLanguageIcon(selectedLanguage)}</span>
+          <span className="text-xl">{getLanguageIcon(selectedLanguage.id)}</span>
           <div className="flex flex-col">
             <span className="text-white font-medium">
-              {selectedLang?.name || t('coding.selectLanguage')}
+              {selectedLanguage?.name || t('coding.selectLanguage')}
             </span>
             <span className="text-gray-400 text-sm">
-              {selectedLang?.extension || ''}
-              {selectedLang?.supports_classes && (
+              {selectedLanguage?.extension || ''}
+              {selectedLanguage?.supports_classes && (
                 <span className="ml-2 text-xs bg-blue-600 text-white px-2 py-0.5 rounded">
                   {t('coding.oop')}
                 </span>
@@ -138,10 +141,10 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                 className={`
                   w-full px-4 py-3 text-left flex items-center space-x-3 transition-colors duration-150
                   hover:bg-gray-700 focus:outline-none focus:bg-gray-700
-                  ${selectedLanguage === language.id ? 'bg-blue-600 text-white' : 'text-gray-300'}
+                  ${selectedLanguage.id === language.id ? 'bg-blue-600 text-white' : 'text-gray-300'}
                 `}
                 onClick={() => {
-                  onLanguageChange(language.id);
+                  onLanguageChange(language);
                   setIsOpen(false);
                 }}
               >
@@ -157,7 +160,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                     )}
                   </div>
                 </div>
-                {selectedLanguage === language.id && (
+                {selectedLanguage.id === language.id && (
                   <div className="w-2 h-2 bg-white rounded-full"></div>
                 )}
               </button>

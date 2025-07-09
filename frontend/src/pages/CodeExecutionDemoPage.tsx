@@ -10,14 +10,13 @@ import {
   Send,
   Loader2,
 } from 'lucide-react';
-import { codeExecutionService, type SupportedLanguage } from '../services/codeExecutionService';
+import { codeExecutionService, type SupportedLanguage, type SubmissionResponse } from '../services/codeExecutionService';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import LanguageSelector from '../components/coding/LanguageSelector';
 import SubmissionResult from '../components/coding/SubmissionResult';
 import { useAuth } from '../contexts/AuthContext';
-import { duelsApiService } from '../services/duelService'; // Import duel service
-import type { DuelProblem, Problem, SubmissionResponse, DuelResponse, Language } from '../types/duel.types';
+import { problemsApiService, type Problem } from '../services/api'; // Corrected import for problemsApiService and Problem
 import { useTranslation } from 'react-i18next';
 import CodeExecutionPanel from '../components/coding/CodeExecutionPanel';
 
@@ -25,84 +24,97 @@ import CodeExecutionPanel from '../components/coding/CodeExecutionPanel';
 // combining properties from Problem and DuelProblem as needed.
 // This resolves the 'code_templates' conflict by making it optional in Problem
 // and explicitly allowing null in DuelProblem, ensuring compatibility.
-type ProblemForDemo = Problem & DuelProblem;
+// type ProblemForDemo = Problem & DuelProblem;
+type ProblemForDemo = Problem;
 
 const CodeExecutionDemoPage: React.FC = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [code, setCode] = useState<string>(''); // Initial code will be loaded from problem starter_code
   const [language, setLanguage] = useState<SupportedLanguage | null>(null);
-  const [languages, setLanguages] = useState<SupportedLanguage[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [problem, setProblem] = useState<ProblemForDemo | null>(null);
   const [submissionResult, setSubmissionResult] = useState<SubmissionResponse | null>(null);
-  const [currentDuel, setCurrentDuel] = useState<DuelResponse | null>(null); // State for the active duel
+  // const [currentDuel, setCurrentDuel] = useState<DuelResponse | null>(null); // State for the active duel
   const { t } = useTranslation();
 
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      if (!isAuthenticated || !user?.id) {
-        // If not authenticated, we can't fetch or create duels
-        setIsLoading(false);
-        return;
-      }
+      // No authentication needed for basic problem fetching for demo purposes
+      // if (!isAuthenticated || !user?.id) {
+      //   // If not authenticated, we can't fetch or create duels
+      //   setIsLoading(false);
+      //   return;
+      // }
 
       try {
         // 1. Load languages
         const supportedLangs = await codeExecutionService.getSupportedLanguages();
-        setLanguages(supportedLangs);
         const pythonLang = supportedLangs.find(lang => lang.id === 'python');
         if (pythonLang) {
           setLanguage(pythonLang);
         }
 
-        let fetchedDuel: DuelResponse | null = null;
-        try {
-          // 2. Try to fetch an active or waiting duel for the user
-          fetchedDuel = await duelsApiService.getDuelForUser(user.id);
-          console.log('Fetched existing duel:', fetchedDuel);
-        } catch (error) {
-          console.warn('No active or waiting duel found, creating a new one.');
-        }
+        // let fetchedDuel: DuelResponse | null = null;
+        // try {
+        //   // 2. Try to fetch an active or waiting duel for the user
+        //   fetchedDuel = await duelsApiService.getDuelForUser(user.id);
+        //   console.log('Fetched existing duel:', fetchedDuel);
+        // } catch (error) {
+        //   console.warn('No active or waiting duel found, creating a new one.');
+        // }
 
-        if (!fetchedDuel) {
-          // 3. If no active duel, create a new AI duel
-          console.log('Attempting to create a new AI duel...');
-          const newDuel = await duelsApiService.createAIDuel({
-            user_id: user.id,
-            theme: 'algorithms', // Default theme
-            difficulty: 'easy',  // Default difficulty
-            language: pythonLang?.id || 'python', // Default language
-            category: 'algorithms', // Default category
-          });
-          fetchedDuel = newDuel;
-          console.log('Created new AI duel:', fetchedDuel);
-        }
+        // if (!fetchedDuel) {
+        //   // 3. If no active duel, create a new AI duel
+        //   console.log('Attempting to create a new AI duel...');
+        //   const newDuel = await duelsApiService.createAIDuel({
+        //     user_id: user.id,
+        //     theme: 'algorithms', // Default theme
+        //     difficulty: 'easy',  // Default difficulty
+        //     language: pythonLang?.id || 'python', // Default language
+        //     category: 'algorithms', // Default category
+        //   });
+        //   fetchedDuel = newDuel;
+        //   console.log('Created new AI duel:', fetchedDuel);
+        // }
 
-        if (fetchedDuel?.problem) {
-          setCurrentDuel(fetchedDuel);
-          setProblem(fetchedDuel.problem as ProblemForDemo);
-          const initialCode = fetchedDuel.problem.starter_code?.[pythonLang?.id || 'python'] || '';
+        // Fetch a random problem instead of a duel
+        const randomProblem = await problemsApiService.getRandomProblem();
+
+        if (randomProblem) {
+          // setCurrentDuel(fetchedDuel); // Remove duel state
+          setProblem(randomProblem as ProblemForDemo);
+          const initialCode = randomProblem.starter_code?.[pythonLang?.id || 'python'] || '';
           setCode(initialCode);
-          console.log('Problem loaded:', fetchedDuel.problem);
+          console.log('Problem loaded:', randomProblem);
         } else {
-          console.error('Duel or problem data is missing after fetch/create:', fetchedDuel);
+          console.error('Problem data is missing after fetch/create:', randomProblem);
           setSubmissionResult({
-            is_correct: false,
-            error: 'Failed to load problem data. Please try again.',
-            passed: 0,
-            total: 0,
-            details: null,
+            submission_id: null,
+            status: 'Error',
+            passed_tests: 0,
+            total_tests: 0,
+            execution_time: '0s',
+            memory_usage: '0KB',
+            score: 0,
+            error_message: 'Failed to load problem data. Please try again.',
+            accepted: false,
+            // details: null, // Removed
           });
         }
       } catch (err: any) {
-        console.error('Error loading duel or problem:', err);
+        console.error('Error loading problem:', err);
         setSubmissionResult({
-          is_correct: false,
-          error: `Failed to load problem: ${err.message || 'Unknown error'}`,
-          passed: 0,
-          total: 0,
-          details: null,
+          submission_id: null,
+          status: 'Error',
+          passed_tests: 0,
+          total_tests: 0,
+          execution_time: '0s',
+          memory_usage: '0KB',
+          score: 0,
+          error_message: `Failed to load problem: ${err.message || 'Unknown error'}`,
+          accepted: false,
+          // details: null,
         });
       } finally {
         setIsLoading(false);
@@ -110,24 +122,26 @@ const CodeExecutionDemoPage: React.FC = () => {
     };
 
     loadData();
-  }, [isAuthenticated, user?.id]); // Rerun when auth status or user ID changes
+  }, []); // Rerun when auth status or user ID changes - now just run once
 
-  const handleLanguageChange = (selectedLangId: string) => {
-    const newLang = languages.find(lang => lang.id === selectedLangId);
-    if (newLang) {
-      setLanguage(newLang);
-      setCode(problem?.starter_code?.[newLang.id] || '');
-    }
+  const handleLanguageChange = (selectedLang: SupportedLanguage) => { // Change type to SupportedLanguage
+    setLanguage(selectedLang);
+    setCode(problem?.starter_code?.[selectedLang.id] || '');
   };
 
   const executeCode = async (isSubmission: boolean) => {
-    if (!language || !code.trim() || !problem || !user?.id || !currentDuel?.id) {
+    // Simplified check, no need for user.id or currentDuel.id for simple execution
+    if (!language || !code.trim() || !problem) {
       setSubmissionResult({
-        is_correct: false,
-        error: 'Please provide code, select a language, and ensure a problem is loaded and a duel is active.',
-        passed: 0,
-        total: 0,
-        details: null,
+        submission_id: null,
+        status: 'Validation Error',
+        passed_tests: 0,
+        total_tests: 0,
+        execution_time: '0s',
+        memory_usage: '0KB',
+        score: 0,
+        error_message: 'Please provide code, select a language, and ensure a problem is loaded.',
+        accepted: false,
       });
       return;
     }
@@ -137,17 +151,12 @@ const CodeExecutionDemoPage: React.FC = () => {
 
     try {
       let response: SubmissionResponse;
-      const submissionData = {
-        player_id: user.id,
-        language: language.id as Language, // Cast to Language type
-        code: code,
-      };
+      // No player_id needed for problemsApiService
 
       if (isSubmission) {
-        response = await duelsApiService.submitSolution(currentDuel.id, submissionData);
+        response = await problemsApiService.submitSolution(problem.slug, language.id, code); // Call problemService
       } else {
-        // For 'Run Tests', use the same submission data
-        response = await duelsApiService.testCode(currentDuel.id, { code, language: language.id as Language });
+        response = await problemsApiService.runTests(problem.slug, language.id, code); // Call problemService
       }
       setSubmissionResult(response);
       console.log('API Response:', response);
@@ -155,11 +164,16 @@ const CodeExecutionDemoPage: React.FC = () => {
     } catch (err: any) {
       console.error('Error during code execution:', err);
       setSubmissionResult({
-        is_correct: false,
-        error: err.response?.data?.detail || err.message || 'An unknown error occurred.',
-        passed: 0,
-        total: 0,
-        details: null,
+        submission_id: null,
+        status: 'Error',
+        passed_tests: 0,
+        total_tests: 0,
+        execution_time: '0s',
+        memory_usage: '0KB',
+        score: 0,
+        error_message: err.response?.data?.detail || err.message || 'An unknown error occurred.',
+        accepted: false,
+        // details: null,
       });
     } finally {
       setIsLoading(false);
@@ -191,7 +205,7 @@ const CodeExecutionDemoPage: React.FC = () => {
               <p className="animate-pulse">Loading problem description...</p>
             )}
             <h4 className="mt-4 font-semibold text-white">Examples:</h4>
-            {(problem?.test_cases || []).filter(tc => !tc.is_hidden).map((tc, index) => (
+            {(problem?.test_cases || []).map((tc, index) => ( // Removed .filter(tc => !tc.is_hidden)
               <div key={index} className="bg-arena-surface/30 p-3 rounded-md mb-2">
                 <p className="font-mono text-sm">Input: <span className="text-arena-accent">{tc.input_data}</span></p>
                 <p className="font-mono text-sm">Output: <span className="text-green-400">{tc.expected_output}</span></p>
@@ -211,14 +225,14 @@ const CodeExecutionDemoPage: React.FC = () => {
           </CardTitle>
           <div className="flex items-center space-x-2">
             <LanguageSelector
-              selectedLanguage={language?.id || 'python'}
+              selectedLanguage={language || { id: 'python', name: 'Python', extension: '.py', supports_classes: true }}
               onLanguageChange={handleLanguageChange}
               className="w-40"
               disabled={isLoading || !problem}
             />
             <Button
               onClick={() => executeCode(false)}
-              disabled={!isAuthenticated || !code.trim() || isLoading || !currentDuel?.id}
+              disabled={!isAuthenticated || !code.trim() || isLoading || !problem?.slug}
               className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-4 py-1.5 rounded-lg font-medium transition-colors flex items-center space-x-2"
             >
               {isLoading && !submissionResult ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
@@ -226,7 +240,7 @@ const CodeExecutionDemoPage: React.FC = () => {
             </Button>
             <Button
               onClick={() => executeCode(true)}
-              disabled={!isAuthenticated || !code.trim() || isLoading || !currentDuel?.id}
+              disabled={!isAuthenticated || !code.trim() || isLoading || !problem?.slug}
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-1.5 rounded-lg font-medium transition-colors flex items-center space-x-2"
             >
               {isLoading && submissionResult ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -241,7 +255,7 @@ const CodeExecutionDemoPage: React.FC = () => {
               onCodeChange={handleCodeChange}
               initialCode={code}
               submissionResult={submissionResult}
-              selectedLanguage={language?.id as Language || 'python'}
+              selectedLanguage={language || { id: 'python', name: 'Python', extension: '.py', supports_classes: true }}
               onLanguageChange={handleLanguageChange}
             />
           </div>
@@ -249,9 +263,9 @@ const CodeExecutionDemoPage: React.FC = () => {
           <div className="bg-arena-surface/40 p-4 rounded-b-lg border-t border-arena-border relative">
             <div className="font-mono text-sm text-arena-text-dim mb-2 flex justify-between items-center">
               <span>CONSOLE OUTPUT</span>
-              {(submissionResult && submissionResult.passed !== undefined && submissionResult.total !== undefined) && (
+              {(submissionResult && submissionResult.passed_tests !== undefined && submissionResult.total_tests !== undefined) && (
                 <span className="text-xs text-arena-text-muted">
-                  {submissionResult.passed} / {submissionResult.total} tests passed
+                  {submissionResult.passed_tests} / {submissionResult.total_tests} tests passed
                 </span>
               )}
             </div>
@@ -271,7 +285,7 @@ const CodeExecutionDemoPage: React.FC = () => {
           </div>
 
           <p className="text-sm text-gray-400 mt-2">
-            Debug: isAuthenticated={String(isAuthenticated)}, code_empty={String(!code.trim())}, isLoading={String(isLoading)}, currentDuel_id={currentDuel?.id ? 'true' : 'false'}
+            Debug: isAuthenticated={String(isAuthenticated)}, code_empty={String(!code.trim())}, isLoading={String(isLoading)}, problem_slug={problem?.slug ? 'true' : 'false'}
           </p>
         </CardContent>
       </Card>

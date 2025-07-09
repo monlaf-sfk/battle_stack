@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { duelsApiService } from '../../services/duelService';
-import type { LeaderboardEntry } from '../../types/duel.types';
+import { duelsApiService } from '../../services/api';
+import type { LeaderboardEntry } from '../../services/api';
 import { 
   Crown, 
   Trophy, 
@@ -28,7 +28,7 @@ const LeaderboardMini: React.FC = () => {
       setError(null);
 
       const response = await duelsApiService.getLeaderboard(5);
-      setLeaderboard(response || []);
+      setLeaderboard(response.data || []);
     } catch (err: any) {
       let message = t('dashboard.failedToLoadLeaderboard');
       if (err?.response) {

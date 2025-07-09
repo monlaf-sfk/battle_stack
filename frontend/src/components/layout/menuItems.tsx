@@ -4,9 +4,9 @@ import {
   Gamepad2,
   LayoutDashboard,
   Settings,
-  Swords,
   Trophy,
   User,
+  Swords,
 } from "lucide-react";
 // Локальное определение типа для избежания проблем с импортом
 interface MenuItem {
@@ -31,12 +31,18 @@ export const getMenuItems = (t: any): MenuSection[] => {
           text: t('sidebar.dashboard'),
           path: "/dashboard",
         },
-        { icon: <Swords size={20} />, text: t('sidebar.quickDuel'), path: "/quick-duel" },
+        // { icon: <Swords size={20} />, text: t('sidebar.quickDuel'), path: "/quick-duel" },
+        // { icon: <Swords size={20} />, text: t('sidebar.pveDuel'), path: "/pve-duel", locked: true }, // Add if PvE was a separate menu item
       ],
     },
     {
       section: t('sidebar.competitionSection'),
       items: [
+        {
+          icon: <Swords size={20} />,
+          text: t('sidebar.duels'),
+          path: "/duels",
+        },
         {
           icon: <Trophy size={20} />,
           text: t('sidebar.leaderboards'),

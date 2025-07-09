@@ -213,36 +213,44 @@ async def get_recent_matches(db: AsyncSession, limit: int = 10) -> list[schemas.
     for duel in duels:
         # This is a simplified transformation.
         # It needs to resolve user details from user_service.
-        if duel.results:
-            winner_id = duel.results.get("winner_id")
+        if duel.results and duel.finished_at:
+            winner_id_raw = duel.results.get("winner_id")
+            winner_id = str(winner_id_raw) if winner_id_raw else None
+
+            problem_title = duel.results.get("ai_problem_data", {}).get("title", "A Great Problem")
             
             p1_id = str(duel.player_one_id)
-            p2_id = str(duel.player_two_id) if duel.player_two_id else "AI"
             
-            # This is a placeholder for getting usernames
-            p1_username = f"User-{p1_id[:4]}"
-            p2_username = f"User-{p2_id[:4]}" if p2_id != "AI" else "AI"
-            
-            # We need to construct two match history items, one for each player
-            if p1_id != "ai": # Assuming AI can't have match history
+            # Determine opponent details
+            opponent_name = "AI"
+            if duel.player_two_id:
+                # Placeholder for username, would be a user service call in a real app
+                opponent_name = f"User-{str(duel.player_two_id)[:4]}"
+
+            # Create entry for Player 1
+            matches.append(schemas.MatchHistoryItem(
+                id=f"{duel.id}-{p1_id}", # A unique ID for the history item
+                duel_id=str(duel.id),
+                opponent_name=opponent_name,
+                is_victory=winner_id == p1_id,
+                played_at=duel.finished_at,
+                problem_title=problem_title,
+                # Placeholder for rating change, this would be more complex in a real system
+                rating_change=10 if winner_id == p1_id else -10
+            ))
+
+            # Create entry for Player 2 if it's a human player
+            if duel.player_two_id and len(matches) < limit:
+                p2_id = str(duel.player_two_id)
+                p1_username = f"User-{p1_id[:4]}"
                 matches.append(schemas.MatchHistoryItem(
-                    id=str(duel.id), # should be a unique history id
-                    duel_id=str(duel.id),
-                    opponent_name=p2_username,
-                    is_victory=winner_id == p1_id,
-                    played_at=duel.finished_at,
-                    problem_title="A Great Problem", # Placeholder
-                    rating_change=10 if winner_id == p1_id else -10 # Placeholder
-                ))
-            if p2_id != "ai" and len(matches) < limit:
-                 matches.append(schemas.MatchHistoryItem(
-                    id=str(uuid.uuid4()), # should be a unique history id
+                    id=f"{duel.id}-{p2_id}",
                     duel_id=str(duel.id),
                     opponent_name=p1_username,
                     is_victory=winner_id == p2_id,
                     played_at=duel.finished_at,
-                    problem_title="A Great Problem", # Placeholder
-                    rating_change=10 if winner_id == p2_id else -10 # Placeholder
+                    problem_title=problem_title,
+                    rating_change=10 if winner_id == p2_id else -10
                 ))
 
     return matches[:limit]

@@ -2,12 +2,10 @@ import React, { useState } from 'react';
 import { CodeEditor } from '../ui/CodeEditor';
 import { Button } from '../ui/Button';
 import { useTranslation } from 'react-i18next';
+import type { Problem } from '../../services/api'; // Import Problem type
 
 interface SqlSolverProps {
-  problem: {
-    description: string;
-    // Add other relevant problem properties here
-  };
+  problem: Problem; // Use Problem type directly
   onSubmit: (solution: string) => void;
 }
 
@@ -23,7 +21,8 @@ const SqlSolver: React.FC<SqlSolverProps> = ({ problem, onSubmit }) => {
     <div className="flex flex-col h-full">
       <div className="p-4 bg-gray-800 text-white rounded-t-lg">
         <h2 className="text-xl font-bold">{t('sqlSolver.title')}</h2>
-        <p className="mt-2 text-sm">{problem.description}</p>
+        {/* Access description safely with optional chaining or provide fallback */}
+        <p className="mt-2 text-sm">{problem.description || 'No description provided.'}</p>
       </div>
       <div className="flex-grow">
         <CodeEditor
