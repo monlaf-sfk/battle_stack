@@ -118,8 +118,21 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           break;
         case 'duel_update':
-          // The message is a signal to refetch the entire duel state for consistency
-          if (id) {
+          // This message can be a simple signal or contain the full duel object
+          if (message.data && typeof message.data === 'object' && message.data.id) {
+            const updatedDuel = message.data as DuelResponse;
+            setDuel(updatedDuel);
+            setInitialLanguageFromDuel(updatedDuel);
+            
+            // Start timer if it hasn't started
+            if (updatedDuel.status === DuelStatus.IN_PROGRESS && updatedDuel.started_at && !timerRef.current) {
+                const start = new Date(updatedDuel.started_at).getTime();
+                timerRef.current = setInterval(() => {
+                    setElapsedTime(Math.floor((Date.now() - start) / 1000));
+                }, 1000);
+            }
+          } else if (id) {
+            // Fallback to refetching if no data is present
             fetchDuelData(id);
           }
           break;
@@ -139,6 +152,11 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setAiFinishedTyping(false);
           startAiTypingSimulation(message.data);
           break;
+        case 'ai_progress':
+            setOpponentCode(message.data.code);
+            setAiProgress(message.data.progress);
+            setOpponentTyping(true);
+            break;
         default:
           console.warn('Unknown message type:', message.type);
       }
@@ -187,6 +205,28 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setDuel(fetchedDuel);
       await setInitialLanguageFromDuel(fetchedDuel);
 
+      if (
+        fetchedDuel.status === DuelStatus.PENDING ||
+        fetchedDuel.status === DuelStatus.GENERATING_PROBLEM
+      ) {
+        const interval = setInterval(async () => {
+          try {
+            const updatedDuel = await duelsApiService.getDuel(id);
+            if (
+              updatedDuel.status !== DuelStatus.PENDING &&
+              updatedDuel.status !== DuelStatus.GENERATING_PROBLEM
+            ) {
+              setDuel(updatedDuel);
+              await setInitialLanguageFromDuel(updatedDuel);
+              clearInterval(interval);
+            }
+          } catch (err) {
+            console.error('Error polling duel status:', err);
+            clearInterval(interval);
+          }
+        }, 2000);
+      }
+
       // Start elapsed time timer if duel is in progress
       if (fetchedDuel.status === DuelStatus.IN_PROGRESS && fetchedDuel.started_at) {
         const start = new Date(fetchedDuel.started_at).getTime();
@@ -219,10 +259,11 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
     process.forEach((step: any, index: number) => {
       const action = step.root;
       if (action.action === 'type') {
-        delay += action.content.length * (50 / action.speed); // Simulate typing speed
+        delay += action.content.length * (150 / action.speed); // Slower, more human-like typing
         aiTypingTimerRef.current = setTimeout(() => {
           setOpponentCode(prev => prev + action.content);
           setAiProgress(index / process.length * 100);
+          setOpponentTyping(true); // Show typing indicator
         }, delay);
       } else if (action.action === 'pause') {
         delay += action.duration * 1000; // Add pause duration
@@ -230,18 +271,20 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setOpponentTyping(false); // Optionally stop typing animation during pause
         }, delay);
       } else if (action.action === 'delete') {
-        delay += action.char_count * 20; // Simulate deleting speed
+        delay += action.char_count * 100; // Slower deleting
         aiTypingTimerRef.current = setTimeout(() => {
           setOpponentCode(prev => prev.slice(0, -action.char_count));
           setAiProgress(index / process.length * 100); // Update progress after delete
+          setOpponentTyping(true); // Show typing indicator
         }, delay);
       }
     });
     aiTypingTimerRef.current = setTimeout(() => {
         setAiFinishedTyping(true);
+        setOpponentTyping(false);
         setAiProgress(100); // Ensure progress is 100% when done
         // Optionally trigger AI submission here after a short delay
-    }, delay + 500); // Add a small buffer after last action
+    }, delay + 1000); // Add a small buffer after last action
 
   }, []);
 

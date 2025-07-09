@@ -87,7 +87,7 @@ const UserProfile: React.FC = () => {
                         >
                             <div className={`flex items-center ${roleInfo.color} gap-1`}>
                                 {roleInfo.icon}
-                                <span className="font-semibold text-sm font-mono">{t(roleInfo.name)}</span>
+                                <span className="font-semibold text-sm font-mono">{roleInfo.name}</span>
                             </div>
                         </motion.div>
                     </div>
@@ -128,9 +128,9 @@ const UserProfile: React.FC = () => {
                     transition={{ delay: 0.6, staggerChildren: 0.1 }}
                     className="grid grid-cols-3 gap-4"
                 >
-                    <StatItem value={data?.stats?.total_duels || 0} label={t('dashboard.duelsStat', { value: data?.stats?.total_duels || 0, duels: t('dashboard.totalDuels') })} />
-                    <StatItem value={data?.stats?.current_streak || 0} label={t('dashboard.streakStat', { value: data?.stats?.current_streak || 0, streak: t('dashboard.streak') })} highlightColor="text-orange-400" />
-                    <StatItem value={data?.stats?.successful_duels || 0} label={t('dashboard.winsStat', { value: data?.stats?.successful_duels || 0, wins: t('dashboard.wins') })} highlightColor="text-green-400" />
+                    <StatItem value={data?.stats?.total_duels || 0} label={t('dashboard.duelsStat')} />
+                    <StatItem value={data?.stats?.current_streak || 0} label={t('dashboard.streakStat')} highlightColor="text-orange-400" />
+                    <StatItem value={data?.stats?.successful_duels || 0} label={t('dashboard.winsStat')} highlightColor="text-green-400" />
                 </motion.div>
             </CardContent>
             <CardFooter className="p-4 bg-gray-900/50 border-t border-gray-800">
@@ -141,7 +141,7 @@ const UserProfile: React.FC = () => {
                     transition={{ delay: 0.7 }}
                 >
                     <Link to="/profile" className="text-gray-400 text-sm font-mono hover:text-white transition-colors">
-                        {t('dashboard.viewFullProfileLink', { text: t('dashboard.viewFullProfile') })}
+                        {t('dashboard.viewFullProfileLink')}
                     </Link>
                 </motion.div>
             </CardFooter>
