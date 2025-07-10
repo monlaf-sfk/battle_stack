@@ -185,6 +185,28 @@ async def get_leaderboard(
 ):
     leaderboard_data = await service.get_leaderboard(db, limit=limit)
     
+    # Get user IDs from leaderboard data
+    user_ids = [str(entry.user_id) for entry in leaderboard_data]
+    
+    # Make HTTP request to auth-service to get user details
+    import httpx
+    user_details_map = {}
+    
+    if user_ids:
+        try:
+            async with httpx.AsyncClient() as client:
+                # Call auth-service to get user details
+                response = await client.post(
+                    "http://auth-service:8000/api/v1/auth/users/batch",
+                    json={"user_ids": user_ids},
+                    timeout=5.0
+                )
+                if response.status_code == 200:
+                    users_data = response.json()
+                    user_details_map = {user["id"]: user for user in users_data}
+        except Exception as e:
+            logger.warning(f"Failed to fetch user details from auth-service: {e}")
+    
     response_data = []
     for i, entry in enumerate(leaderboard_data):
         # Handle case where draws attribute might not exist yet (migration not applied)
@@ -192,11 +214,16 @@ async def get_leaderboard(
         total_matches = entry.wins + entry.losses + draws
         win_rate = (entry.wins / total_matches * 100) if total_matches > 0 else 0.0
         
+        # Get user details from the user_details_map
+        user_details = user_details_map.get(str(entry.user_id))
+        username = user_details.get("username") if user_details else f"User-{str(entry.user_id)[:8]}"
+        full_name = user_details.get("full_name") if user_details and user_details.get("full_name") else username
+        
         leaderboard_entry = schemas.LeaderboardEntry(
             rank=i + 1,
             user_id=str(entry.user_id),
-            username="",  # Will be filled by frontend
-            full_name="",  # Will be filled by frontend
+            username=username,
+            full_name=full_name,
             elo_rating=entry.elo_rating,
             total_matches=total_matches,
             wins=entry.wins,

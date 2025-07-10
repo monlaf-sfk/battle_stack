@@ -1,4 +1,4 @@
-from shared.app.models import User
+from shared.app.auth.models import User
 from shared.app.schemas import UserCreate, UserUpdate
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession

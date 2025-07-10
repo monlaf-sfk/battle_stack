@@ -3,6 +3,7 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from pydantic import BaseModel, constr, Field
 
 from shared.app.auth.service import authenticate_user, create_user, get_user
@@ -372,4 +373,30 @@ async def change_password(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect current password")
     user.hashed_password = hash_password(req.new_password)
     await db.commit()
-    return None 
+    return None
+
+
+class BatchUsersRequest(BaseModel):
+    user_ids: list[str]
+
+@router.post("/users/batch", response_model=list[User])
+async def get_users_batch(
+    request: BatchUsersRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get multiple users by their IDs. 
+    This endpoint is designed for inter-service communication.
+    """
+    try:
+        from uuid import UUID
+        user_uuids = [UUID(user_id) for user_id in request.user_ids]
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid user IDs format")
+    
+    result = await db.execute(
+        select(UserModel).where(UserModel.id.in_(user_uuids))
+    )
+    users = result.scalars().all()
+    
+    return [User.model_validate(user) for user in users]
