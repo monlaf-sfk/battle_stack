@@ -128,9 +128,12 @@ class LeaderboardEntry(BaseModel):
     rank: int
     user_id: str
     username: str
+    full_name: Optional[str] = None
     elo_rating: int
     total_matches: int
     wins: int
+    losses: int
+    draws: int
     win_rate: float
     current_streak: int
     

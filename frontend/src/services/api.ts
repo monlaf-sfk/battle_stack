@@ -406,6 +406,7 @@ export interface LeaderboardEntry {
   rank: number;
   user_id: string;
   username: string;
+  full_name: string;
   elo_rating: number;
   total_matches: number;
   wins: number;

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { duelsApiService } from "../services/api"; // Corrected import path
 import type { LeaderboardEntry } from "../services/api"; // Corrected import path
 import { useTranslation } from 'react-i18next';
+import { FaCrown } from "react-icons/fa";
+import { useAuth } from "../contexts/AuthContext";
 
 // Removed local interface definition for LeaderboardEntry as it's now imported from api.ts
 // interface LeaderboardEntry {
@@ -20,6 +22,7 @@ const LeaderboardsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -35,43 +38,84 @@ const LeaderboardsPage: React.FC = () => {
       }
     };
     fetchLeaderboard();
-  }, []);
+  }, [t]);
+
+  const getRankColor = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return "text-yellow-400";
+      case 2:
+        return "text-gray-400";
+      case 3:
+        return "text-yellow-600";
+      default:
+        return "text-gray-500";
+    }
+  };
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">{t('leaderboardsPage.title')}</h1>
-      {loading && <div>{t('common.loading')}...</div>}
-      {error && <div className="text-red-500 mb-4">{t('common.error')}: {error}</div>}
+    <div className="container mx-auto p-4 md:p-8 text-white">
+      <div className="text-center mb-8">
+        <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500">
+          {t('leaderboardsPage.title')}
+        </h1>
+        <p className="text-gray-400 text-lg">{t('leaderboardsPage.subtitle', 'See who is dominating the arena')}</p>
+      </div>
+
+      {loading && <div className="text-center text-xl">{t('common.loading')}...</div>}
+      {error && <div className="text-center text-red-500 text-xl mb-4">{t('common.error')}: {error}</div>}
+      
       {!loading && !error && (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-gray-900 rounded-lg shadow">
-            <thead>
-              <tr className="text-gray-400 text-left">
-                <th className="py-2 px-4">#</th>
-                <th className="py-2 px-4 w-fit whitespace-nowrap">{t('common.username')}</th>
-                <th className="py-2 px-4">{t('leaderboardsPage.elo')}</th>
-                <th className="py-2 px-4">{t('leaderboardsPage.wins')}</th>
-                <th className="py-2 px-4">{t('leaderboardsPage.winRate')}</th>
-                <th className="py-2 px-4">{t('leaderboardsPage.streak')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leaderboard.map((entry) => (
-                <tr key={entry.user_id} className="border-b border-gray-800 hover:bg-gray-800 transition">
-                  <td className="py-2 px-4 font-mono">{entry.rank}</td>
-                  <td className="py-2 px-4 font-mono">{entry.username}</td>
-                  <td className="py-2 px-4 font-mono">{entry.elo_rating}</td>
-                  <td className="py-2 px-4 font-mono">{entry.wins}</td>
-                  <td className="py-2 px-4 font-mono">{(entry.win_rate * 100).toFixed(1)}%</td>
-                  <td className="py-2 px-4 font-mono">{entry.current_streak}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="max-w-4xl mx-auto">
+          <div className="space-y-2">
+            {leaderboard.map((entry, index) => (
+              <div
+                key={entry.user_id}
+                className={`flex items-center p-4 rounded-lg transition-all duration-300 ${
+                  user?.id === entry.user_id ? 'bg-blue-900/50 ring-2 ring-blue-500' : 'bg-gray-800/50 hover:bg-gray-700/50'
+                } ${index < 3 ? 'border-l-4' : ''} ${
+                  index === 0 ? 'border-yellow-400' : index === 1 ? 'border-gray-400' : index === 2 ? 'border-yellow-600' : 'border-transparent'
+                }`}
+              >
+                <div className={`w-16 flex-shrink-0 text-center text-2xl font-bold ${getRankColor(entry.rank)}`}>
+                  <div className="flex flex-col items-center justify-center h-full">
+                    {entry.rank === 1 && <FaCrown className="mb-1" />}
+                    <span>{entry.rank}</span>
+                  </div>
+                </div>
+
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gray-700 mx-4 flex items-center justify-center">
+                  <span className="text-xl font-bold">{entry.username.charAt(0).toUpperCase()}</span>
+                </div>
+
+                <div className="flex-grow grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
+                  <div className="font-semibold text-lg truncate" title={entry.full_name || entry.username}>
+                    {entry.full_name || entry.username}
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-400">{t('leaderboardsPage.elo')}</div>
+                    <div className="text-lg font-mono">{entry.elo_rating}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-400">{t('leaderboardsPage.wins')}</div>
+                    <div className="text-lg font-mono">{entry.wins}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-400">{t('leaderboardsPage.winRate')}</div>
+                    <div className="text-lg font-mono">{(entry.win_rate).toFixed(1)}%</div>
+                  </div>
+                </div>
+                <div className="w-16 text-center">
+                  <div className="text-sm text-gray-400">{t('leaderboardsPage.streak')}</div>
+                  <div className="text-lg font-mono">{entry.current_streak} 🔥</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
 };
 
-export default LeaderboardsPage; 
+export default LeaderboardsPage;

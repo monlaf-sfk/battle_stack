@@ -115,7 +115,7 @@ async def get_leaderboard(db: AsyncSession, limit: int = 100) -> List[PlayerRati
         .order_by(desc(PlayerRating.elo_rating))
         .limit(limit)
     )
-    return list(result.scalars().all()) 
+    return list(result.scalars().all())
 
 async def get_active_or_waiting_duel(db: AsyncSession, user_id: UUID) -> models.Duel | None:
     """
@@ -177,4 +177,4 @@ async def get_recent_matches(db: AsyncSession, limit: int = 10) -> list[schemas.
                     rating_change=10 if winner_id == p2_id else -10
                 ))
 
-    return matches 
+    return matches

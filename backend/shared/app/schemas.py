@@ -45,6 +45,13 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: constr(min_length=6, max_length=128)
 
+    @field_validator('username')
+    @classmethod
+    def validate_username(cls, v):
+        if not re.match("^[A-Za-z0-9-_]+$", v):
+            raise ValueError("Username can only contain letters, numbers, hyphens, and underscores.")
+        return v
+
 
 class User(UserBase):
     id: uuid.UUID
@@ -131,3 +138,10 @@ class Message(BaseModel):
 class UserUpdate(BaseModel):
     username: Optional[constr(min_length=3, max_length=128, pattern="^[A-Za-z0-9-_]+$")] = None
     full_name: Optional[constr(min_length=1, max_length=128)] = None
+
+    @field_validator('username')
+    @classmethod
+    def validate_username(cls, v):
+        if v is not None and not re.match("^[A-Za-z0-9-_]+$", v):
+            raise ValueError("Username can only contain letters, numbers, hyphens, and underscores.")
+        return v

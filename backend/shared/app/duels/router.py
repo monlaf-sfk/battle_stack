@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# In-memory store for AI-generated problems to avoid re-generation on retries
+# In-memory store for AI-generated problems
 # {duel_id: GeneratedProblem}
 generated_problem_cache: Dict[UUID, Any] = {}
 
@@ -187,22 +187,28 @@ async def get_leaderboard(
     
     response_data = []
     for i, entry in enumerate(leaderboard_data):
-        total_matches = int(entry.wins) + int(entry.losses)
-        win_rate = (int(entry.wins) / total_matches * 100) if total_matches > 0 else 0.0
+        # Handle case where draws attribute might not exist yet (migration not applied)
+        draws = getattr(entry, 'draws', 0)
+        total_matches = entry.wins + entry.losses + draws
+        win_rate = (entry.wins / total_matches * 100) if total_matches > 0 else 0.0
         
         leaderboard_entry = schemas.LeaderboardEntry(
             rank=i + 1,
             user_id=str(entry.user_id),
-            username=str(entry.username),
-            elo_rating=int(entry.elo_rating),
+            username="",  # Will be filled by frontend
+            full_name="",  # Will be filled by frontend
+            elo_rating=entry.elo_rating,
             total_matches=total_matches,
-            wins=int(entry.wins),
+            wins=entry.wins,
+            losses=entry.losses,
+            draws=draws,
             win_rate=round(win_rate, 1),
-            current_streak=int(entry.current_streak)
+            current_streak=entry.current_streak
         )
         response_data.append(leaderboard_entry)
         
     return response_data
+
 
 @router.get("/matches/recent", response_model=list[schemas.MatchHistoryItem])
 async def get_recent_matches(limit: int = 10, db: AsyncSession = Depends(get_db)):

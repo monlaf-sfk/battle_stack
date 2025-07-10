@@ -58,6 +58,7 @@ class PlayerRating(Base):
     elo_rating = Column(Integer, default=1200, nullable=False)
     wins = Column(Integer, default=0, nullable=False)
     losses = Column(Integer, default=0, nullable=False)
+    draws = Column(Integer, default=0, nullable=False)
     total_matches = Column(Integer, default=0, nullable=False)
     current_streak = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
