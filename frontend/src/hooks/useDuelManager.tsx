@@ -59,7 +59,15 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const currentLanguageRef = useRef(currentLanguage);
   currentLanguageRef.current = currentLanguage;
 
-  const BASE_WS_URL = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost/api/v1/duels/ws';
+  const getWebSocketUrl = () => {
+    if (import.meta.env.VITE_WEBSOCKET_URL) {
+      return import.meta.env.VITE_WEBSOCKET_URL;
+    }
+    const isSecure = window.location.protocol === 'https:';
+    const protocol = isSecure ? 'wss' : 'ws';
+    const host = window.location.host;
+    return `${protocol}://${host}/api/v1/duels/ws`;
+  };
 
   const setInitialLanguageFromDuel = useCallback(async (duelData: DuelResponse) => {
     if (duelData.problem && !currentLanguageRef.current) {
@@ -157,7 +165,8 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     console.log(`Attempting to connect to WebSocket for duel ${id}...`);
 
-    const socket = new WebSocket(`${BASE_WS_URL}/${id}?token=${token}`);
+    const wsUrl = getWebSocketUrl();
+    const socket = new WebSocket(`${wsUrl}/${id}?token=${token}`);
 
     socket.onopen = () => {
       console.log('WebSocket connected.');
@@ -334,12 +343,38 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   }, []);
 
-  // Initial connection or re-connection if duelId changes or on page load
   useEffect(() => {
+    // If there's a duelId in the URL, we are joining a specific duel.
     if (duelId && isAuthenticated && user?.id) {
       connect(duelId);
+      return; // Exit early to avoid checking for active duels
     }
-
+  
+    // If no duelId in URL, check if the user has an active or waiting duel.
+    const checkForActiveDuel = async () => {
+      if (isAuthenticated && user?.id) {
+        setIsLoading(true);
+        try {
+          const activeDuel = await duelsApiService.getDuelForUser(user.id);
+          if (activeDuel) {
+            // Found an active duel, connect to it
+            connect(activeDuel.id);
+          } else {
+            // No active duel, finished loading
+            setIsLoading(false);
+          }
+        } catch (error) {
+          console.error('Error checking for active duel:', error);
+          setError('Failed to check for an active duel.');
+          setIsLoading(false);
+        }
+      } else {
+        setIsLoading(false);
+      }
+    };
+  
+    checkForActiveDuel();
+  
     return () => {
       disconnect();
     };

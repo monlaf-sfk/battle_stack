@@ -28,62 +28,60 @@ async def get_supported_languages():
         {
             "id": "python",
             "name": "Python 3",
-            "judge0_id": 71,
-            "extension": "py"
+            "extension": "py",
+            "supports_classes": True,
         },
         {
             "id": "javascript", 
             "name": "JavaScript",
-            "judge0_id": 63,
-            "extension": "js"
+            "extension": "js",
+            "supports_classes": False,
         },
         {
             "id": "java",
             "name": "Java",
-            "judge0_id": 62,
-            "extension": "java"
+            "extension": "java",
+            "supports_classes": True,
         },
         {
             "id": "cpp",
             "name": "C++",
-            "judge0_id": 54,
-            "extension": "cpp"
+            "extension": "cpp",
+            "supports_classes": True,
         },
         {
             "id": "c",
             "name": "C",
-            "judge0_id": 50,
-            "extension": "c"
+            "extension": "c",
+            "supports_classes": False,
         },
         {
             "id": "go",
             "name": "Go",
-            "judge0_id": 60,
-            "extension": "go"
+            "extension": "go",
+            "supports_classes": False,
         },
         {
             "id": "rust",
             "name": "Rust",
-            "judge0_id": 73,
-            "extension": "rs"
+            "extension": "rs",
+            "supports_classes": True,
         },
         {
             "id": "typescript",
             "name": "TypeScript",
-            "judge0_id": 74,
-            "extension": "ts"
+            "extension": "ts",
+            "supports_classes": False,
         },
         {
             "id": "sql",
             "name": "SQL",
-            "judge0_id": 82,
-            "extension": "sql"
+            "extension": "sql",
+            "supports_classes": False,
         }
     ]
     
-    return {
-        "supported_languages": supported_languages
-    }
+    return supported_languages
 
 # Define a constant for the duel time limit in seconds (e.g., 15 minutes)
 DUEL_TIME_LIMIT_SECONDS = 15 * 60
