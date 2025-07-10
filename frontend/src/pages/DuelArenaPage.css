@@ -1,0 +1,67 @@
+/* Resizable Panel Styles */
+.resize-handle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  user-select: none;
+}
+
+.resize-handle-horizontal {
+  width: 16px;
+  cursor: col-resize;
+}
+
+.resize-handle-vertical {
+  height: 16px;
+  cursor: row-resize;
+}
+
+.resize-handle:hover {
+  background-color: rgba(0, 255, 136, 0.1);
+}
+
+.resize-handle:active {
+  background-color: rgba(0, 255, 136, 0.2);
+}
+
+.resize-handle-inner {
+  width: 3px;
+  height: 40px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.resize-handle-vertical .resize-handle-inner {
+  width: 40px;
+  height: 3px;
+}
+
+.resize-handle:hover .resize-handle-inner {
+  background-color: rgba(0, 255, 136, 0.5);
+}
+
+.resize-handle:active .resize-handle-inner {
+  background-color: rgba(0, 255, 136, 0.8);
+}
+
+/* Animate panel transitions */
+[data-panel] {
+  transition: flex-grow 0.2s ease-out;
+}
+
+/* Shimmer animation for AI progress */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+} 

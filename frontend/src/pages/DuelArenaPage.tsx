@@ -3,7 +3,24 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/Toast';
 import { useTranslation } from 'react-i18next';
-import { Swords, CheckCircle, Clock, User, Bot, Target, Eye, Play } from 'lucide-react';
+import { 
+  Swords, 
+  CheckCircle, 
+  Clock, 
+  User, 
+  Bot, 
+  Target, 
+  Eye, 
+  EyeOff,
+  Play, 
+  Code2,
+  TestTube,
+  FileText,
+  Maximize2,
+  Minimize2,
+  CheckCheck,
+  XCircle,
+} from 'lucide-react';
 import { useDuel } from '@/hooks/useDuelManager';
 import { DuelStatus } from '@/services/duelService';
 import { CodeEditor } from '@/components/ui/CodeEditor';
@@ -13,7 +30,21 @@ import { codeExecutionService } from '@/services/codeExecutionService';
 import type { SupportedLanguage } from '@/services/codeExecutionService';
 import { useLayout } from '@/contexts/LayoutContext';
 import { AnimatePresence, motion } from 'framer-motion';
-import SubmissionResult from '@/components/coding/SubmissionResult';
+import {
+  Panel,
+  PanelGroup,
+  PanelResizeHandle,
+} from 'react-resizable-panels';
+import './DuelArenaPage.css';
+
+// Custom resize handle component
+const CustomResizeHandle = ({ direction = 'horizontal' }: { direction?: 'horizontal' | 'vertical' }) => (
+  <PanelResizeHandle 
+    className={`resize-handle ${direction === 'horizontal' ? 'resize-handle-horizontal' : 'resize-handle-vertical'}`}
+  >
+    <div className="resize-handle-inner" />
+  </PanelResizeHandle>
+);
 
 const DuelArenaPage: React.FC = () => {
   const { duelId } = useParams<{ duelId: string }>();
@@ -44,8 +75,9 @@ const DuelArenaPage: React.FC = () => {
 
   const [userCode, setUserCode] = useState<string>('');
   const [showOpponentCode, setShowOpponentCode] = useState(true);
-  const [showProblemPanel, setShowProblemPanel] = useState(true);
   const [supportedLanguages, setSupportedLanguages] = useState<SupportedLanguage[]>([]);
+  const [activeTab, setActiveTab] = useState<'description' | 'testcases'>('description');
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Collapse sidebar on enter, expand on leave
   useEffect(() => {
@@ -58,9 +90,8 @@ const DuelArenaPage: React.FC = () => {
   // Handle initial connection and disconnection on component unmount
   useEffect(() => {
     if (duelId && isAuthenticated && user?.id) {
-      connect(duelId); // Connect to WebSocket
+      connect(duelId);
     } else if (!isAuthenticated) {
-      // If not authenticated, redirect to login
       addToast({
         type: 'info',
         title: t('duels.loginToStartDuelTitle'),
@@ -70,7 +101,7 @@ const DuelArenaPage: React.FC = () => {
     }
 
     return () => {
-      disconnect(); // Disconnect WebSocket on unmount
+      disconnect();
     };
   }, [duelId, isAuthenticated, user?.id, navigate, addToast, t, connect, disconnect]);
 
@@ -191,8 +222,11 @@ const DuelArenaPage: React.FC = () => {
   const isPVP = duel.player_two_id !== null && duel.player_two_id !== undefined && duel.player_two_id !== "ai";
   const opponentIsAi = !isPVP;
 
+  // Parse test cases from problem
+  const testCases = duel.problem?.test_cases?.filter(tc => tc.is_public) || [];
+
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col bg-gradient-to-br from-arena-dark via-arena-surface to-arena-dark text-white relative overflow-hidden">
+    <div className={`${isFullscreen ? 'fixed inset-0 z-50' : 'h-[calc(100vh-64px)]'} flex flex-col bg-gradient-to-br from-arena-dark via-arena-surface to-arena-dark text-white relative overflow-hidden`}>
       {/* Animated background mesh */}
       <div className="absolute inset-0 bg-gradient-to-br from-arena-accent/5 via-transparent to-purple-500/5 animate-pulse"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_40%_20%,rgba(0,255,136,0.1)_0%,transparent_50%),radial-gradient(circle_at_80%_0%,rgba(139,92,246,0.1)_0%,transparent_50%),radial-gradient(circle_at_0%_50%,rgba(6,182,212,0.1)_0%,transparent_50%)]"></div>
@@ -290,241 +324,408 @@ const DuelArenaPage: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Fullscreen Toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="hover:bg-arena-surface/50"
+          >
+            {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+          </Button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col gap-4 p-4 h-full overflow-hidden">
-        {/* Problem Description - Collapsible */}
-        {showProblemPanel && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="bg-arena-surface/90 border border-arena-border/50 rounded-2xl shadow-2xl backdrop-blur-xl flex-shrink-0 overflow-hidden max-h-72"
-          >
-            <div className="p-4 md:p-6 h-full flex flex-col">
-              <div className="flex items-center justify-between mb-4 flex-shrink-0">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-arena-accent/20 rounded-xl blur-md"></div>
-                    <div className="relative p-2 md:p-3 bg-gradient-to-br from-arena-accent/15 to-arena-accent/5 rounded-xl border border-arena-accent/30">
-                      <Target size={20} className="md:w-6 md:h-6 text-arena-accent" />
-                    </div>
-                  </div>
-                  <div>
-                    <h2 className="font-bold text-xl md:text-2xl text-white">{duel.problem?.title || 'Loading...'}</h2>
-                    <p className="text-sm text-arena-text-muted font-medium">Solve to win the duel</p>
-                  </div>
+      {/* Main Content with Resizable Panels */}
+      <main className="flex-1 p-4 overflow-hidden">
+        <PanelGroup direction="horizontal" className="h-full">
+          {/* Left Panel: Problem Description & Tests */}
+          <Panel defaultSize={30} minSize={20} maxSize={50}>
+            <div className="h-full pr-2">
+              <div className="bg-arena-surface/90 border border-arena-border/50 rounded-2xl shadow-2xl backdrop-blur-xl h-full flex flex-col">
+                {/* Tabs */}
+                <div className="flex items-center border-b border-arena-border/50 bg-arena-surface rounded-t-2xl">
+                  <button
+                    onClick={() => setActiveTab('description')}
+                    className={`flex items-center gap-2 px-6 py-4 font-medium transition-all relative ${
+                      activeTab === 'description'
+                        ? 'text-arena-accent'
+                        : 'text-arena-text-muted hover:text-arena-text'
+                    }`}
+                  >
+                    <FileText size={18} />
+                    <span>Problem Description</span>
+                    {activeTab === 'description' && (
+                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-arena-accent"></div>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('testcases')}
+                    className={`flex items-center gap-2 px-6 py-4 font-medium transition-all relative ${
+                      activeTab === 'testcases'
+                        ? 'text-arena-accent'
+                        : 'text-arena-text-muted hover:text-arena-text'
+                    }`}
+                  >
+                    <TestTube size={18} />
+                    <span>Test Cases</span>
+                    {activeTab === 'testcases' && (
+                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-arena-accent"></div>
+                    )}
+                  </button>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setShowProblemPanel(false)}
-                  className="hover:bg-arena-surface/50"
-                >
-                  <Eye className="w-5 h-5" />
-                </Button>
-              </div>
-              <div className="flex-1 overflow-y-auto pr-2">
-                <div className="prose prose-invert prose-sm max-w-none">
-                  {duel.problem?.description ? (
-                    <div 
-                      className="text-arena-text leading-relaxed"
-                      dangerouslySetInnerHTML={{ 
-                        __html: duel.problem.description
-                          .replace(/\n/g, '<br>')
-                          .replace(/`([^`]+)`/g, '<code class="bg-arena-dark/50 px-2 py-1 rounded text-arena-accent font-mono text-sm border border-arena-accent/20">$1</code>')
-                      }} 
-                    />
+
+                {/* Tab Content */}
+                <div className="flex-1 p-6 overflow-y-auto">
+                  {activeTab === 'description' ? (
+                    <div>
+                      <h2 className="text-2xl font-bold text-white mb-4">{duel.problem?.title || 'Loading...'}</h2>
+                      <div className="prose prose-invert prose-sm max-w-none">
+                        {duel.problem?.description ? (
+                          <div 
+                            className="text-arena-text leading-relaxed"
+                            dangerouslySetInnerHTML={{ 
+                              __html: duel.problem.description
+                                .replace(/\n/g, '<br>')
+                                .replace(/`([^`]+)`/g, '<code class="bg-arena-dark/50 px-2 py-1 rounded text-arena-accent font-mono text-sm border border-arena-accent/20">$1</code>')
+                            }} 
+                          />
+                        ) : (
+                          <div className="animate-pulse space-y-4">
+                            <div className="h-5 bg-arena-dark/50 rounded w-2/3"></div>
+                            <div className="h-5 bg-arena-dark/50 rounded w-full"></div>
+                            <div className="h-5 bg-arena-dark/50 rounded w-1/2"></div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   ) : (
-                    <div className="animate-pulse space-y-4">
-                      <div className="h-5 bg-arena-dark/50 rounded w-2/3"></div>
-                      <div className="h-5 bg-arena-dark/50 rounded w-full"></div>
-                      <div className="h-5 bg-arena-dark/50 rounded w-1/2"></div>
+                    <div className="space-y-6">
+                      <h3 className="text-lg font-semibold text-white">Public Test Cases</h3>
+                      {testCases.length > 0 ? (
+                        <div className="space-y-4">
+                          {testCases.map((testCase, index) => (
+                            <div key={index} className="bg-arena-dark/30 rounded-xl p-4 border border-arena-border/30">
+                              <div className="flex items-center gap-2 mb-3">
+                                <div className="w-8 h-8 bg-arena-accent/20 rounded-lg flex items-center justify-center">
+                                  <span className="text-sm font-bold text-arena-accent">#{index + 1}</span>
+                                </div>
+                                <span className="text-sm font-medium text-arena-text-muted">Test Case</span>
+                              </div>
+                              
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="text-xs font-medium text-arena-text-muted uppercase tracking-wider">Input:</label>
+                                  <div className="mt-1 bg-arena-dark/50 rounded-lg p-3 font-mono text-sm text-white border border-arena-border/20">
+                                    {testCase.input_data}
+                                  </div>
+                                </div>
+                                
+                                <div>
+                                  <label className="text-xs font-medium text-arena-text-muted uppercase tracking-wider">Expected Output:</label>
+                                  <div className="mt-1 bg-arena-dark/50 rounded-lg p-3 font-mono text-sm text-emerald-400 border border-arena-border/20">
+                                    {testCase.expected_output}
+                                  </div>
+                                </div>
+                                
+                                {testCase.explanation && (
+                                  <div>
+                                    <label className="text-xs font-medium text-arena-text-muted uppercase tracking-wider">Explanation:</label>
+                                    <div className="mt-1 text-sm text-arena-text">
+                                      {testCase.explanation}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center text-arena-text-muted py-8">
+                          <TestTube size={48} className="mx-auto mb-4 opacity-50" />
+                          <p>No public test cases available</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
             </div>
-          </motion.div>
-        )}
+          </Panel>
 
-        {/* Button to show problem if hidden */}
-        {!showProblemPanel && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex justify-center"
-          >
-            <Button 
-              variant="secondary" 
-              onClick={() => setShowProblemPanel(true)}
-              className="bg-arena-surface/50 hover:bg-arena-surface/70 border-arena-border"
-            >
-              <Target className="w-4 h-4 mr-2" />
-              {t('duels.showProblem')}
-            </Button>
-          </motion.div>
-        )}
+          <CustomResizeHandle direction="horizontal" />
 
-        {/* Main Content Area */}
-        <div className="flex-1 grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-4 h-full overflow-hidden">
-          {/* Left: Code Editors */}
-          <div className="flex flex-col gap-4 h-full overflow-hidden">
-            {/* User Code Editor - Now takes more space */}
-            <div className="bg-arena-surface/90 border border-arena-border/50 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col h-3/5">
-              <div className="flex items-center justify-between p-3 bg-arena-surface rounded-t-2xl border-b border-arena-border/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse"></div>
-                  <User className="w-5 h-5 text-blue-400" />
-                  <span className="font-semibold text-arena-text-primary text-lg">{user?.username || 'You'}</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="w-48">
-                    <select
-                      value={currentLanguage?.id || ''}
-                      onChange={(e) => handleLanguageChange(e.target.value)}
-                      className="bg-arena-dark border border-arena-border text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 font-mono"
-                      disabled={!supportedLanguages.length}
-                    >
-                      <option value="" disabled>Select Language</option>
-                      {supportedLanguages.map(lang => (
-                        <option key={lang.id} value={lang.id}>{lang.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div className="flex-1 relative">
-                <CodeEditor
-                  value={userCode}
-                  language={currentLanguage.id}
-                  onChange={handleUserCodeChange}
-                  theme="vs-dark"
-                  height="100%"
-                  options={{
-                    minimap: { enabled: window.innerWidth > 1400 },
-                    scrollBeyondLastLine: false,
-                    fontSize: window.innerWidth < 768 ? 14 : 16,
-                    lineHeight: 1.6,
-                    padding: { top: 20, bottom: 20 },
-                    smoothScrolling: true,
-                    cursorBlinking: 'smooth',
-                    renderLineHighlight: 'all',
-                    bracketPairColorization: { enabled: true },
-                    wordWrap: 'on',
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Opponent Code Editor - Collapsible */}
-            {showOpponentCode && (
-              <motion.div 
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="bg-arena-surface/90 border border-arena-border/50 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col h-2/5"
-              >
-                <div className="flex items-center justify-between p-3 bg-arena-surface rounded-t-2xl border-b border-arena-border/50">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${opponentTyping ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
-                    {opponentIsAi ? <Bot className="w-5 h-5 text-purple-400" /> : <User className="w-5 h-5 text-red-400" />}
-                    <span className="font-semibold text-arena-text-primary text-lg">{isPVP ? 'Opponent' : 'AI Opponent'}</span>
-                    {opponentTyping && <span className="text-sm text-green-400 italic ml-2 animate-pulse">typing...</span>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {opponentIsAi && (
-                      <div className="bg-arena-dark/80 px-3 py-1 rounded-lg text-sm font-mono">
-                        AI: {Math.round(aiProgress)}%
+          {/* Middle Panel: Code Editors */}
+          <Panel defaultSize={45} minSize={30}>
+            <div className="h-full px-2">
+              <PanelGroup direction="vertical" className="h-full">
+                {/* User Code Editor */}
+                <Panel defaultSize={showOpponentCode ? 60 : 100} minSize={40}>
+                  <div className="h-full pb-2">
+                    <div className="bg-arena-surface/90 border border-arena-border/50 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col h-full">
+                      <div className="flex items-center justify-between px-4 py-3 bg-arena-surface rounded-t-2xl border-b border-arena-border/50">
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse"></div>
+                          </div>
+                          <Code2 className="w-5 h-5 text-blue-400" />
+                          <span className="font-semibold text-arena-text-primary text-lg">{user?.username || 'You'}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <select
+                            value={currentLanguage?.id || ''}
+                            onChange={(e) => handleLanguageChange(e.target.value)}
+                            className="bg-arena-dark border border-arena-border text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 px-3 py-1.5 font-mono"
+                            disabled={!supportedLanguages.length}
+                          >
+                            <option value="" disabled>Select Language</option>
+                            {supportedLanguages.map(lang => (
+                              <option key={lang.id} value={lang.id}>{lang.name}</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
-                    )}
-                    <Button variant="ghost" size="sm" onClick={() => setShowOpponentCode(false)}>
-                      <Eye className="w-5 h-5" />
-                    </Button>
+                      <div className="flex-1 relative">
+                        <CodeEditor
+                          value={userCode}
+                          language={currentLanguage.id}
+                          onChange={handleUserCodeChange}
+                          theme="vs-dark"
+                          height="100%"
+                          options={{
+                            minimap: { enabled: false },
+                            scrollBeyondLastLine: false,
+                            fontSize: 16,
+                            lineHeight: 1.6,
+                            padding: { top: 20, bottom: 20 },
+                            smoothScrolling: true,
+                            cursorBlinking: 'smooth',
+                            renderLineHighlight: 'all',
+                            bracketPairColorization: { enabled: true },
+                            wordWrap: 'on',
+                            automaticLayout: true,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </Panel>
+
+                {showOpponentCode && (
+                  <>
+                    <CustomResizeHandle direction="vertical" />
+                    
+                    {/* Opponent Code Editor */}
+                    <Panel defaultSize={40} minSize={20}>
+                      <div className="h-full pt-2">
+                        <div className="bg-arena-surface/90 border border-arena-border/50 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col h-full">
+                          <div className="flex items-center justify-between px-4 py-3 bg-arena-surface rounded-t-2xl border-b border-arena-border/50">
+                            <div className="flex items-center gap-3">
+                              <div className={`relative`}>
+                                <div className={`w-3 h-3 rounded-full ${opponentTyping ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
+                              </div>
+                              {opponentIsAi ? <Bot className="w-5 h-5 text-purple-400" /> : <User className="w-5 h-5 text-red-400" />}
+                              <span className="font-semibold text-arena-text-primary text-lg">{isPVP ? 'Opponent' : 'AI Opponent'}</span>
+                              {opponentTyping && <span className="text-sm text-green-400 italic ml-2 animate-pulse">typing...</span>}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {opponentIsAi && (
+                                <div className="bg-arena-dark/80 px-3 py-1 rounded-lg text-sm font-mono">
+                                  AI: {Math.round(aiProgress)}%
+                                </div>
+                              )}
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => setShowOpponentCode(false)}
+                                className="hover:bg-arena-surface/50"
+                              >
+                                <EyeOff className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="flex-1 relative">
+                            <CodeEditor
+                              value={opponentCode}
+                              language={currentLanguage.id}
+                              readOnly
+                              theme="vs-dark"
+                              height="100%"
+                              options={{
+                                minimap: { enabled: false },
+                                scrollBeyondLastLine: false,
+                                fontSize: 16,
+                                lineHeight: 1.6,
+                                padding: { top: 20, bottom: 20 },
+                                readOnly: true,
+                                wordWrap: 'on',
+                                automaticLayout: true,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </Panel>
+                  </>
+                )}
+              </PanelGroup>
+
+              {/* Show Opponent Button */}
+              {!showOpponentCode && (
+                <div className="mt-4 flex justify-center">
+                  <Button 
+                    variant="secondary" 
+                    onClick={() => setShowOpponentCode(true)}
+                    className="bg-arena-surface/50 hover:bg-arena-surface/70 border-arena-border"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Show Opponent Code
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Panel>
+
+          <CustomResizeHandle direction="horizontal" />
+
+          {/* Right Panel: Actions & Results */}
+          <Panel defaultSize={25} minSize={20} maxSize={40}>
+            <div className="h-full pl-2">
+              <div className="bg-arena-surface/90 border border-arena-border/50 rounded-2xl shadow-2xl backdrop-blur-xl h-full flex flex-col p-6">
+                {/* Actions */}
+                <div className="space-y-4 mb-6">
+                  <h3 className="text-lg font-bold text-arena-text-primary border-b border-arena-border pb-2">Actions</h3>
+                  <Button 
+                    onClick={handleRunTests} 
+                    disabled={duel?.status !== DuelStatus.IN_PROGRESS}
+                    variant="secondary"
+                    className="w-full h-12 text-base font-medium"
+                  >
+                    <Play className="mr-2 h-5 w-5" />
+                    Run Tests
+                  </Button>
+                  <Button 
+                    onClick={handleSubmitSolution} 
+                    disabled={duel?.status !== DuelStatus.IN_PROGRESS}
+                    variant="gradient"
+                    className="w-full h-12 text-base font-medium"
+                  >
+                    <CheckCircle className="mr-2 h-5 w-5" />
+                    Submit Solution
+                  </Button>
+                </div>
+
+                {/* Test Results */}
+                <div className="flex-1 overflow-hidden flex flex-col">
+                  <h3 className="text-lg font-bold text-arena-text-primary border-b border-arena-border pb-2 mb-4">Test Results</h3>
+                  <div className="flex-1 overflow-y-auto">
+                    <AnimatePresence mode="wait">
+                      {submissionResult ? (
+                        <motion.div
+                          key="result"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          {/* Enhanced Test Results Display */}
+                          <div className="space-y-4">
+                            {/* Overall Status */}
+                            <div className={`p-4 rounded-xl border ${
+                              submissionResult.is_correct 
+                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+                                : 'bg-red-500/10 border-red-500/30 text-red-400'
+                            }`}>
+                              <div className="flex items-center gap-3">
+                                {submissionResult.is_correct ? (
+                                  <CheckCheck className="w-6 h-6" />
+                                ) : (
+                                  <XCircle className="w-6 h-6" />
+                                )}
+                                <span className="font-semibold text-lg">
+                                  {submissionResult.is_correct ? 'All Tests Passed!' : 'Tests Failed'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Test Summary */}
+                            <div className="bg-arena-dark/30 rounded-lg p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="text-sm font-medium text-arena-text-muted uppercase tracking-wider">Test Results</h4>
+                                <span className="text-sm font-mono text-arena-text">
+                                  {submissionResult.passed} / {submissionResult.total} Passed
+                                </span>
+                              </div>
+                              
+                              {/* Progress Bar */}
+                              <div className="w-full h-2 bg-arena-border/50 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-500"
+                                  style={{ width: `${(submissionResult.passed / submissionResult.total) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Individual Test Details */}
+                            {submissionResult.details && submissionResult.details.length > 0 && (
+                              <div className="space-y-3">
+                                <h4 className="text-sm font-medium text-arena-text-muted uppercase tracking-wider">Test Details</h4>
+                                {submissionResult.details.map((detail: string, index: number) => {
+                                  const isPassed = detail.toLowerCase().includes('passed');
+                                  return (
+                                    <div key={index} className="bg-arena-dark/30 rounded-lg p-3 space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium">Test {index + 1}</span>
+                                        <span className={`text-xs px-2 py-1 rounded ${
+                                          isPassed 
+                                            ? 'bg-emerald-500/20 text-emerald-400' 
+                                            : 'bg-red-500/20 text-red-400'
+                                        }`}>
+                                          {isPassed ? 'PASSED' : 'FAILED'}
+                                        </span>
+                                      </div>
+                                      {!isPassed && (
+                                        <div className="text-xs text-red-400 font-mono bg-red-500/10 p-2 rounded whitespace-pre-wrap">
+                                          {detail}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* Compilation Error */}
+                            {submissionResult.error && (
+                              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                                <h4 className="text-sm font-medium text-red-400 mb-2">Error</h4>
+                                <pre className="text-xs text-red-300 font-mono whitespace-pre-wrap">
+                                  {submissionResult.error}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="empty"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="text-center py-8"
+                        >
+                          <TestTube size={48} className="mx-auto mb-4 text-arena-text-muted opacity-50" />
+                          <p className="text-arena-text-muted">Run tests to see results here</p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
-                <div className="flex-1 relative">
-                  <CodeEditor
-                    value={opponentCode}
-                    language={currentLanguage.id}
-                    readOnly
-                    theme="vs-dark"
-                    height="100%"
-                    options={{
-                      minimap: { enabled: false },
-                      scrollBeyondLastLine: false,
-                      fontSize: window.innerWidth < 768 ? 14 : 16,
-                      lineHeight: 1.6,
-                      padding: { top: 20, bottom: 20 },
-                      readOnly: true,
-                      wordWrap: 'on',
-                    }}
-                  />
-                </div>
-              </motion.div>
-            )}
-
-            {/* Button to show opponent if hidden */}
-            {!showOpponentCode && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex justify-center"
-              >
-                <Button 
-                  variant="secondary" 
-                  onClick={() => setShowOpponentCode(true)}
-                  className="bg-arena-surface/50 hover:bg-arena-surface/70 border-arena-border"
-                >
-                  {opponentIsAi ? <Bot className="w-4 h-4 mr-2" /> : <User className="w-4 h-4 mr-2" />}
-                  {t('duels.showOpponent')}
-                </Button>
-              </motion.div>
-            )}
-          </div>
-
-          {/* Right: Actions & Test Results */}
-          <aside className="bg-arena-surface/90 border border-arena-border/50 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col p-6 gap-6">
-            <div className="flex flex-col space-y-4">
-              <h3 className="text-lg font-bold text-arena-text-primary border-b border-arena-border pb-2">{t('duels.actions')}</h3>
-              <Button 
-                onClick={handleRunTests} 
-                disabled={duel?.status !== DuelStatus.IN_PROGRESS}
-                variant="secondary"
-                className="h-12 text-base font-medium"
-              >
-                <Play className="mr-2 h-5 w-5" />
-                {t('coding.runTests')}
-              </Button>
-              <Button 
-                onClick={handleSubmitSolution} 
-                disabled={duel?.status !== DuelStatus.IN_PROGRESS}
-                variant="gradient"
-                className="h-12 text-base font-medium"
-              >
-                <CheckCircle className="mr-2 h-5 w-5" />
-                {t('coding.submitSolution')}
-              </Button>
+              </div>
             </div>
-
-            <div className="flex-1 overflow-y-auto">
-              <h3 className="text-lg font-bold text-arena-text-primary border-b border-arena-border pb-2 mb-4">{t('duels.testResults')}</h3>
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={submissionResult ? 'result' : 'prompt'}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <SubmissionResult result={submissionResult} t={t} />
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </aside>
-        </div>
+          </Panel>
+        </PanelGroup>
       </main>
     </div>
   );
