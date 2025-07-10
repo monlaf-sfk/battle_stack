@@ -116,7 +116,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       }
     } catch (error) {
       console.error('Monaco Editor theme configuration failed:', error);
-      setEditorError(t('codeEditor.themeConfigFailed'));
+      setEditorError(t('coding.themeConfigFailed'));
     }
   };
 
@@ -133,7 +133,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       }
     } catch (error) {
       console.error('Monaco Editor beforeMount error:', error);
-      setEditorError(t('codeEditor.initializationFailed'));
+      setEditorError(t('coding.initializationFailed'));
     }
   };
 
@@ -178,7 +178,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     <div className="flex items-center justify-center h-full bg-arena-dark border border-arena-border rounded-lg">
       <div className="flex flex-col items-center gap-3">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-arena-accent border-t-transparent"></div>
-        <span className="text-arena-text-muted text-sm">{t('codeEditor.loading')}</span>
+        <span className="text-arena-text-muted text-sm">{t('coding.loading')}</span>
       </div>
     </div>
   );
@@ -188,10 +188,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-2 bg-arena-surface/50 border-b border-arena-border">
         <span className="text-xs text-arena-text-muted">
-          {t('codeEditor.fallbackEditor', { language })}
+          {t('coding.fallbackEditor', { language })}
         </span>
         <span className="text-xs text-yellow-400">
-          {t('codeEditor.monacoUnavailable')}
+          {t('coding.monacoUnavailable')}
         </span>
       </div>
       <textarea
@@ -205,7 +205,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           lineHeight: '1.5',
           tabSize: 4,
         }}
-        placeholder={t('codeEditor.writeCodePlaceholder', { language })}
+        placeholder={t('coding.writeCodePlaceholder', { language })}
         spellCheck={false}
       />
     </div>

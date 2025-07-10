@@ -1,28 +1,27 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import { useAuth, AuthProvider } from './contexts/AuthContext';
-import { ToastProvider } from './components/ui/Toast';
-import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import DashboardPage from './pages/DashboardPage';
-import DuelsPage from './pages/DuelsPage';
-import DuelArenaPage from './pages/DuelArenaPage';
-import DuelCompletionPage from './pages/DuelCompletionPage';
-import CodeExecutionDemoPage from './pages/CodeExecutionDemoPage';
-import { MainLayout } from './components/layout/MainLayout';
-import { LayoutProvider } from './contexts/LayoutContext';
-import ProfilePage from './pages/ProfilePage';
+import { useAuth, AuthProvider } from '@/contexts/AuthContext';
+import { ToastProvider } from '@/components/ui/Toast';
+import LandingPage from '@/pages/LandingPage';
+import LoginPage from '@/pages/LoginPage';
+import RegisterPage from '@/pages/RegisterPage';
+import DashboardPage from '@/pages/DashboardPage';
+import DuelsPage from '@/pages/DuelsPage';
+import DuelArenaPage from '@/pages/DuelArenaPage';
+import DuelCompletionPage from '@/pages/DuelCompletionPage';
+import CodeExecutionDemoPage from '@/pages/CodeExecutionDemoPage';
+import { MainLayout } from '@/components/layout/MainLayout';
+import { LayoutProvider } from '@/contexts/LayoutContext';
+import ProfilePage from '@/pages/ProfilePage';
 // import QuickDuelPage from './pages/QuickDuelPage';
 // import PvEDuelPage from './pages/PvEDuelPage';
-import { DuelProvider } from './hooks/useDuelManager';
-import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { PublicRoute } from './components/auth/PublicRoute';
-import LeaderboardsPage from "./pages/LeaderboardsPage";
-import SettingsPage from './pages/SettingsPage';
+import { DuelProvider } from '@/hooks/useDuelManager';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { PublicRoute } from '@/components/auth/PublicRoute';
+import LeaderboardsPage from "@/pages/LeaderboardsPage";
+import SettingsPage from '@/pages/SettingsPage';
 import { I18nextProvider } from 'react-i18next';
-import i18n from './i18n'; // Import the i18n configuration
-import type { DuelResult } from './services/duelService';
+import i18n from '@/i18n'; // Import the i18n configuration
 
 const queryClient = new QueryClient();
 
@@ -58,7 +57,6 @@ const AppRoutes = () => {
             <Route path="/duel/:duelId" element={<DuelArenaPage />} /> {/* New route for duel arena */}
             <Route path="/duel/:duelId/complete" element={
               <DuelCompletionPage 
-                result={{} as DuelResult} // Pass a mock result or fetch from state
                 onPlayAgain={() => navigate('/duels')}
               />
             } />

@@ -2,17 +2,29 @@ import os
 import json
 import asyncio
 import uuid
-from openai import AsyncAzureOpenAI
+from openai import AsyncAzureOpenAI, NotGiven
 from pydantic import BaseModel, Field, RootModel, field_validator, ValidationError
 from typing import List, Dict, Any, Union, Optional
 import logging
 import re
 from fastapi import HTTPException
 
-from shared.app.code_runner import execute_code, SubmissionParams
-from shared.app.config import settings
+from ..code_runner import execute_code, SubmissionParams
+from ..config import settings
 
 logger = logging.getLogger(__name__)
+
+def _create_slug(title: str) -> str:
+    """Creates a URL-friendly slug from a title."""
+    # Convert to lowercase
+    slug = title.lower()
+    # Replace spaces and special characters with hyphens
+    slug = re.sub(r'\s+', '-', slug)
+    # Remove any characters that are not alphanumeric or hyphens
+    slug = re.sub(r'[^a-z0-9-]', '', slug)
+    # Remove leading/trailing hyphens
+    slug = slug.strip('-')
+    return slug
 
 # It's good practice to initialize the client once and reuse it.
 if not all([settings.AZURE_OPENAI_ENDPOINT, settings.AZURE_OPENAI_API_KEY]):
@@ -25,6 +37,12 @@ else:
         api_key=settings.AZURE_OPENAI_API_KEY,
     )
 
+class CustomAIDuelSettings(BaseModel):
+    category: str
+    theme: str
+    difficulty: str
+    language: str
+
 class GeneratorInvalidResponse(Exception):
     """Custom exception for invalid responses from the AI problem generator."""
     pass
@@ -33,7 +51,7 @@ class AIGeneratorClient:
     def __init__(self, client: Optional[AsyncAzureOpenAI]):
         self._client = client
 
-    async def generate(self, prompt: str, response_format: Optional[Dict[str, str]] = None) -> str:
+    async def generate(self, prompt: str, response_format: Optional[Dict[str, str]] = None) -> Any:
         if not self._client:
             logger.error("Azure OpenAI client is not configured. Cannot generate content.")
             raise GeneratorInvalidResponse("AI service is not configured on the server.")
@@ -46,7 +64,7 @@ class AIGeneratorClient:
                     {"role": "system", "content": "You are an expert AI assistant that generates structured JSON output."},
                     {"role": "user", "content": prompt}
                 ],
-                response_format=response_format, # Use the passed-in format
+                response_format=response_format if response_format else NotGiven,
                 temperature=0.7
             )
             response_content = completion.choices[0].message.content
@@ -79,19 +97,21 @@ class TestCase(BaseModel):
     expected_output: str
     explanation: str
     is_public: bool = False
+    is_correct: Optional[bool] = None
 
 class CodeTemplate(BaseModel):
     language: str
     template_code: str
 
 class GeneratedProblem(BaseModel):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4)
-    title: str
-    description: str
-    difficulty: str
-    solution: str = Field(..., description="The complete, correct solution code for the problem.")
-    test_cases: List[TestCase]
-    code_templates: List[CodeTemplate]
+    title: str = Field(..., description="A clear, descriptive title for the problem (e.g., 'Two Sum', 'Reverse a Linked List').")
+    slug: str = Field(..., description="A URL-friendly slug for the problem (e.g., 'two-sum', 'reverse-linked-list').")
+    description: str = Field(..., description="A detailed explanation of the problem, including input/output formats and constraints.")
+    difficulty: str = Field(..., description="The difficulty of the problem (e.g., 'Easy', 'Medium', 'Hard').")
+    solution: str = Field(..., description="The complete, correct Python solution for the problem. Must contain only the function definition(s).")
+    code_templates: List[CodeTemplate] = Field(..., description="A list of code templates for different languages.")
+    function_name: str = Field(..., description="The name of the main function to be tested (e.g., 'solve_problem').")
+    test_cases: List[TestCase] = Field(..., description="A list of test cases to validate the solution.")
     time_limit_ms: int = 2000
     memory_limit_mb: int = 128
 
@@ -144,25 +164,22 @@ def generate_algorithm_problem_prompt(theme: str, difficulty: str, language: str
     8. Include proper function signatures, clear variable names, and a detailed description with examples and constraints.
     
     TEST CASES REQUIREMENTS:
-    - Generate 10-15 test cases total
-    - Include basic examples, edge cases (empty inputs, single elements, maximum constraints), boundary conditions, and corner cases
-    - Test cases should cover all possible scenarios and validate correctness thoroughly
-    - Include both small and large inputs to test performance
-    - Ensure comprehensive coverage of the problem space
+    - **CRITICAL**: The `input_data` for each test case must be a string that can be parsed by Python's `ast.literal_eval`. The solution function will receive the parsed object as an argument.
+    - For example, if the function expects a list of integers, `input_data` MUST be a string literal like `"[1, 2, 3]"`.
+    - If the function expects a string, `input_data` MUST be a quoted string literal like `"'hello'"`.
+    - If the function takes multiple arguments, they MUST be provided in a tuple literal, e.g., `"(1, 'a', [2, 3])"`.
+    - Generate 10-15 test cases total.
+    - Include basic examples, edge cases (empty inputs, single elements), boundary conditions, and performance tests.
+    - Ensure comprehensive coverage of the problem space.
     
     IMPORTANT CODE TEMPLATE REQUIREMENTS:
-    - The `code_templates` must be BOILERPLATE ONLY. It should define the function signature and a simple I/O wrapper.
+    - The `code_templates` must contain ONLY the function signature and a 'TODO' comment. It should NOT include any input/output handling (like `input()` or `print()` calls). The system will handle I/O automatically.
     - The function body should be empty or contain a 'pass' statement with a 'TODO' comment.
     - Example Python `template_code`:
       ```python
       def function_name(params):
           # TODO: Implement solution
           pass
-      
-      # Read input and call function
-      input_data = eval(input())
-      result = function_name(input_data)
-      print(result)
       ```
 
     The `solution` field must contain ONLY the raw function definition(s), like `def my_function(a, b): ...`.
@@ -210,6 +227,19 @@ async def generate_algorithm_problem(theme: str, difficulty: str, language: str 
     try:
         response_json = await generator_client.generate(prompt, response_format={"type": "json_object"})
         
+        # Extract function name from the generated solution before validation
+        function_name = None
+        if language == "python":
+            match = re.search(r"def\s+(\w+)\s*\(", response_json.get("solution", ""))
+            if match:
+                function_name = match.group(1)
+        
+        # Add the extracted function name and a generated slug to the response data
+        response_json['function_name'] = function_name
+        if response_json.get("title"):
+            response_json['slug'] = _create_slug(response_json['title'])
+
+
         # Validate the parsed JSON against our Pydantic model
         problem = GeneratedProblem(**response_json)
         
@@ -218,16 +248,10 @@ async def generate_algorithm_problem(theme: str, difficulty: str, language: str 
         logger.info(f"Self-correcting test cases for generated problem: {problem.title}")
         
         # Find function name for wrapper
-        function_name = None
-        if language == "python":
-            match = re.search(r"def\s+(\w+)\s*\(", problem.solution)
-            if match:
-                function_name = match.group(1)
-
         if not function_name:
             logger.warning(f"Could not determine function name for self-correction. Skipping.")
             return problem # Or handle as an error
-
+            
         # Safer I/O wrapper using ast.literal_eval
         wrapper = f"""
 import sys
@@ -238,95 +262,88 @@ try:
     input_str = sys.stdin.read().strip()
     if input_str:
         # Safely parse the input string into a Python object
+        # It's expected to be a list or tuple literal, e.g., "[1, 2, 3]" or "('a', 'b')"
         parsed_input = ast.literal_eval(input_str)
         
+        # Handle different input patterns
         if isinstance(parsed_input, tuple):
+            # Assumes the function takes multiple arguments
             result = {function_name}(*parsed_input)
         else:
+            # Assumes the function takes a single argument (e.g., a list)
             result = {function_name}(parsed_input)
             
+        # Print the result to stdout
         if result is not None:
             print(result)
 
 except Exception as e:
-    print(f"Execution Error: {{e}}", file=sys.stderr)
+    import traceback
+    print(f"Execution Error: {{type(e).__name__}}: {{e}}", file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
 """
         source_to_run = problem.solution + "\n" + wrapper
 
         validation_successful = True
-        try:
-            for i, test_case in enumerate(problem.test_cases):
-                logger.info(f"Running solution against test case {i+1} input: {test_case.input_data}")
-                params = SubmissionParams(
-                    source_code=source_to_run,
-                    language_id=71,  # Python 3
-                    stdin=test_case.input_data,
-                    cpu_time_limit=5.0,  # Increased timeout
-                    memory_limit=256000  # Increased memory limit
-                )
+        corrected_test_cases = []
+
+        for i, test_case in enumerate(problem.test_cases):
+            # The input data should be a string literal of the python object
+            # e.g., "[1, 2, 3]" for a list
+            stdin_to_run = str(test_case.input_data)
+            
+            logger.info(f"Running solution against test case {i+1} input: {stdin_to_run}")
+
+            params = SubmissionParams(
+                source_code=source_to_run,
+                language_id=71, # Python
+                stdin=stdin_to_run,
+                expected_output=None,
+                cpu_time_limit=problem.time_limit_ms / 1000,
+                memory_limit=problem.memory_limit_mb * 1024
+            )
+            
+            try:
+                result_data = await execute_code(params)
+                status_desc = result_data.status.get("description")
                 
-                try:
-                    result = await asyncio.wait_for(execute_code(params), timeout=10.0)  # 10 second timeout
-                    
-                    if result.status['description'] == 'Accepted' and result.stdout is not None:
-                        corrected_output = result.stdout.strip()
-                        if test_case.expected_output.strip() != corrected_output:
-                            logger.warning(f"Correcting test case {i+1}. Original output: '{test_case.expected_output}', Corrected output: '{corrected_output}'")
-                        test_case.expected_output = corrected_output
+                # Check for execution errors first
+                if status_desc not in ["Accepted", "Wrong Answer"]:
+                    logger.error(f"Generated solution failed validation for input '{stdin_to_run}'. Error: {status_desc} - {result_data.stderr or result_data.compile_output}")
+                    test_case.is_correct = False
+                    validation_successful = False
+                else:
+                    actual_output = (result_data.stdout or "").strip()
+                    expected_output_str = str(test_case.expected_output).strip()
+
+                    if actual_output != expected_output_str:
+                        logger.warning(f"Correcting test case {i+1}. Original output: '{expected_output_str}', Corrected output: '{actual_output}'")
+                        test_case.expected_output = actual_output
+                        test_case.is_correct = True
                     else:
-                        # If the solution code fails on one of its own test cases, the problem is invalid.
-                        error_details = result.stderr or result.compile_output or result.message
-                        logger.error(f"Generated solution failed validation for input '{test_case.input_data}'. Error: {error_details}")
-                        validation_successful = False
-                        break
-                        
-                except asyncio.TimeoutError:
-                    logger.warning(f"Validation timeout for test case {i+1}. Using original expected output.")
-                    validation_successful = False
-                    break
-                except Exception as validation_error:
-                    logger.warning(f"Validation failed for test case {i+1}: {validation_error}. Using original expected output.")
-                    validation_successful = False
-                    break
-        
-        except Exception as e:
-            logger.warning(f"Validation process failed: {e}. Proceeding with generated test cases.")
-            validation_successful = False
+                        test_case.is_correct = True
+            
+            except Exception as e:
+                logger.error(f"An unexpected error occurred during test case validation: {e}", exc_info=True)
+                test_case.is_correct = False
+                validation_successful = False
+
+            corrected_test_cases.append(test_case)
+
+        problem.test_cases = corrected_test_cases
         
         if validation_successful:
             logger.info("✅ All test cases self-corrected successfully.")
         else:
             logger.warning("⚠️ Validation failed or timed out. Using original test cases from AI generation.")
         
-        # Set first 2-3 test cases to be public (2 for easy, 3 for medium/hard)
+        # Mark some test cases as public
         if problem.test_cases:
-            public_count = 2 if problem.difficulty.lower() == "easy" else 3
+            difficulty_str = str(problem.difficulty).lower()
+            public_count = 2 if difficulty_str == "easy" else 3
             for i in range(min(public_count, len(problem.test_cases))):
                 problem.test_cases[i].is_public = True
         
-        # Safety net: ensure template is just a stub, not the full solution
-        if problem.solution and problem.code_templates:
-            for template in problem.code_templates:
-                # Basic check: if template contains solution logic, replace it.
-                # A more robust check would be needed for production.
-                if "TODO" not in template.template_code or len(template.template_code) > (len(problem.solution) * 0.8):
-                    import re
-                    match = re.search(r"def\s+(.+?)\):", template.template_code)
-                    if match:
-                        signature = match.group(0)
-                        template.template_code = f"""{signature}
-    # TODO: Implement solution
-    pass
-
-# Read input, call the function, and print the result.
-try:
-    input_data = eval(input())
-    result = {match.group(1).split('(')[0].strip()}(input_data)
-    print(result)
-except:
-    pass
-"""
-
         return problem
         
     except GeneratorInvalidResponse:
@@ -342,7 +359,8 @@ class SQLTestCase(BaseModel):
     verification_query: str
 
 class SQLGeneratedProblem(BaseModel):
-    task_description: str
+    title: str = Field(..., description="A clear, descriptive title for the SQL problem.")
+    description: str
     schema_setup_sql: str
     correct_solution_sql: str
     test_cases: List[SQLTestCase]
@@ -355,7 +373,7 @@ async def generate_sql_problem(theme: str, difficulty: str) -> SQLGeneratedProbl
     
     try:
         response_json = await generator_client.generate(prompt, response_format={"type": "json_object"})
-        problem = GeneratedProblem.parse_raw(response_json)
+        problem = SQLGeneratedProblem.model_validate(response_json)
         
         # Here, you might want to add a self-correction step for SQL as well.
         # This would involve running the solution query against the test cases' setup_sql

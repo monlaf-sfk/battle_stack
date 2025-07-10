@@ -175,13 +175,18 @@ class DuelService {
 
   // Submit solution for a duel
   async submitSolution(duelId: string, submission: DuelSubmission): Promise<SubmissionResponse> {
-    const response: AxiosResponse<SubmissionResponse> = await duelsApi.post(`/${duelId}/submit`, submission);
-    return response.data;
+    try {
+      const response: AxiosResponse<SubmissionResponse> = await duelsApi.post(`/${duelId}/submit`, submission);
+      return response.data;
+    } catch (error) {
+      console.error("Error submitting solution:", error);
+      throw error;
+    }
   }
 
   // Test code against public tests for a duel
-  async testCode(duelId: string, submission: Omit<DuelSubmission, 'player_id'>): Promise<SubmissionResponse> {
-    const response: AxiosResponse<SubmissionResponse> = await duelsApi.post(`/${duelId}/test`, submission);
+  async testCode(duelId: string, submission: { code: string; language: string; }): Promise<SubmissionResponse> {
+    const response: AxiosResponse<SubmissionResponse> = await duelsApi.post(`/${duelId}/run-public-tests`, submission);
     return response.data;
   }
 

@@ -40,27 +40,35 @@ export interface SubmissionRequest {
 }
 
 export interface SubmissionResponse {
-  submission_id: string | null;
-  status: string;
-  passed_tests: number;
-  total_tests: number;
-  execution_time: string;
-  memory_usage: string;
-  score: number;
-  error_message: string;
-  accepted: boolean;
+  token: string;
+  status?: {
+    id: number;
+    name: string;
+    description: string;
+  };
+  passed_tests?: number;
+  total_tests?: number;
+  test_cases?: TestCaseResult[];
+  error_message?: string;
+  accepted?: boolean; // Generic boolean for overall success.
+  compile_output?: string | null; // Added to capture compilation errors
 }
 
 // 🧪 Типы для выполнения кода
 export interface TestCaseResult {
-  test_case_index: number;
-  passed: boolean;
-  input_data: any;
-  expected_output: any;
-  actual_output: any;
-  execution_time: number;
-  error_message?: string;
-  hidden: boolean;
+  stdin: string;
+  stdout: string | null;
+  expected_output: string | null;
+  status: {
+    id: number;
+    name: string;
+    description: string;
+  };
+  time: string;
+  memory: number;
+  is_public?: boolean;
+  compile_output: string | null;
+  stderr: string | null;
 }
 
 export interface CodeRunResult {
@@ -178,13 +186,8 @@ export class CodeExecutionService {
       console.error('Failed to submit solution:', error);
       // Возвращаем ошибку как валидный ответ
       return {
-        submission_id: null,
-        status: 'Internal Error',
-        passed_tests: 0,
-        total_tests: 0,
-        execution_time: '0.000s',
-        memory_usage: '0KB',
-        score: 0.0,
+        token: '',
+        status: { id: 0, name: 'Internal Error', description: 'Unknown error' },
         error_message: error instanceof Error ? error.message : 'Unknown error',
         accepted: false,
       };

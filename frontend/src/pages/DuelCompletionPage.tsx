@@ -6,10 +6,11 @@ import { Award, ThumbsDown, ThumbsUp, Repeat, BarChart2, User, Bot, Clock, Hash,
 import type { DuelResult, PlayerResult } from '@/services/duelService';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
+import { duelsApiService } from '@/services/duelService';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 interface DuelCompletionScreenProps {
-  result: DuelResult | null;
   onPlayAgain: () => void;
 }
 
@@ -82,9 +83,51 @@ const PlayerStatCard: React.FC<{
   );
 };
 
-const DuelCompletionScreen: React.FC<DuelCompletionScreenProps> = ({ result, onPlayAgain }) => {
+const DuelCompletionScreen: React.FC<DuelCompletionScreenProps> = ({ onPlayAgain }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { duelId } = useParams<{ duelId: string }>();
+  const [result, setResult] = React.useState<DuelResult | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchResult = async () => {
+      if (!duelId) {
+        setIsLoading(false);
+        return;
+      }
+      try {
+        // We need to fetch the full duel details which should contain the result
+        const duelDetails = await duelsApiService.getDuel(duelId);
+        if (duelDetails.results) {
+           // Assuming duelDetails.results is of type DuelResult
+           setResult(duelDetails.results as unknown as DuelResult);
+        }
+      } catch (error) {
+        console.error('Failed to fetch duel results:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchResult();
+  }, [duelId]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="w-full max-w-5xl p-6">
+          <Skeleton className="h-24 w-24 mx-auto rounded-full" />
+          <Skeleton className="h-12 w-64 mx-auto mt-4" />
+          <Skeleton className="h-8 w-48 mx-auto mt-2" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
+            <Skeleton className="h-64 rounded-2xl" />
+            <Skeleton className="h-64 rounded-2xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!result) {
     return (
@@ -96,6 +139,15 @@ const DuelCompletionScreen: React.FC<DuelCompletionScreenProps> = ({ result, onP
 
   const isWinner = result.winner_id === user?.id;
   const isDraw = result.winner_id === null;
+
+  // Debug logging to understand the issue
+  console.log('🔍 DuelCompletionScreen Debug:', {
+    winner_id: result.winner_id,
+    user_id: user?.id,
+    isWinner,
+    isDraw,
+    result
+  });
 
   const userResult: PlayerResult | null = result.player_one_result?.player_id === user?.id
     ? result.player_one_result
@@ -177,7 +229,7 @@ const DuelCompletionScreen: React.FC<DuelCompletionScreenProps> = ({ result, onP
           />
           <PlayerStatCard
             username={result.is_ai_duel ? 'AI Opponent' : 'Opponent'}
-            isWinner={!isWinner || isDraw}
+            isWinner={isDraw ? true : !isWinner}
             isAI={result.is_ai_duel}
             stats={opponentStats}
           />

@@ -1,19 +1,28 @@
-K_FACTOR = 32
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from uuid import UUID
+from .models import PlayerRating
 
-def get_expected_score(player_rating: int, opponent_rating: int) -> float:
+async def get_or_create_player_rating(db: AsyncSession, user_id: UUID, username: str) -> PlayerRating:
     """
-    Calculate the expected score of a player against an opponent.
+    Retrieves a player's rating, creating it if it doesn't exist.
     """
-    return 1 / (1 + 10 ** ((opponent_rating - player_rating) / 400))
+    result = await db.execute(select(PlayerRating).where(PlayerRating.user_id == user_id))
+    player_rating = result.scalar_one_or_none()
+    if not player_rating:
+        player_rating = PlayerRating(user_id=user_id, username=username)
+        db.add(player_rating)
+        await db.flush()
+    return player_rating
 
-def update_elo_ratings(winner_rating: int, loser_rating: int) -> tuple[int, int]:
+def update_elo_ratings(winner_rating: int, loser_rating: int, k_factor: int = 32) -> tuple[int, int]:
     """
-    Update ELO ratings for a winner and a loser.
+    Updates the ELO ratings of two players after a match.
     """
-    expected_winner_score = get_expected_score(winner_rating, loser_rating)
-    expected_loser_score = get_expected_score(loser_rating, winner_rating)
+    expected_winner = 1 / (1 + 10 ** ((loser_rating - winner_rating) / 400))
+    expected_loser = 1 / (1 + 10 ** ((winner_rating - loser_rating) / 400))
 
-    new_winner_rating = round(winner_rating + K_FACTOR * (1 - expected_winner_score))
-    new_loser_rating = round(loser_rating + K_FACTOR * (0 - expected_loser_score))
-    
+    new_winner_rating = round(winner_rating + k_factor * (1 - expected_winner))
+    new_loser_rating = round(loser_rating + k_factor * (0 - expected_loser))
+
     return new_winner_rating, new_loser_rating 

@@ -27,7 +27,7 @@ async def generate_ai_coding_process(
 ) -> List[CodingStep]:
     """
     Generates a sequence of coding actions (typing, pausing, deleting) to simulate
-    an AI opponent writing code.
+    a more human-like AI opponent writing code.
     """
     steps = []
     
@@ -35,30 +35,48 @@ async def generate_ai_coding_process(
     # human user, and the AI should write the complete, correct solution.
     full_code_target = solution
 
+    # Add initial long thinking pause (human-like behavior)
+    steps.append(CodingStep(root=PauseAction(duration=random.uniform(5.0, 12.0))))
+
     # Now, simulate the typing process for the `full_code_target`
     remaining_code = full_code_target
     
     while remaining_code:
-        # Add a pause to simulate thinking
-        if random.random() < 0.2: # 20% chance of a pause
-            steps.append(CodingStep(root=PauseAction(duration=random.uniform(0.5, 2.0))))
+        # More frequent pauses for thinking (50% chance vs 20%)
+        if random.random() < 0.5:
+            # Longer thinking pauses (2-8 seconds vs 0.5-2)
+            thinking_time = random.uniform(2.0, 8.0)
+            steps.append(CodingStep(root=PauseAction(duration=thinking_time)))
 
-        # Add a "mistake" and correction
-        if random.random() < 0.05 and len(steps) > 0: # 5% chance of a mistake
-            # Delete a few characters
-            delete_count = random.randint(3, 10)
+        # Much higher chance of mistakes (25% vs 5%)
+        if random.random() < 0.25 and len(steps) > 0:
+            # More substantial mistakes (5-20 characters vs 3-10)
+            delete_count = random.randint(5, 20)
             steps.append(CodingStep(root=DeleteAction(char_count=delete_count)))
-            # Add a short pause
-            steps.append(CodingStep(root=PauseAction(duration=random.uniform(0.2, 0.5))))
-            # This is a simplified model; we don't actually "re-type" the correct code here,
-            # but we assume the `full_code_target` is what is eventually typed out.
+            
+            # Longer pause after mistake to "think" about correction
+            steps.append(CodingStep(root=PauseAction(duration=random.uniform(1.0, 4.0))))
+            
+            # Sometimes add a second mistake while "correcting"
+            if random.random() < 0.3:
+                smaller_mistake = random.randint(2, 8)
+                steps.append(CodingStep(root=DeleteAction(char_count=smaller_mistake)))
+                steps.append(CodingStep(root=PauseAction(duration=random.uniform(0.5, 2.0))))
 
-        # Type a chunk of code
-        chunk_size = random.randint(5, 15)
+        # Type smaller chunks more slowly (3-8 characters vs 5-15)
+        chunk_size = random.randint(3, 8)
         code_chunk = remaining_code[:chunk_size]
         remaining_code = remaining_code[chunk_size:]
         
-        typing_speed = random.uniform(0.8, 1.5) # Varies typing speed
+        # Much slower and more variable typing speed (0.3-0.8 vs 0.8-1.5)
+        typing_speed = random.uniform(0.3, 0.8)
         steps.append(CodingStep(root=CodeTypingAction(content=code_chunk, speed=typing_speed)))
+        
+        # Occasional mid-typing pause (like a human stopping to think)
+        if random.random() < 0.15:
+            steps.append(CodingStep(root=PauseAction(duration=random.uniform(1.0, 3.0))))
+    
+    # Add final review pause before "submitting"
+    steps.append(CodingStep(root=PauseAction(duration=random.uniform(3.0, 8.0))))
     
     return steps 

@@ -54,9 +54,7 @@ i18n
             sql: 'SQL',
             loginToContinue: 'Please log in to continue.',
             termsOfService: 'Terms of Service',
-            codeEditor: {
-              loading: 'Loading Editor...'
-            },
+            
           },
           header: {
             title: 'BATTLESTACK',
@@ -358,7 +356,7 @@ i18n
             connectingToDuel: 'Connecting to duel...',
             problemStatement: 'Problem Statement',
             solution: 'Solution',
-            codeEditor: 'Code Editor',
+   
             chat: 'Chat',
             disconnect: 'Disconnect',
             typeMessage: 'Type your message...',
@@ -434,6 +432,16 @@ i18n
             oop: 'OOP',
             failedToLoadLanguages: 'Failed to load supported languages',
             selectLanguage: 'Select Language',
+            allTestsPassed: 'All tests passed',
+            testsFailed: 'Tests failed',
+            score: 'Score',
+            input: 'Input',
+            yourOutput: 'Your Output',
+            expectedOutput: 'Expected Output',
+            errorOutput: 'Error Output',
+            unknownStatus: 'Unknown Status',
+            allPublicTestsPassed: 'All public tests passed',
+            
           },
           duels: {
             easy: 'Easy',
@@ -535,7 +543,7 @@ i18n
             connectingToDuel: 'Connecting to duel...',
             problemStatement: 'Problem Statement',
             solution: 'Solution',
-            codeEditor: 'Code Editor',
+  
             chat: 'Chat',
             disconnect: 'Disconnect',
             typeMessage: 'Type your message...',
@@ -597,6 +605,10 @@ i18n
             roomCodePlaceholder: 'Enter 6-character code',
             roomCodeCharCount: '{{count}}/6 characters',
             subtitle: 'Enter a code to join a private duel or create your own.',
+            showProblem: 'Show Problem',
+            showOpponent: 'Show Opponent',
+            actions: 'Actions',
+            testResults: 'Test Results',
           }
         },
       },
@@ -642,9 +654,7 @@ i18n
             sql: 'SQL',
             loginToContinue: 'Пожалуйста, войдите, чтобы продолжить.',
             termsOfService: 'Условия обслуживания',
-            codeEditor: {
-              loading: 'Загрузка редактора...'
-            },
+   
           },
           header: {
             title: 'BATTLESTACK',
@@ -843,7 +853,7 @@ i18n
             connectingToDuel: 'Подключение к дуэли...',
             problemStatement: 'Условие задачи',
             solution: 'Решение',
-            codeEditor: 'Редактор кода',
+     
             chat: 'Чат',
             disconnect: 'Отключиться',
             typeMessage: 'Введите сообщение...',
@@ -905,6 +915,10 @@ i18n
             roomCodePlaceholder: 'Введите 6-значный код',
             roomCodeCharCount: '{{count}}/6 символов',
             subtitle: 'Введите код, чтобы присоединиться к приватной дуэли или создать свою.',
+            showProblem: 'Показать проблему',
+            showOpponent: 'Показать соперника',
+            actions: 'Действия',
+            testResults: 'Результаты тестов',
           },
           achievements: {
             firstSteps: {
@@ -1109,7 +1123,7 @@ i18n
             connectingToDuel: 'Подключение к дуэли...',
             problemStatement: 'Условие задачи',
             solution: 'Решение',
-            codeEditor: 'Редактор кода',
+            
             chat: 'Чат',
             disconnect: 'Отключиться',
             typeMessage: 'Введите сообщение...',
@@ -1185,6 +1199,15 @@ i18n
             oop: 'ООП',
             failedToLoadLanguages: 'Не удалось загрузить поддерживаемые языки',
             selectLanguage: 'Выберите язык',
+            allTestsPassed: 'Все тесты пройдены',
+            testsFailed: 'Тесты не пройдены',
+            score: 'Счет',
+            input: 'Входные данные',
+            yourOutput: 'Ваш вывод',
+            expectedOutput: 'Ожидаемый вывод',
+            errorOutput: 'Вывод ошибки',
+            unknownStatus: 'Неизвестный статус',
+            allPublicTestsPassed: 'Все публичные тесты пройдены',
           }
         },
       },

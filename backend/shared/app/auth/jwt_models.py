@@ -1,6 +1,17 @@
+from pydantic import BaseModel, UUID4
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenPayload(BaseModel):
+    sub: UUID4
+
 """JWT User models for microservice authentication"""
 from dataclasses import dataclass
-from .models import UserRole
+from shared.app.user.models import UserRole
 
 
 @dataclass

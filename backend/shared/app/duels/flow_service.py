@@ -82,47 +82,50 @@ async def _execute_code_against_tests(submission: schemas.CodeSubmission, proble
     # Always wrap python code to handle I/O, making it easier for the user.
     if submission.language == "python":
         function_name = problem.get("function_name")
+        
+        # We always use a wrapper for Python to handle I/O, ensuring consistency.
         if function_name is None:
-            # Fallback if function_name is not in problem data
-            import re
-            match = re.search(r"def\s+(\w+)\s*\(", submission.code)
-            if match:
-                function_name = match.group(1)
-            else:
-                return CodeExecutionResult(is_correct=False, error="Could not determine function name to test.")
+            # This should ideally not happen if the problem generation is correct
+            return CodeExecutionResult(is_correct=False, error="Could not determine function name to test. Problem data is missing this key.")
 
         # Safer I/O wrapper using ast.literal_eval
         wrapper = f"""
+
+# User's solution is above this line
 import sys
 import ast
 
-# User's solution is above this line
 try:
     input_str = sys.stdin.read().strip()
     if input_str:
-        # Safely parse the input string into a Python object (e.g., list, dict, int)
+        # Safely parse the input string into a Python object.
+        # It's expected to be a list or tuple literal, e.g., "[1, 2, 3]" or "('a', 'b')"
         parsed_input = ast.literal_eval(input_str)
         
-        # Check if the parsed input is a tuple, which we'll use to pass multiple arguments
+        # Handle different input patterns
         if isinstance(parsed_input, tuple):
+            # Assumes the function takes multiple arguments
             result = {function_name}(*parsed_input)
         else:
-            # Otherwise, pass it as a single argument
+            # Assumes the function takes a single argument (e.g., a list)
             result = {function_name}(parsed_input)
             
-        # The AI's generated solution must print the result to be captured.
-        # For validation, we assume it does.
+        # Print the result to stdout
         if result is not None:
             print(result)
 
 except Exception as e:
     # This helps debug issues with the wrapper or the user's code during execution
-    print(f"Execution Error: {{e}}", file=sys.stderr)
+    import traceback
+    print(f"Execution Error: {{type(e).__name__}}: {{e}}", file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
 """
-        source_to_run += wrapper
+        source_to_run = submission.code + wrapper
 
     for i, test_case in enumerate(problem["test_cases"]):
-        stdin_to_run = test_case.get("input_data")
+        # The input data should be a string literal of the python object
+        # e.g., "[1, 2, 3]" for a list
+        stdin_to_run = str(test_case.get("input_data"))
         
         params = SubmissionParams(
             source_code=source_to_run,
@@ -140,23 +143,24 @@ except Exception as e:
             # Case 1: Compilation Error
             if status_desc == "Compilation Error":
                 error_details.append(f"Compilation Error: {result_data.compile_output or 'No details provided.'}")
-                break
+                break # Stop on compilation error
 
             # Case 2: Runtime Error, TLE, or other execution issues
             if status_desc not in ["Accepted", "Wrong Answer"]:
                 error_details.append(
-                    f"Test case {i+1} failed: {status_desc}. "
+                    f"Test case {i+1} failed with status: {status_desc}. "
+                    f"Input: {stdin_to_run}. "
                     f"Details: {result_data.stderr or 'No error message captured.'}"
                 )
-                # For critical errors, we might stop, but for now we continue to see other test cases
                 continue
 
             # Case 3: No output produced
             if result_data.stdout is None or result_data.stdout.strip() == "":
                 error_details.append(
                     f"Test case {i+1} failed: Wrong Answer. "
+                    f"Input: {stdin_to_run}. "
                     f"Expected: '{test_case.get('expected_output')}', Got: No output. "
-                    f"Ensure your function returns a value and uses 'print()'."
+                    f"Ensure your function returns a value."
                 )
                 continue
 
@@ -167,14 +171,15 @@ except Exception as e:
             if actual_output != expected_output:
                 error_details.append(
                     f"Test case {i+1} failed: Wrong Answer. "
+                    f"Input: {stdin_to_run}. "
                     f"Expected: '{expected_output}', Got: '{actual_output}'"
                 )
             else:
                 passed_tests += 1
-                logger.info(f"Test case {i+1} passed. Expected: '{expected_output}', Got: '{actual_output}'")
+                logger.info(f"Test case {i+1} passed. Input: {stdin_to_run}. Expected: '{expected_output}', Got: '{actual_output}'")
 
         except Exception as e:
-            logger.error(f"Error executing test case {i+1}: {e}")
+            logger.error(f"Error executing test case {i+1} for input {stdin_to_run}: {e}", exc_info=True)
             error_details.append(f"Test case {i+1} failed with an unhandled system exception: {str(e)}")
 
     all_passed = passed_tests == total_tests
@@ -206,6 +211,63 @@ async def _execute_code_against_public_tests(submission: schemas.CodeSubmission,
     return await _execute_code_against_tests(submission, temp_problem)
 
 
+async def _determine_winner(db: AsyncSession, duel: models.Duel) -> tuple[UUID | str | None, schemas.DuelResult]:
+    results = duel.results or {}
+    p1_solved_at_str = results.get("p1_solved_at")
+    p1_solved_at = datetime.fromisoformat(p1_solved_at_str) if p1_solved_at_str else None
+    
+    # Extract actual values to avoid Column descriptor issues
+    player_one_id = duel.player_one_id
+    player_two_id = duel.player_two_id
+    duel_started_at = duel.started_at
+    
+    opponent_id = player_two_id
+    p2_solved_at_key = "p2_solved_at" if opponent_id is not None else "ai_solved_at"
+    p2_solved_at_str = results.get(p2_solved_at_key)
+    p2_solved_at = datetime.fromisoformat(p2_solved_at_str) if p2_solved_at_str else None
+
+    # Log debug information
+    logger.info(f"🔍 Winner determination for duel {duel.id}:")
+    logger.info(f"   P1 ({player_one_id}) solved at: {p1_solved_at}")
+    logger.info(f"   AI/P2 solved at: {p2_solved_at}")
+    logger.info(f"   First solver from results: {results.get('first_solver')}")
+    logger.info(f"   Full results: {results}")
+
+    winner_id: UUID | str | None = None
+    if p1_solved_at and p2_solved_at:
+        winner_id = player_one_id if p1_solved_at < p2_solved_at else (opponent_id or "ai")
+        logger.info(f"   Both solved: Winner is {winner_id} (P1 time: {p1_solved_at}, AI/P2 time: {p2_solved_at})")
+    elif p1_solved_at:
+        winner_id = player_one_id
+        logger.info(f"   Only P1 solved: Winner is {winner_id}")
+    elif p2_solved_at:
+        winner_id = opponent_id or "ai"
+        logger.info(f"   Only AI/P2 solved: Winner is {winner_id}")
+    else:
+        logger.info(f"   No one solved yet")
+
+    start_time = duel_started_at
+    is_p1_winner = winner_id == player_one_id
+    is_p2_winner = winner_id == (opponent_id or "ai")
+
+    logger.info(f"   Final determination: P1 winner={is_p1_winner}, AI/P2 winner={is_p2_winner}")
+
+    p1_score, p1_time = scoring_service.calculate_score(start_time, p1_solved_at, results.get("p1_subs", 0), is_p1_winner) if p1_solved_at and start_time else (0, 0.0)
+    p2_score, p2_time = scoring_service.calculate_score(start_time, p2_solved_at, results.get("p2_subs", 0), is_p2_winner) if p2_solved_at and start_time else (0, 0.0)
+    
+    player_one_result = schemas.PlayerResult(player_id=str(player_one_id), score=int(p1_score), time_taken_seconds=p1_time, submission_count=results.get("p1_subs", 0), is_winner=is_p1_winner)
+    player_two_result = schemas.PlayerResult(player_id=str(opponent_id or "ai"), score=int(p2_score), time_taken_seconds=p2_time, submission_count=results.get("p2_subs", 0), is_winner=is_p2_winner)
+
+    final_results = schemas.DuelResult(
+        winner_id=str(winner_id) if winner_id else None,
+        player_one_result=player_one_result,
+        player_two_result=player_two_result,
+        finished_at=datetime.now(timezone.utc),
+        is_ai_duel=player_two_id is None
+    )
+
+    return winner_id, final_results
+
 class DuelFlowService:
     async def handle_submission(
         self,
@@ -213,124 +275,92 @@ class DuelFlowService:
         duel_id: UUID,
         submission: schemas.DuelSubmission,
     ) -> CodeExecutionResult:
-        duel = await service.get_duel(db, duel_id)
-
-        # Check duel status and existence first
-        if duel is None:
+        # Initial fetch to check status
+        initial_duel = await service.get_duel(db, duel_id)
+        if initial_duel is None:
             return CodeExecutionResult(is_correct=False, error="Duel not found.")
-        if duel.status != models.DuelStatus.IN_PROGRESS: # type: ignore
+        if initial_duel.status != models.DuelStatus.IN_PROGRESS:
             return CodeExecutionResult(is_correct=False, error="Duel not in progress.")
 
-        user_id = submission.player_id
-
-        # 1. Get problem data (must be AI generated)
-        # Safely access JSONB data, ensuring it's treated as a dict
-        duel_results_raw = getattr(duel, 'results', None)
-        duel_results_dict: Dict[str, Any] = cast(Dict[str, Any], duel_results_raw) if duel_results_raw is not None else {}
-        problem_data_from_db: Dict[str, Any] = duel_results_dict.get("ai_problem_data", {})
-
+        # Extract problem data before long async call
+        problem_data_from_db: Dict[str, Any] = cast(Dict[str, Any], initial_duel.results).get("ai_problem_data", {}) if initial_duel.results else {}
         if not problem_data_from_db:
-            return CodeExecutionResult(is_correct=False, error="Only AI-generated duels are supported. No problem data found.")
+            return CodeExecutionResult(is_correct=False, error="Only AI-generated duels are supported.")
 
-        # Make a copy to ensure mutability when modifying problem_data for execution
         problem_data_mutable = problem_data_from_db.copy()
-
-        # Add function_name for testing if not present (for AI generated problems)
         if "function_name" not in problem_data_mutable:
             slug = problem_data_mutable.get("slug", "")
             problem_data_mutable["function_name"] = slug.replace('-', '_')
 
-        # 2. Execute code against test cases
-        code_submission = schemas.CodeSubmission(code=submission.code, language=submission.language)
-        execution_result = await _execute_code_against_tests(code_submission, problem_data_mutable)
-        logger.info(f"Execution result for user {user_id} in duel {duel_id}: is_correct={execution_result.is_correct}, error='{execution_result.error}', details='{execution_result.details}'")
-
-        # For submissions, only public test case details should be revealed if incorrect.
-        # If correct, no details are needed for the frontend.
-        if execution_result.is_correct:
-            execution_result.details = None
-        elif execution_result.details:
-            public_test_details = []
-            for detail_message in execution_result.details:
-                if "Compilation Error" in detail_message or "Execution Error" in detail_message:
-                    public_test_details.append(detail_message)
-            execution_result.details = public_test_details if public_test_details else ["One or more tests failed. No further details available for private tests."]
-
-        # 2. Update submission count and test results
-        is_player_one = duel.player_one_id == user_id # type: ignore
+        # This is the long-running async call
+        execution_result = await _execute_code_against_tests(
+            schemas.CodeSubmission(code=submission.code, language=submission.language),
+            problem_data_mutable
+        )
         
-        # Need to ensure duel.results is a mutable dict for updates
-        current_duel_results: Dict[str, Any] = duel_results_dict.copy() # Use the already casted `duel_results_dict`
+        # After the long await, the initial_duel object may be stale.
+        # Refetch the duel to ensure the session is active.
+        duel = await service.get_duel(db, duel_id)
+        if not duel:
+             return CodeExecutionResult(is_correct=False, error="Duel not found after code execution.")
 
+        current_duel_results: Dict[str, Any] = cast(Dict[str, Any], duel.results) if duel.results is not None else {}
+        is_player_one = duel.player_one_id == submission.player_id
+
+        # Update submission stats
         player_subs_key = "p1_subs" if is_player_one else "p2_subs"
-        player_passed_key = "p1_passed_tests" if is_player_one else "p2_passed_tests"
-        player_total_key = "p1_total_tests" if is_player_one else "p2_total_tests"
-
         current_duel_results[player_subs_key] = current_duel_results.get(player_subs_key, 0) + 1
-        current_duel_results[player_passed_key] = execution_result.passed
-        current_duel_results[player_total_key] = execution_result.total
         
-        # The update_duel_results function expects the duel object and the updated dictionary
-        # It handles the assignment to duel.results internally and flushes the session.
-        await service.update_duel_results(db, duel, current_duel_results)
+        await service.update_duel_results(db, duel_id, current_duel_results)
 
         if not execution_result.is_correct:
-            # We still return the result to potentially show failure reasons on the UI
-            logger.warning(f"Submission by {user_id} for duel {duel_id} is incorrect. Not ending duel.")
+            logger.warning(f"Submission by {submission.player_id} for duel {duel_id} is incorrect.")
             return execution_result
-
-        # 3. Code is correct, record solve time and end the duel.
+            
+        # Record solve time and check for a winner
         player_solved_key = "p1_solved_at" if is_player_one else "p2_solved_at"
-        # Avoid overwriting if already solved
-        if player_solved_key in current_duel_results: # type: ignore
-            logger.info(f"Player {user_id} has already solved duel {duel_id}. Not ending again.")
-            return execution_result
+        if player_solved_key in current_duel_results:
+            return execution_result 
 
-        logger.info(f"Correct submission by {user_id} for duel {duel_id}. Recording solve time.")
-        finish_time = datetime.now(timezone.utc)
-        current_duel_results[player_solved_key] = finish_time.isoformat()
-
+        current_duel_results[player_solved_key] = datetime.now(timezone.utc).isoformat()
+        
         other_player_solved_key = "p2_solved_at" if is_player_one else "p1_solved_at"
-        # This comparison `other_player_solved_key not in current_duel_results` is correct for a dict.
-        # Adding type ignore for the linter if it still misinterprets current_duel_results.
-        was_first_to_solve = other_player_solved_key not in current_duel_results # type: ignore
+        if other_player_solved_key not in current_duel_results:
+             current_duel_results['first_solver'] = 'p1' if is_player_one else 'p2'
 
-        if was_first_to_solve:
-            current_duel_results['first_solver'] = 'p1' if is_player_one else 'p2'
-
-        await service.update_duel_results(db, duel, current_duel_results)
-
-        # 4. End the duel and broadcast results
-        logger.info(f"All tests passed for user {user_id}. Ending duel {duel_id}.")
-        # duel.id is of type UUID from the ORM when `as_uuid=True` is used. Casting for linter safety.
-        await self.end_duel_and_broadcast(db, cast(UUID, duel.id))
+        await service.update_duel_results(db, duel_id, current_duel_results)
+        
+        logger.info(f"All tests passed for user {submission.player_id}. Ending duel {duel_id}.")
+        await self.end_duel_and_broadcast(db, duel_id)
+        
         return execution_result
 
 
     async def end_duel_and_broadcast(self, db: AsyncSession, duel_id: UUID, is_timeout: bool = False, for_ai: bool = False):
+        # Completely re-fetch the duel to avoid detached object issues
         duel = await service.get_duel(db, duel_id)
         if not duel or duel.status == models.DuelStatus.COMPLETED:
             logger.warning(f"Duel {duel_id} already ended or does not exist.")
             return
 
-        # Determine winner
-        winner_id, final_results = await self._determine_winner(db, duel)
+        # Extract all needed data immediately after fetch
+        duel_player_one_id = duel.player_one_id
+        duel_player_two_id = duel.player_two_id
         
-        # Call the service to formally end the duel and save results
+        winner_id, final_results = await _determine_winner(db, duel)
+        
         status = models.DuelStatus.TIMED_OUT if is_timeout else models.DuelStatus.COMPLETED
         await service.end_duel(db, duel_id, final_results, status=status)
         
-        # Update ELO ratings
-        if winner_id and not for_ai:
-            if str(winner_id) == str(duel.player_one_id):
-                loser_id = duel.player_two_id
-            else:
-                loser_id = duel.player_one_id
-            
-            if loser_id: # Ensure there is a loser to update
-                await service.update_ratings_after_duel(db, winner_id=winner_id, loser_id=loser_id)
+        await service.update_user_stats_after_duel(db, duel_player_one_id, final_results.player_one_result)
+        if duel_player_two_id is not None and final_results.player_two_result:
+            await service.update_user_stats_after_duel(db, duel_player_two_id, final_results.player_two_result)
 
-        # Broadcast duel end state to all participants
+        if winner_id and not for_ai and isinstance(winner_id, UUID):
+            loser_id = duel_player_one_id if str(winner_id) != str(duel_player_one_id) else duel_player_two_id
+            if loser_id and isinstance(loser_id, UUID):
+                await service.update_ratings_after_duel(db, winner_id=winner_id, loser_id=loser_id)
+        
         end_message = schemas.DuelEndMessage(
             type="duel_end",
             data=final_results.model_dump(mode='json')
@@ -338,122 +368,6 @@ class DuelFlowService:
 
         logger.info(f"Broadcasting duel_end event for duel {duel_id}.")
         await manager.broadcast_to_all(str(duel_id), json.dumps(end_message.model_dump(mode='json'), default=str))
-
-    async def _determine_winner(self, db: AsyncSession, duel: models.Duel) -> tuple[UUID | str | None, schemas.DuelResult]:
-        player_one_solved_at_str = duel.results.get("p1_solved_at")
-        player_two_solved_at_str = duel.results.get("p2_solved_at")
-
-        player_one_solved_at = datetime.fromisoformat(player_one_solved_at_str) if player_one_solved_at_str else None
-        player_two_solved_at = datetime.fromisoformat(player_two_solved_at_str) if player_two_solved_at_str else None
-
-        duel_start_time = duel.started_at
-
-        player_one_score = 0
-        player_two_score = 0
-        player_one_time_taken = 0.0
-        player_two_time_taken = 0.0
-        
-        is_player_one_winner = False
-        is_player_two_winner = False
-        winner_id = None
-
-        if player_one_solved_at and duel_start_time:
-            was_first_to_solve_p1 = duel.results.get('first_solver') == 'p1'
-            player_one_score, player_one_time_taken = scoring_service.calculate_score(
-                duel_start_time, player_one_solved_at, duel.results.get('p1_subs', 0), was_first_to_solve_p1
-            )
-
-        if player_two_solved_at and duel_start_time:
-            was_first_to_solve_p2 = duel.results.get('first_solver') == 'p2'
-            player_two_score, player_two_time_taken = scoring_service.calculate_score(
-                duel_start_time, player_two_solved_at, duel.results.get('p2_subs', 0), was_first_to_solve_p2
-            )
-
-        # Determine winner based on scores or first to solve
-        if player_one_solved_at and player_two_solved_at:
-            if player_one_score > player_two_score:
-                is_player_one_winner = True
-                winner_id = duel.player_one_id
-            elif player_two_score > player_one_score:
-                is_player_two_winner = True
-                winner_id = duel.player_two_id
-            else: # Tie-breaker: whoever submitted first wins
-                if player_one_time_taken < player_two_time_taken:
-                    is_player_one_winner = True
-                    winner_id = duel.player_one_id
-                elif player_two_time_taken < player_one_time_taken:
-                    is_player_two_winner = True
-                    winner_id = duel.player_two_id
-        elif player_one_solved_at:
-            is_player_one_winner = True
-            winner_id = duel.player_one_id
-        elif player_two_solved_at:
-            is_player_two_winner = True
-            winner_id = duel.player_two_id
-        else:
-            # If neither player solved, determine winner by most passed tests
-            p1_passed = duel.results.get("p1_passed_tests", 0)
-            p2_passed = duel.results.get("p2_passed_tests", 0)
-
-            if p1_passed > p2_passed:
-                is_player_one_winner = True
-                winner_id = duel.player_one_id
-            elif p2_passed > p1_passed:
-                is_player_two_winner = True
-                winner_id = duel.player_two_id
-            # If still tied (same tests passed, or 0 tests passed), it's a draw/no winner
-
-        player_one_result = schemas.PlayerResult(
-            player_id=str(duel.player_one_id),
-            score=player_one_score,
-            time_taken_seconds=player_one_time_taken,
-            submission_count=duel.results.get('p1_subs', 0),
-            is_winner=is_player_one_winner
-        )
-
-        player_two_result = None
-        if duel.player_two_id:
-            player_two_result = schemas.PlayerResult(
-                player_id=str(duel.player_two_id),
-                score=player_two_score,
-                time_taken_seconds=player_two_time_taken,
-                submission_count=duel.results.get('p2_subs', 0),
-                is_winner=is_player_two_winner
-            )
-        else: # Always create a PlayerResult for AI if player_two_id is None
-            ai_solve_time = duel.results.get("ai_solved_at")
-            ai_time_taken = 0.0
-            ai_submission_count = duel.results.get('ai_subs', 0)
-            ai_score = duel.results.get('ai_passed_tests', 0)
-
-            if ai_solve_time and duel_start_time:
-                ai_solve_datetime = datetime.fromisoformat(ai_solve_time)
-                was_first_to_solve_ai = duel.results.get('first_solver') == 'ai'
-                ai_score, ai_time_taken = scoring_service.calculate_score(
-                    duel_start_time, ai_solve_datetime, ai_submission_count, was_first_to_solve_ai
-                )
-            
-            # Ensure is_player_two_winner is correctly determined for AI
-            is_ai_winner = False
-            if winner_id and str(winner_id) == "ai": # Check if the determined winner is 'ai'
-                is_ai_winner = True
-
-            player_two_result = schemas.PlayerResult(
-                player_id="ai", # AI's ID should always be a string literal
-                score=ai_score,
-                time_taken_seconds=ai_time_taken,
-                submission_count=ai_submission_count,
-                is_winner=is_ai_winner
-            )
-
-        final_results = schemas.DuelResult(
-            winner_id=winner_id,
-            player_one_result=player_one_result,
-            player_two_result=player_two_result,
-            finished_at=datetime.now(timezone.utc),
-            is_ai_duel=duel.player_two_id is None
-        )
-        return winner_id, final_results
 
 
 duel_flow_service = DuelFlowService()

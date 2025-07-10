@@ -12,7 +12,24 @@ import { useTranslation } from 'react-i18next';
 // Import only necessary types and interfaces
 import type { Problem } from '../../services/api';
 import type { SupportedLanguage as Language, SubmissionResponse } from '../../services/codeExecutionService';
-import SubmissionResult from './SubmissionResult'; // Ensure SubmissionResultProps accepts testResults
+import SubmissionResult from './SubmissionResult';
+import type { SubmissionResultData } from './SubmissionResult';
+
+// Adapter function to convert SubmissionResponse to SubmissionResultData
+const adaptSubmissionData = (submission: SubmissionResponse | null): SubmissionResultData | null => {
+  if (!submission) return null;
+
+  const statusName = submission.status?.name || 'Error';
+  const isCorrect = statusName === 'Accepted';
+
+  return {
+    is_correct: isCorrect,
+    error: submission.error_message || (!isCorrect ? submission.status?.description : null),
+    details: submission.test_cases?.map(tc => tc.status?.description || 'No details available.'),
+    passed: submission.passed_tests || 0,
+    total: submission.total_tests || 0,
+  };
+};
 
 interface CodeExecutionPanelProps {
   // `problem` is now passed as a prop, containing problem metadata
@@ -87,6 +104,8 @@ const CodeExecutionPanel: React.FC<CodeExecutionPanelProps> = ({
     }
   };
 
+  const adaptedResult = adaptSubmissionData(submissionResult);
+
   return (
     <div className={`flex flex-col h-full bg-gray-900 rounded-lg border border-gray-700 overflow-hidden ${className}`}>
       {/* Editor Area */}
@@ -123,7 +142,7 @@ const CodeExecutionPanel: React.FC<CodeExecutionPanelProps> = ({
         {/* Console Output */}
         <div className="p-4 overflow-auto flex-grow bg-gray-800/50">
           <SubmissionResult 
-            submission={submissionResult} // Pass submissionResult prop
+            result={adaptedResult} // Pass adapted result
             t={t} // Pass t prop
           />
         </div>

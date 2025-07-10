@@ -127,10 +127,10 @@ export const AlgorithmSolver: React.FC<AlgorithmSolverProps> = ({
               <div className="space-y-2">
                 {testResults.map((result, index) => (
                   <div key={index} className={`p-2 rounded-md text-sm flex items-center gap-2 ${
-                    result.passed ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'
+                    result.status.name === 'Accepted' ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'
                   }`}>
-                    {result.passed ? <CheckCircle size={16} /> : <XCircle size={16} />}
-                    <span>{t('coding.testCase', { number: index + 1 })}: {result.passed ? t('common.passed') : t('common.failed')}</span>
+                    {result.status.name === 'Accepted' ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                    <span>{t('coding.testCase', { number: index + 1 })}: {result.status.name}</span>
                   </div>
                 ))}
               </div>

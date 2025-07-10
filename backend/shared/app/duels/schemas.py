@@ -70,20 +70,24 @@ class Duel(BaseModel):
 
     @model_validator(mode='after')
     def create_problem_from_results(self) -> 'Duel':
-        if self.results and 'ai_problem_data' in self.results:
-            ai_problem_data = self.results['ai_problem_data']
-            
-            # Convert code_templates to starter_code dictionary
-            starter_code = {
-                template['language']: template['template_code']
-                for template in ai_problem_data.get('code_templates', [])
-            }
-            ai_problem_data['starter_code'] = starter_code
-            
-            # Ensure problem_id from the duel is used in the problem object
-            ai_problem_data['id'] = self.problem_id
+        if self.results is not None:
+            if 'ai_problem_data' in self.results:
+                ai_problem_data = self.results.get('ai_problem_data')
+                if not ai_problem_data:
+                    return self
+                
+                # Convert code_templates to starter_code dictionary
+                starter_code = {
+                    template['language']: template['template_code']
+                    for template in ai_problem_data.get('code_templates', [])
+                }
+                ai_problem_data['starter_code'] = starter_code
+                
+                # Ensure problem_id from the duel is used in the problem object
+                if self.problem_id:
+                    ai_problem_data['id'] = self.problem_id
 
-            self.problem = DuelProblem.model_validate(ai_problem_data)
+                self.problem = DuelProblem.model_validate(ai_problem_data)
 
         return self
 
@@ -98,6 +102,13 @@ class DuelSubmission(BaseModel):
     player_id: UUID
     language: str
     code: str
+
+class SubmissionResult(BaseModel):
+    is_correct: bool
+    details: Optional[str] = None
+    passed: Optional[int] = None
+    total: Optional[int] = None
+    error: Optional[str] = None
 
 class AIDuelCreateRequest(BaseModel):
     user_id: UUID
@@ -122,6 +133,8 @@ class LeaderboardEntry(BaseModel):
     wins: int
     win_rate: float
     current_streak: int
+    
+    model_config = ConfigDict(from_attributes=True, coerce_numbers_to_str=True)
 
 class MatchHistoryItem(BaseModel):
     id: str

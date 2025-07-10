@@ -5,8 +5,16 @@ from typing import Dict, List
 from sqlalchemy import Column, Integer, DateTime, JSON, String, Boolean, Float
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, declarative_base
+from enum import Enum
+
 
 Base = declarative_base()
+
+class UserRole(str, Enum):
+    USER = "user"
+    MODERATOR = "moderator"
+    ADMIN = "admin"
+    SUPER_ADMIN = "super_admin"
 
 class UserProfile(Base):
     __tablename__ = "user_profiles"

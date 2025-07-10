@@ -31,6 +31,7 @@ interface UserPermissions {
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
+  token: string | null;
   permissions: UserPermissions;
   loading: boolean;
   login: (accessToken: string, refreshToken: string) => Promise<void>;
@@ -45,6 +46,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [permissions, setPermissions] = useState<UserPermissions>({
     canAccessAdmin: false,
     canManageProblems: false,
@@ -99,6 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Store new tokens
         localStorage.setItem('token', response.data.access_token);
         localStorage.setItem('refreshToken', response.data.refresh_token);
+        setToken(response.data.access_token);
         
         console.log('✅ Tokens refreshed successfully');
         return true;
@@ -151,6 +154,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const response = await authApiService.refreshToken(refreshToken);
             localStorage.setItem('token', response.data.access_token);
             localStorage.setItem('refreshToken', response.data.refresh_token);
+            setToken(response.data.access_token);
             
             // Retry getting user
             const userResponse = await authApiService.getCurrentUser();
@@ -206,6 +210,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (accessToken: string, refreshToken: string) => {
     localStorage.setItem('token', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
+    setToken(accessToken);
     setIsAuthenticated(true);
     await refreshUser();
   };
@@ -214,6 +219,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('rememberMe');
+    setToken(null);
     setIsAuthenticated(false);
     setUser(null);
     setPermissions({
@@ -234,6 +240,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider value={{ 
       isAuthenticated, 
       user, 
+      token,
       permissions, 
       loading, 
       login, 

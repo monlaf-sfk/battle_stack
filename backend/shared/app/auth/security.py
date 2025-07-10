@@ -4,11 +4,11 @@ import secrets
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from pydantic import UUID4
+from pydantic import UUID4, ValidationError
 from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from shared.app.config import settings
-from .jwt_models import JWTUser
+from .jwt_models import JWTUser, TokenPayload
 from .models import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -57,6 +57,21 @@ def create_refresh_token(data: dict, expires_delta: timedelta | None = None) -> 
         to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
     )
     return encoded_jwt
+
+
+def get_user_id_from_token(token: str) -> str | None:
+    """
+    Decode JWT token and extract user ID.
+    Returns user ID on success, None on failure.
+    Does not raise HTTP exceptions, making it suitable for WebSockets.
+    """
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        return payload.get("user_id")
+    except JWTError:
+        return None
 
 
 def verify_token(token: str) -> dict[str, Any]:
@@ -153,8 +168,33 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> JWTUser:
         raise credentials_exception
 
 
-async def get_current_user_id(current_user: User = Depends(get_current_user)) -> UUID4:
-    return current_user.id
+async def get_current_user_id(token: str = Depends(oauth2_scheme)) -> UUID4:
+    """
+    Dependency to get the current user's ID from a JWT token.
+    This is useful for microservices where you only need the user ID
+    and don't want to make a database call.
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        # Get the user_id from the user_id claim (not sub which contains username)
+        user_id = payload.get("user_id")
+        if user_id is None:
+            raise credentials_exception
+        
+        # Validate that the user_id is a valid UUID
+        token_data = TokenPayload(sub=user_id)
+        
+    except (JWTError, ValidationError):
+        raise credentials_exception
+        
+    return token_data.sub
 
 
 async def get_current_active_user(

@@ -172,20 +172,14 @@ export const duelsApiService = {
   
   // Get recent matches (public)
   getRecentMatches: async (limit?: number) => {
-    const publicDuelsApi = axios.create({
-      baseURL: '/api/v1/duels',
-    });
     const params = new URLSearchParams();
     if (limit) params.append('limit', limit.toString());
-    return await publicDuelsApi.get(`/matches/recent?${params.toString()}`);
+    return await duelsApi.get(`/matches/recent?${params.toString()}`);
   },
   
   // Get public leaderboard
   getPublicLeaderboard: async () => {
-    const publicDuelsApi = axios.create({
-      baseURL: '/api/v1/duels',
-    });
-    return await publicDuelsApi.get('/leaderboard');
+    return await duelsApi.get('/leaderboard');
   },
 
   // Join matchmaking
@@ -216,8 +210,14 @@ export const duelsApiService = {
   },
 
   // Test code against public tests for a duel
-  testCode: async (duelId: string, submission: { code: string; language: string; }) => {
-    const response = await duelsApi.post(`/${duelId}/test`, submission);
+  testCode: async (
+    duelId: string,
+    submission: { code: string; language: string }
+  ) => {
+    const response = await duelsApi.post(
+      `/${duelId}/run-public-tests`,
+      submission
+    );
     return response.data;
   },
 };

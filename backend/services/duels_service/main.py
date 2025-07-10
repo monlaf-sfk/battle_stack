@@ -1,14 +1,18 @@
 import asyncio
 from contextlib import asynccontextmanager
+import os
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from shared.app.duels.router import router as duels_router
-from shared.app.config import settings
 from shared.app.database import init_db_connection, close_db_connection
 from shared.app.duels.flow_service import duel_flow_service
 from shared.app.middleware.rate_limiter import RateLimiterMiddleware
 from shared.app.duels import service as duel_service
+
+# Load environment variables for configuration
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
 
 # Create problems router for language support
 problems_router = APIRouter()
@@ -103,6 +107,7 @@ async def check_for_timed_out_duels():
         print("Running periodic check for timed-out duels...")
         try:
             async with SessionLocal() as db:
+                
                 await duel_service.end_timed_out_duels(db, DUEL_TIME_LIMIT_SECONDS)
         except Exception as e:
             print(f"An error occurred in check_for_timed_out_duels: {e}")
@@ -139,7 +144,7 @@ app = FastAPI(
 # CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS if settings.CORS_ORIGINS is not None else [],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -148,7 +153,7 @@ app.add_middleware(
 # Add Rate Limiting Middleware
 app.add_middleware(
     RateLimiterMiddleware,
-    redis_url=settings.REDIS_URL
+    redis_url=REDIS_URL
 )
 
 app.include_router(duels_router, prefix="/api/v1/duels", tags=["duels"])
