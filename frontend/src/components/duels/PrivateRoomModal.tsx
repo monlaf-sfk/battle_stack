@@ -6,7 +6,7 @@ import { Loader2, Lock, Plus, Users, X } from 'lucide-react';
 import { useToast } from '../ui/Toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { duelsApiService } from '../../services/duelService';
+import { duelsApiService } from '../../services/api';
 import { useTranslation } from 'react-i18next';
 import { Label } from '../ui/label';
 

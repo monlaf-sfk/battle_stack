@@ -9,7 +9,7 @@ import AIDuelSetupModal from '../components/duels/AIDuelSetupModal'; // Will cre
 import PrivateRoomModal from '../components/ui/JoinPrivateRoomModal'; // Will create this
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { duelsApiService } from '../services/duelService';
+import { duelsApiService } from '../services/api';
 
 const DuelTypeCard: React.FC<{
   icon: React.ReactNode;

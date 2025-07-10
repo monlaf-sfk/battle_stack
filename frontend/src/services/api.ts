@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import type { SubmissionResponse } from './codeExecutionService'; // Import SubmissionResponse
+import type { DuelResponse } from './duelService';
 
 const authApi = axios.create({
   baseURL: '/api/v1/auth',
@@ -33,6 +34,22 @@ addAuthInterceptor(authApi);
 addAuthInterceptor(userApi);
 addAuthInterceptor(problemsApi);
 addAuthInterceptor(duelsApi); // Make sure duelsApi is added to interceptors
+
+// Helper to transform duel response to include problem object
+const transformDuelResponse = (duelData: DuelResponse): DuelResponse => {
+  if (duelData.results && duelData.results.ai_problem_data) {
+    const aiProblemData = duelData.results.ai_problem_data;
+    // Ensure starter_code is generated from code_templates if not present
+    if (!aiProblemData.starter_code) {
+      aiProblemData.starter_code = {};
+      for (const template of aiProblemData.code_templates) {
+        aiProblemData.starter_code[template.language] = template.template_code;
+      }
+    }
+    duelData.problem = aiProblemData; // Attach the AI problem data as 'problem'
+  }
+  return duelData;
+};
 
 // Dashboard API endpoints
 export const dashboardApi = {
@@ -200,7 +217,7 @@ export const duelsApiService = {
   // Get duel by ID
   getDuel: async (duelId: string) => {
     const response = await duelsApi.get(`/${duelId}`);
-    return response.data;
+    return transformDuelResponse(response.data);
   },
 
   // Submit solution for a duel
@@ -218,6 +235,41 @@ export const duelsApiService = {
       `/${duelId}/run-public-tests`,
       submission
     );
+    return response.data;
+  },
+
+  // Get active or waiting duel for a user
+  getDuelForUser: async (userId: string) => {
+    try {
+      const response = await duelsApi.get(`/user/${userId}/active-or-waiting`);
+      return transformDuelResponse(response.data);
+    } catch (error: any) {
+      if (error.response && error.response.status === 404) {
+        return null; // No active duel found
+      }
+      throw error;
+    }
+  },
+
+  // Create an AI duel with custom settings
+  createAIDuel: async (request: any) => { // Using `any` for now, will be defined in duelService.ts
+    const response = await duelsApi.post('/ai-duel-custom', request);
+    return transformDuelResponse(response.data);
+  },
+
+  // Create a private room duel
+  createPrivateRoom: async (userId: string, difficulty: any, category: string) => {
+    const response = await duelsApi.post('/rooms', {
+      user_id: userId,
+      difficulty,
+      category,
+    });
+    return response.data;
+  },
+
+  // Join a private room
+  joinRoom: async (roomCode: string, userId: string) => {
+    const response = await duelsApi.post('/rooms/join', { room_code: roomCode, user_id: userId });
     return response.data;
   },
 };

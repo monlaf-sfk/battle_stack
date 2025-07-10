@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock, Loader2, Plus, Users } from 'lucide-react';
 import { Button } from './Button';
 import { useToast } from './Toast';
-import { duelsApiService } from '@/services/duelService';
+import { duelsApiService } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';

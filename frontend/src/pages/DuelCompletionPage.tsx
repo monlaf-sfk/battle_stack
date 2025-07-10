@@ -7,7 +7,7 @@ import type { DuelResult, PlayerResult } from '@/services/duelService';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Link, useParams } from 'react-router-dom';
-import { duelsApiService } from '@/services/duelService';
+import { duelsApiService } from '@/services/api';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 interface DuelCompletionScreenProps {

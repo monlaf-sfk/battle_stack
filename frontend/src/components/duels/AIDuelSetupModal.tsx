@@ -9,7 +9,7 @@ import { useToast } from '../ui/Toast';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { codeExecutionService, type SupportedLanguage } from '../../services/codeExecutionService';
-import { duelsApiService } from '../../services/duelService';
+import { duelsApiService } from '../../services/api';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 

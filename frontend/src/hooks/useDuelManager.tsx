@@ -3,7 +3,8 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
-import { duelsApiService, type DuelResponse, DuelStatus, type DuelResult, type DuelTestResponse } from '../services/duelService';
+import { type DuelResponse, DuelStatus, type DuelResult, type DuelTestResponse } from '../services/duelService';
+import { duelsApiService } from '../services/api';
 import { codeExecutionService, type SupportedLanguage } from '../services/codeExecutionService';
 import type { SubmissionResultData } from '../components/coding/SubmissionResult';
 // import type { UUID } from 'uuid'; // Removed as UUIDs are strings on frontend
@@ -275,13 +276,17 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsConnected(false);
       if (timerRef.current) clearInterval(timerRef.current);
       if (aiTypingTimerRef.current) clearTimeout(aiTypingTimerRef.current);
-      if (event.code === 1000) {
+
+      if (event.wasClean) {
         addToast({ type: 'info', title: 'Disconnected', message: 'You have disconnected from the duel.' });
       } else if (event.code === 1001) { // Going away (browser navigating)
-        console.log('Browser navigating away.');
+        console.log('Browser navigating away, no toast needed.');
       } else {
-        addToast({ type: 'error', title: 'Disconnected', message: `WebSocket error: ${event.reason || 'Unknown reason'}` });
-        setError(`WebSocket disconnected: ${event.reason || 'Unknown reason'}`);
+        // Only show error toast if it wasn't a clean disconnect.
+        const reason = event.reason || `code: ${event.code}`;
+        console.error('WebSocket disconnected unexpectedly:', reason);
+        addToast({ type: 'error', title: 'Disconnected', message: `Connection lost: ${reason}` });
+        setError(`WebSocket disconnected: ${reason}`);
       }
     };
 
