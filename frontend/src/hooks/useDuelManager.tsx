@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
-import { duelsApiService, type DuelResponse, DuelStatus, type DuelResult } from '../services/duelService';
+import { duelsApiService, type DuelResponse, DuelStatus, type DuelResult, type DuelTestResponse } from '../services/duelService';
 import { codeExecutionService, type SupportedLanguage } from '../services/codeExecutionService';
 import type { SubmissionResultData } from '../components/coding/SubmissionResult';
 // import type { UUID } from 'uuid'; // Removed as UUIDs are strings on frontend
@@ -375,9 +375,29 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
     try {
-      await duelsApiService.testCode(duel.id, { code, language: language.id });
-       // The websocket will broadcast the result, so we don't need to return it here.
-      return null;
+      const result: DuelTestResponse = await duelsApiService.testCode(duel.id, { code, language: language.id });
+      
+      const detailsArray = Array.isArray(result.details)
+        ? result.details.map((tc, index) => {
+            if (tc.status === 'COMPILATION_ERROR') {
+              return `Compilation Error: ${tc.error_message}`;
+            }
+            const status = tc.status === 'PASSED' ? 'passed' : 'failed';
+            return `Test case #${index + 1} ${status}: Input: '${tc.input}', Expected: '${tc.expected}', Got: '${tc.got}'`;
+          })
+        : result.details ? [result.details] : [];
+
+      const adaptedData: SubmissionResultData = {
+        is_correct: result.is_correct,
+        error: result.error,
+        details: detailsArray,
+        passed: result.passed_count,
+        total: result.total_count,
+      };
+
+      setSubmissionResult(adaptedData);
+      return adaptedData;
+
     } catch (err: any) {
       console.error('Test run failed:', err);
       addToast({ type: 'error', title: 'Test Error', message: err.response?.data?.detail || 'Failed to run tests.' });

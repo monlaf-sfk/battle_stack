@@ -60,8 +60,6 @@ const AppRoutes = () => {
                 onPlayAgain={() => navigate('/duels')}
               />
             } />
-            {/* <Route path="/quick-duel" element={<QuickDuelPage />} /> */}
-            {/* <Route path="/duel/pve/:duelId" element={<PvEDuelPage />} /> */}
             <Route path="/leaderboards" element={<LeaderboardsPage />} />
           </Route>
         </Routes>

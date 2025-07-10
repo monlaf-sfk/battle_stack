@@ -4,6 +4,21 @@ import type { SubmissionResponse } from './codeExecutionService';
 
 // --- Type Definitions for Duels --- //
 
+export interface DuelTestResponse {
+  is_correct: boolean;
+  passed_count: number;
+  total_count: number;
+  error?: string;
+  details?: {
+    input: string;
+    expected: string;
+    got: string;
+    status: 'PASSED' | 'FAILED' | 'COMPILATION_ERROR';
+    is_public: boolean;
+    error_message?: string;
+  }[];
+}
+
 export const DuelStatus = {
   PENDING: "pending",
   GENERATING_PROBLEM: "generating_problem",
@@ -185,8 +200,8 @@ class DuelService {
   }
 
   // Test code against public tests for a duel
-  async testCode(duelId: string, submission: { code: string; language: string; }): Promise<SubmissionResponse> {
-    const response: AxiosResponse<SubmissionResponse> = await duelsApi.post(`/${duelId}/run-public-tests`, submission);
+  async testCode(duelId: string, submission: { code: string; language: string; }): Promise<DuelTestResponse> {
+    const response: AxiosResponse<DuelTestResponse> = await duelsApi.post(`/${duelId}/run-public-tests`, submission);
     return response.data;
   }
 
