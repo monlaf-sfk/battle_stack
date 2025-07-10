@@ -55,7 +55,7 @@ const UserProfile: React.FC = () => {
 
     return (
         <Card 
-            className="bg-gray-900 border border-gray-800 hover:border-gray-700 transition-all duration-300 overflow-hidden"
+            className="bg-gray-900 border-2 border-transparent hover:border-gray-700 transition-all duration-300 overflow-hidden"
         >
             <div className="h-2 bg-gradient-to-r from-green-400 to-blue-500" />
             <CardContent className="p-6">
@@ -102,11 +102,10 @@ const UserProfile: React.FC = () => {
                 >
                     <div className="flex justify-between items-center mb-1 text-sm">
                         <span className="font-semibold text-white flex items-center font-mono text-sm gap-1.5">
-                            <Crown size={14} className="text-yellow-400" />
                             {t('profilePage.level', { level: level })}
                         </span>
                         <span className="text-gray-400 font-mono text-xs">
-                            {t('profilePage.xpProgress', { current: xpInCurrentLevel, total: 200, xp: t('profilePage.xp') })}
+                            {xpInCurrentLevel} / 200 {t('profilePage.xp')}
                         </span>
                     </div>
                     <div className="relative">
@@ -128,9 +127,9 @@ const UserProfile: React.FC = () => {
                     transition={{ delay: 0.6, staggerChildren: 0.1 }}
                     className="grid grid-cols-3 gap-4"
                 >
-                    <StatItem value={data?.stats?.total_duels || 0} label={t('dashboard.duelsStat')} />
-                    <StatItem value={data?.stats?.current_streak || 0} label={t('dashboard.streakStat')} highlightColor="text-orange-400" />
-                    <StatItem value={data?.stats?.successful_duels || 0} label={t('dashboard.winsStat')} highlightColor="text-green-400" />
+                    <StatItem value={data?.stats?.tasks_completed || 0} label={t('dashboard.tasksStat')} highlightColor="text-blue-400" />
+                    <StatItem value={totalXP || 0} label={t('dashboard.totalXpStat')} highlightColor="text-yellow-400" />
+                    <StatItem value={data?.stats?.hours_coded || 0} label={t('dashboard.hoursStat')} highlightColor="text-green-400" />
                 </motion.div>
             </CardContent>
             <CardFooter className="p-4 bg-gray-900/50 border-t border-gray-800">
@@ -156,7 +155,7 @@ const StatItem = ({ value, label, highlightColor = 'text-white' }: { value: numb
         whileHover={{ scale: 1.05, backgroundColor: 'rgba(31, 41, 55, 0.7)'}}
     >
         <div className={`text-2xl font-bold ${highlightColor} font-mono`}>{value}</div>
-        <div className="text-xs text-gray-400 font-mono tracking-wider">{label}</div>
+        <div className="text-xs text-gray-400 font-mono tracking-wider uppercase">{label}</div>
     </motion.div>
 );
 

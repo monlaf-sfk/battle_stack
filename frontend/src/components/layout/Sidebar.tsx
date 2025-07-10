@@ -4,7 +4,7 @@ import { useLayout } from "@/contexts/LayoutContext";
 import { getMenuItems } from "./menuItems.tsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDashboard } from "../../hooks/useDashboard";
-import { Flame, Zap, Crown, Lock } from "lucide-react";
+import { Award, Star, Trophy, Lock } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 
 const Sidebar = () => {
@@ -114,36 +114,22 @@ const Sidebar = () => {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="p-4 border-b border-gray-800"
             >
-              <div className="grid grid-cols-2 gap-3 text-center">
-                <div className="bg-gray-900 rounded-lg p-3 border border-gray-800">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Flame size={16} className="text-orange-400" />
-                    <span className="text-white font-mono text-sm font-bold">
-                      {data?.stats?.current_streak || 0}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-400 font-mono">{t('sidebar.streak')}</div>
-                </div>
-                
-                <div className="bg-gray-900 rounded-lg p-3 border border-gray-800">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Zap size={16} className="text-yellow-400" />
-                    <span className="text-white font-mono text-sm font-bold">
-                      {data?.stats ? (data.stats.tasks_completed * 25) : 0}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-400 font-mono">{t('sidebar.xp')}</div>
-                </div>
-              </div>
-              
-              {/* Rank Badge */}
-              <div className="mt-3 bg-gray-900 rounded-lg p-2 border border-gray-800">
-                <div className="flex items-center justify-center gap-2">
-                  <Crown size={16} className="text-white" />
-                  <span className="text-white font-mono text-sm font-bold">
-                    {t('sidebar.rank')} #{data?.userRank !== null ? data.userRank : t('common.notApplicable')}
-                  </span>
-                </div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <StatCard 
+                  icon={<Award size={18} className="text-blue-400" />} 
+                  value={data?.stats?.elo_rating || 0}
+                  label={t('leaderboardsPage.elo')} 
+                />
+                <StatCard 
+                  icon={<Star size={18} className="text-yellow-400" />} 
+                  value={data?.stats?.current_streak || 0}
+                  label={t('leaderboardsPage.streak')} 
+                />
+                <StatCard 
+                  icon={<Trophy size={18} className="text-green-400" />} 
+                  value={data?.stats?.successful_duels || 0}
+                  label={t('leaderboardsPage.wins')} 
+                />
               </div>
             </motion.div>
           )}
@@ -251,5 +237,17 @@ const Sidebar = () => {
     </>
   );
 };
+
+const StatCard = ({ icon, value, label }: { icon: React.ReactNode, value: number, label: string }) => (
+  <div className="bg-gray-900 rounded-lg p-3 border border-gray-800/80 hover:bg-gray-800/60 transition-colors">
+    <div className="flex flex-col items-center justify-center gap-1">
+      {icon}
+      <span className="text-white font-mono text-sm font-bold">
+        {value}
+      </span>
+      <div className="text-xs text-gray-400 font-mono uppercase tracking-wider">{label}</div>
+    </div>
+  </div>
+);
 
 export default Sidebar;

@@ -7,7 +7,6 @@ import {
   Crown, 
   Trophy, 
   Medal, 
-  TrendingUp, 
   Users,
   Star,
   ChevronRight,
@@ -64,13 +63,13 @@ const LeaderboardMini: React.FC = () => {
   const getRankBadgeColor = (rank: number) => {
     switch (rank) {
       case 1:
-        return 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900';
+        return 'bg-yellow-400/20 text-yellow-400';
       case 2:
-        return 'bg-gradient-to-r from-gray-300 to-gray-500 text-gray-900';
+        return 'bg-gray-400/20 text-gray-400';
       case 3:
-        return 'bg-gradient-to-r from-amber-600 to-amber-800 text-amber-100';
+        return 'bg-amber-600/20 text-amber-500';
       default:
-        return 'bg-arena-surface/30 text-arena-text-muted';
+        return 'bg-gray-700/20 text-gray-400';
     }
   };
 
@@ -170,61 +169,46 @@ const LeaderboardMini: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="group relative overflow-hidden border border-arena-border rounded-lg p-3 hover:border-arena-accent/40 transition-all duration-200 bg-arena-surface/10 hover:bg-arena-surface/20"
+              className="group relative flex items-center justify-between rounded-lg p-3 transition-all duration-200 bg-gray-900/50 hover:bg-gray-800/60"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${getRankBadgeColor(player.rank)}`}>
-                    <span className="text-xs font-bold">
-                      #{player.rank}
-                    </span>
-                  </div>
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold ${getRankBadgeColor(player.rank)}`}>
+                  {getRankIcon(player.rank)}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm text-white truncate">
+                    {player.username}
+                  </p>
                   
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      {getRankIcon(player.rank)}
-                      <span className="font-medium text-sm text-white truncate">
-                        {player.username}
-                      </span>
+                  <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
+                    <div className="flex items-center gap-1" title={t('leaderboardsPage.elo') as string}>
+                      <Award size={12} />
+                      <span>{player.elo_rating}</span>
                     </div>
-                    
-                    <div className="flex items-center gap-3 text-xs text-arena-text-muted">
-                      <div className="flex items-center gap-1">
-                        <TrendingUp size={10} />
-                        {player.elo_rating} {t('dashboard.elo')}
-                      </div>
-                      
-                      <div className="flex items-center gap-1">
-                        <Trophy size={10} />
-                        {t('dashboard.winRate', { rate: formatWinRate(player.win_rate) })}
-                      </div>
-                      
-                      <div className="flex items-center gap-1">
-                        <Star size={10} />
-                        {player.current_streak} {t('dashboard.streak')}
-                      </div>
+                    <div className="flex items-center gap-1" title={t('leaderboardsPage.winRate') as string}>
+                      <Trophy size={12} />
+                      <span>{formatWinRate(player.win_rate)}</span>
+                    </div>
+                    <div className="flex items-center gap-1" title={t('leaderboardsPage.streak') as string}>
+                      <Star size={12} />
+                      <span>{player.current_streak}</span>
                     </div>
                   </div>
                 </div>
-                
-                <ChevronRight 
-                  size={14} 
-                  className="text-arena-text-muted group-hover:text-arena-accent transition-colors opacity-0 group-hover:opacity-100" 
-                />
               </div>
               
-              {/* Rank position indicator */}
-              {player.rank <= 3 && (
-                <div className="absolute top-0 right-0 w-0 h-0 border-l-[15px] border-l-transparent border-t-[15px] border-t-arena-accent/20"></div>
-              )}
+              <div className={`text-sm font-bold ${getRankBadgeColor(player.rank)} p-1 rounded-md`}>
+                #{player.rank}
+              </div>
             </motion.div>
           ))}
         </div>
         
-        <div className="mt-4 pt-3 border-t border-arena-border">
-          <button className="w-full text-center text-xs text-arena-accent hover:text-arena-accent-bright transition-colors flex items-center justify-center gap-1">
-            {t('dashboard.viewFullLeaderboard')}
-            <ChevronRight size={12} />
+        <div className="mt-4">
+          <button className="w-full text-center text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center justify-center gap-1 font-semibold">
+            <span>{t('dashboard.viewFullLeaderboard')}</span>
+            <ChevronRight size={14} />
           </button>
         </div>
       </CardContent>

@@ -12,9 +12,9 @@ import { Button } from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
   Zap, 
-  Code, 
   Crown, 
   Sword,
+  BarChart,
   ChevronRight
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -24,23 +24,22 @@ const QuickActions: React.FC = () => {
   const { permissions } = useAuth();
   const { t } = useTranslation();
 
-
   const mainActions = [
     {
-      id: 'quick-match',
-      title: t('dashboard.quickMatch'),
+      id: 'duels',
+      title: t('sidebar.duels'),
       description: t('dashboard.jumpIntoDuel'),
       icon: <Sword size={24} />,
       variant: 'gradient' as const,
-      onClick: () => navigate('/quick-duel'),
+      onClick: () => navigate('/duels'),
     },
     {
-      id: 'problems',
-      title: t('dashboard.practice'),
-      description: t('dashboard.honeSkills'),
-      icon: <Code size={24} />,
+      id: 'leaderboards',
+      title: t('sidebar.leaderboards'),
+      description: t('dashboard.topCodersSubtitle'),
+      icon: <BarChart size={24} />,
       variant: 'glass' as const,
-      onClick: () => navigate('/problems'),
+      onClick: () => navigate('/leaderboards'),
     },
   ];
 

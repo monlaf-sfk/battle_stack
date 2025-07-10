@@ -10,8 +10,8 @@ import { GoogleOAuthButton } from "@/components/auth/GoogleOAuthButton";
 import { Link } from "react-router-dom";
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Lock, AlertCircle, UserPlus } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { User, Mail, Lock, AlertCircle, UserPlus, Github } from 'lucide-react';
+import { useTranslation, Trans } from 'react-i18next';
 
 interface PasswordStrength {
   score: number;
@@ -66,10 +66,13 @@ const RegisterPage = () => {
 
   // Debounce username availability check
   useEffect(() => {
+    if (usernameCheckTimeout.current) {
+      clearTimeout(usernameCheckTimeout.current);
+    }
+
     if (username.length >= 3) {
-      if (usernameCheckTimeout.current) {
-        clearTimeout(usernameCheckTimeout.current);
-      }
+      setError(prev => (prev === t('registerPage.usernameMinLength') ? '' : prev));
+      
       usernameCheckTimeout.current = setTimeout(async () => {
         try {
           const response = await authApi.get(`/check-username?username=${username}`);
@@ -77,7 +80,7 @@ const RegisterPage = () => {
           if (!response.data.available) {
             setError(t('registerPage.usernameTaken'));
           } else {
-            setError('');
+            setError(prev => (prev === t('registerPage.usernameTaken') ? '' : prev));
           }
         } catch (err) {
           console.error('Error checking username availability:', err);
@@ -86,23 +89,29 @@ const RegisterPage = () => {
       }, 500);
     } else if (username.length > 0) {
       setUsernameAvailable(false);
-      setError(t('registerPage.usernameTooShort'));
+      setError(t('registerPage.usernameMinLength'));
     } else {
       setUsernameAvailable(null);
+      setError(prev =>
+        [t('registerPage.usernameMinLength'), t('registerPage.usernameTaken')].includes(prev) ? '' : prev
+      );
     }
     return () => {
       if (usernameCheckTimeout.current) {
         clearTimeout(usernameCheckTimeout.current);
       }
     };
-  }, [username]);
+  }, [username, t]);
 
   // Debounce email availability check
   useEffect(() => {
-    if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
-      if (emailCheckTimeout.current) {
-        clearTimeout(emailCheckTimeout.current);
-      }
+    if (emailCheckTimeout.current) {
+      clearTimeout(emailCheckTimeout.current);
+    }
+
+    if (/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(email)) {
+      setError(prev => (prev === t('registerPage.emailInvalid') ? '' : prev));
+
       emailCheckTimeout.current = setTimeout(async () => {
         try {
           const response = await authApi.get(`/check-email?email=${email}`);
@@ -110,7 +119,7 @@ const RegisterPage = () => {
           if (!response.data.available) {
             setError(t('registerPage.emailTaken'));
           } else {
-            setError('');
+            setError(prev => (prev === t('registerPage.emailTaken') ? '' : prev));
           }
         } catch (err) {
           console.error('Error checking email availability:', err);
@@ -122,23 +131,26 @@ const RegisterPage = () => {
       setError(t('registerPage.emailInvalid'));
     } else {
       setEmailAvailable(null);
+      setError(prev =>
+        [t('registerPage.emailInvalid'), t('registerPage.emailTaken')].includes(prev) ? '' : prev
+      );
     }
     return () => {
       if (emailCheckTimeout.current) {
         clearTimeout(emailCheckTimeout.current);
       }
     };
-  }, [email]);
+  }, [email, t]);
 
   // Update validation when form fields change
   useEffect(() => {
     setFormValidation({
-      username: username.trim().length >= 3 && usernameAvailable === true,
-      email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email) && emailAvailable === true,
+      username: username.trim().length >= 3,
+      email: /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(email),
       password: passwordStrength.score >= 2,
       confirmPassword: password === confirmPassword && confirmPassword.length > 0
     });
-  }, [username, email, password, confirmPassword, passwordStrength, usernameAvailable, emailAvailable]);
+  }, [username, email, password, confirmPassword, passwordStrength]);
 
   const calculatePasswordStrength = (pass: string): PasswordStrength => {
     let score = 0;
@@ -171,14 +183,14 @@ const RegisterPage = () => {
       return false;
     }
     if (username.length < 3) {
-      setError(t('registerPage.usernameTooShort'));
+      setError(t('registerPage.usernameMinLength'));
       return false;
     }
     if (!email.trim()) {
       setError(t('registerPage.emailRequired'));
       return false;
     }
-    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+    if (!/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(email)) {
       setError(t('registerPage.emailInvalid'));
       return false;
     }
@@ -187,15 +199,15 @@ const RegisterPage = () => {
       return false;
     }
     if (passwordStrength.score < 2) {
-      setError(t('registerPage.passwordTooWeak'));
+      setError(t('registerPage.passwordWeak'));
       return false;
     }
     if (password !== confirmPassword) {
-      setError(t('registerPage.passwordsDoNotMatch'));
+      setError(t('registerPage.passwordsMismatch'));
       return false;
     }
     if (!acceptTerms) {
-      setError(t('registerPage.acceptTerms'));
+      setError(t('registerPage.termsNotAccepted'));
       return false;
     }
     return true;
@@ -343,7 +355,7 @@ const RegisterPage = () => {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    success={/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email) && emailAvailable === true ? t('registerPage.validEmail') : undefined}
+                    success={/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(email) && emailAvailable === true ? t('registerPage.validEmail') : undefined}
                     autoComplete="email"
                     disabled={isLoading}
                     className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
@@ -418,11 +430,13 @@ const RegisterPage = () => {
                     className="form-checkbox h-4 w-4 text-white bg-gray-700 border-gray-600 rounded focus:ring-0 focus:outline-none"
                   />
                   <label htmlFor="acceptTerms" className="text-gray-400 font-mono">
-                    {t('registerPage.agreeToTerms', {
-                      termsOfService: <Link to="/terms" className="text-white hover:text-gray-300 transition-colors font-bold">{t('common.termsOfService')}</Link>,
-                      and: t('common.and'),
-                      privacyPolicy: <Link to="/privacy" className="text-white hover:text-gray-300 transition-colors font-bold">{t('common.privacyPolicy')}</Link>
-                    })}
+                    <Trans
+                      i18nKey="registerPage.agreeToTerms"
+                      components={{
+                        1: <Link to="/terms" className="text-white hover:text-gray-300 transition-colors font-bold" />,
+                        3: <Link to="/privacy" className="text-white hover:text-gray-300 transition-colors font-bold" />
+                      }}
+                    />
                   </label>
                 </motion.div>
 
@@ -508,7 +522,7 @@ const RegisterPage = () => {
                   disabled={true}
                   type="button"
                 >
-                  <img src="https://www.svgrepo.com/show/512120/github-142.svg" alt="GitHub" className="w-5 h-5 mr-3" />
+                  <Github size={20} className="mr-3" />
                   {t('common.github')} {t('common.comingSoon')}
                 </Button>
               </motion.div>

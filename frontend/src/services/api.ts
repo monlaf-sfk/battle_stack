@@ -307,6 +307,7 @@ export interface DashboardStats {
   total_duels: number;
   tournaments_won: number;
   hours_coded: number;
+  elo_rating: number;
   progress_data: {
     name: string;
     value: number;

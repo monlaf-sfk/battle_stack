@@ -72,14 +72,14 @@ const RecentActivity: React.FC = () => {
     }
   };
 
-  const getRatingChangeColor = (change?: number | null) => { // Updated type to allow null
-    if (change === null || change === undefined || change === 0) return 'text-arena-text-muted';
+  const getRatingChangeColor = (change?: number | null) => {
+    if (change === null || change === undefined || change === 0) return 'text-gray-500';
     return change > 0 ? 'text-green-400' : 'text-red-400';
   };
 
-  const getRatingChangeIcon = (change?: number | null) => { // Updated type to allow null
-    if (change === null || change === undefined || change === 0) return <Minus size={12} />;
-    return change > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />;
+  const getRatingChangeIcon = (change?: number | null) => {
+    if (change === null || change === undefined || change === 0) return <Minus size={12} className="mr-1" />;
+    return change > 0 ? <TrendingUp size={12} className="mr-1" /> : <TrendingDown size={12} className="mr-1" />;
   };
 
   if (loading) {
@@ -193,34 +193,28 @@ const RecentActivity: React.FC = () => {
                       </span>
                       <span className={`text-xs px-2 py-0.5 rounded font-medium ${
                         duel.is_victory 
-                          ? 'bg-green-500/20 text-green-400' 
-                          : 'bg-red-500/20 text-red-400'
+                          ? 'bg-green-900/50 text-green-400' 
+                          : 'bg-red-900/50 text-red-400'
                       }`}>
                         {duel.is_victory ? t('dashboard.victory') : t('dashboard.defeat')}
                       </span>
                     </div>
                     
-                    <p className="text-xs text-arena-text-muted truncate">
+                    <p className="text-xs text-gray-400 truncate">
                       {duel.problem_title}
                     </p>
                     
-                    <div className="flex items-center gap-3 mt-2 text-xs text-arena-text-muted">
-                      {/* {duel.solve_time && ( */}
-                        {/* <div className="flex items-center gap-1"> */}
-                          {/* <Zap size={10} /> */}
-                          {/* {duel.solve_time} */}
-                        {/* </div> */}
-                      {/* )} */}
+                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
                       
-                      {duel.rating_change !== null && duel.rating_change !== undefined && ( // Check for null/undefined
-                        <div className={`flex items-center gap-1 ${getRatingChangeColor(duel.rating_change)}`}>
+                      {duel.rating_change !== null && duel.rating_change !== undefined && (
+                        <div className={`flex items-center ${getRatingChangeColor(duel.rating_change)}`}>
                           {getRatingChangeIcon(duel.rating_change)}
                           {Math.abs(duel.rating_change)} {t('dashboard.elo')}
                         </div>
                       )}
                       
                       <div className="flex items-center gap-1">
-                        <Calendar size={10} />
+                        <Calendar size={12} className="mr-1" />
                         {formatTimeAgo(duel.played_at)}
                       </div>
                     </div>
@@ -229,7 +223,7 @@ const RecentActivity: React.FC = () => {
                 
                 <ChevronRight 
                   size={16} 
-                  className="text-arena-text-muted group-hover:text-arena-accent transition-colors opacity-0 group-hover:opacity-100" 
+                  className="text-gray-600 group-hover:text-white transition-colors" 
                 />
               </div>
             </motion.div>
@@ -238,7 +232,7 @@ const RecentActivity: React.FC = () => {
         
         {recentDuels.length >= 5 && (
           <div className="mt-4 text-center">
-            <button className="text-xs text-arena-accent hover:text-arena-accent-bright transition-colors">
+            <button className="text-xs text-arena-accent hover:underline transition-colors">
               {t('dashboard.viewAllActivity')}
             </button>
           </div>
