@@ -151,3 +151,10 @@ class MatchHistoryItem(BaseModel):
 class DuelEndMessage(BaseModel):
     type: Literal["duel_end"] = "duel_end"
     data: DuelResult
+
+class DailyActivity(BaseModel):
+    date: str
+    count: int
+
+    class Config:
+        from_attributes = True

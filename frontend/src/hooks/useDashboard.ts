@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { dashboardApi /*, duelsApiService*/, type DashboardStats, type Achievement, type AIRecommendation, type NewsItem } from '../services/api';
+import { useState, useEffect, useCallback } from 'react';
+import { dashboardApi, type DashboardStats, type Achievement, type AIRecommendation, type NewsItem, type DailyActivity } from '../services/api';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,13 +9,16 @@ interface DashboardData {
   recommendations: AIRecommendation[];
   newsItems: NewsItem[];
   userRank: number | null;
+  dailyActivity: DailyActivity[];
 }
 
 interface UseDashboardReturn {
   data: DashboardData;
   loading: boolean;
+  activityLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+  fetchActivityForYear: (year: number) => Promise<void>;
   updateProgress: (category: string, progress: number) => Promise<void>;
   addAchievement: (name: string, description: string, icon?: string) => Promise<void>;
 }
@@ -28,40 +31,35 @@ export const useDashboard = (): UseDashboardReturn => {
     recommendations: [],
     newsItems: [],
     userRank: null,
+    dailyActivity: [],
   });
   const [loading, setLoading] = useState(true);
+  const [activityLoading, setActivityLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { addToast } = useToast();
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Fetch all dashboard data in parallel
-      const [statsResponse, achievementsResponse, recommendationsResponse, newsResponse/*, leaderboardResponse*/] = await Promise.all([
+      const currentYear = new Date().getFullYear();
+      const [statsResponse, achievementsResponse, recommendationsResponse, newsResponse, dailyActivityResponse] = await Promise.all([
         dashboardApi.getStats(),
         dashboardApi.getAchievements(),
         dashboardApi.getRecommendations(),
         dashboardApi.getNews(),
-        // duelsApiService.getPublicLeaderboard(),
+        dashboardApi.getDailyActivity(currentYear),
       ]);
 
-      let currentUserRank: number | null = null;
-      // if (user && leaderboardResponse.data) {
-      //   const userInLeaderboard = leaderboardResponse.data.find((entry: any) => entry.user_id === user.id);
-      //   if (userInLeaderboard) {
-      //     currentUserRank = userInLeaderboard.rank;
-      //   }
-      // }
-
-      setData({
+      setData(prevData => ({
+        ...prevData,
         stats: statsResponse.data,
         achievements: achievementsResponse.data,
         recommendations: recommendationsResponse.data,
         newsItems: newsResponse.data,
-        userRank: currentUserRank,
-      });
+        dailyActivity: dailyActivityResponse.data,
+      }));
     } catch (err: any) {
       console.error('Failed to fetch dashboard data:', err);
       const errorMessage = err.response?.data?.detail || 'Failed to load dashboard data';
@@ -76,8 +74,26 @@ export const useDashboard = (): UseDashboardReturn => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [addToast]);
 
+  const fetchActivityForYear = async (year: number) => {
+    try {
+      setActivityLoading(true);
+      const response = await dashboardApi.getDailyActivity(year);
+      setData(prev => ({ ...prev, dailyActivity: response.data }));
+    } catch (err: any) {
+      console.error(`Failed to fetch activity for year ${year}:`, err);
+      addToast({
+        type: 'error',
+        title: 'Activity Error',
+        message: `Failed to load activity data for ${year}.`,
+        duration: 5000,
+      });
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+  
   const updateProgress = async (category: string, progress: number) => {
     try {
       await dashboardApi.updateProgress(category, progress);
@@ -139,14 +155,18 @@ export const useDashboard = (): UseDashboardReturn => {
   };
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [user]);
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user, fetchDashboardData]);
 
   return {
     data,
     loading,
+    activityLoading,
     error,
     refetch,
+    fetchActivityForYear,
     updateProgress,
     addAchievement,
   };

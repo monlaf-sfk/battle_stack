@@ -79,6 +79,12 @@ const DuelArenaPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'description' | 'testcases'>('description');
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Function to get the localStorage key for user code
+  const getUserCodeStorageKey = useCallback(() => {
+    if (!duelId || !user?.id) return null;
+    return `duel-${duelId}-user-${user.id}-code`;
+  }, [duelId, user?.id]);
+
   // Collapse sidebar on enter, expand on leave
   useEffect(() => {
     setSidebarOpen(false);
@@ -105,6 +111,17 @@ const DuelArenaPage: React.FC = () => {
     };
   }, [duelId, isAuthenticated, user?.id, navigate, addToast, t, connect, disconnect]);
 
+  // Load user code from localStorage on initial component mount
+  useEffect(() => {
+    const storageKey = getUserCodeStorageKey();
+    if (storageKey) {
+      const savedCode = localStorage.getItem(storageKey);
+      if (savedCode) {
+        setUserCode(savedCode);
+      }
+    }
+  }, [getUserCodeStorageKey]);
+
   // Fetch supported languages
   useEffect(() => {
     const fetchLanguages = async () => {
@@ -121,24 +138,41 @@ const DuelArenaPage: React.FC = () => {
   // Set initial code once duel problem is loaded and language is set
   useEffect(() => {
     if (duel?.problem && currentLanguage && !userCode) {
-      const initialCode = duel.problem.starter_code?.[currentLanguage.id] || '';
-      setUserCode(initialCode);
+      const storageKey = getUserCodeStorageKey();
+      const savedCode = storageKey ? localStorage.getItem(storageKey) : null;
+      
+      if (savedCode) {
+        setUserCode(savedCode);
+      } else {
+        const initialCode = duel.problem.starter_code?.[currentLanguage.id] || '';
+        setUserCode(initialCode);
+      }
     }
-  }, [duel?.problem, currentLanguage, userCode]);
+  }, [duel?.problem, currentLanguage, userCode, getUserCodeStorageKey]);
 
-  // Navigate to completion screen when duel is completed
+  // Navigate to completion screen when duel is completed and clear storage
   useEffect(() => {
     if (duel?.status === DuelStatus.COMPLETED || duel?.status === DuelStatus.TIMED_OUT) {
+      const userCodeKey = getUserCodeStorageKey();
+      if (userCodeKey) {
+        localStorage.removeItem(userCodeKey);
+      }
+      // Opponent code key is handled in useDuelManager
       navigate(`/duel/${duelId}/complete`);
     }
-  }, [duel?.status, duelId, navigate]);
+  }, [duel?.status, duelId, navigate, getUserCodeStorageKey]);
 
   const handleUserCodeChange = useCallback((code: string | undefined) => {
-    setUserCode(code || '');
+    const newCode = code || '';
+    setUserCode(newCode);
     if (currentLanguage) {
-      sendCodeUpdate(code || '', currentLanguage);
+      sendCodeUpdate(newCode, currentLanguage);
     }
-  }, [sendCodeUpdate, currentLanguage]);
+    const storageKey = getUserCodeStorageKey();
+    if (storageKey) {
+      localStorage.setItem(storageKey, newCode);
+    }
+  }, [sendCodeUpdate, currentLanguage, getUserCodeStorageKey]);
 
   const handleRunTests = async () => {
     if (!userCode.trim() || !currentLanguage || !duel?.id) {

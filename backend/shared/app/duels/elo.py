@@ -1,12 +1,28 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from uuid import UUID
+from uuid import UUID, uuid4
 from .models import PlayerRating
 
-async def get_or_create_player_rating(db: AsyncSession, user_id: UUID, username: str) -> PlayerRating:
+AI_OPPONENT_ID = UUID("00000000-0000-0000-0000-000000000001")
+AI_DEFAULT_ELO = 1200
+
+async def get_or_create_player_rating(db: "AsyncSession", user_id: UUID, username: str) -> PlayerRating:
     """
-    Retrieves a player's rating, creating it if it doesn't exist.
+    Retrieves or creates a player rating entry.
+    Handles a special case for the AI opponent to avoid database writes.
     """
+    if user_id == AI_OPPONENT_ID:
+        # Return an in-memory PlayerRating object for the AI, no DB interaction
+        return PlayerRating(
+            user_id=AI_OPPONENT_ID,
+            username="AI Opponent",
+            elo_rating=AI_DEFAULT_ELO,
+            wins=0,
+            losses=0,
+            draws=0,
+            total_matches=0
+        )
+
     result = await db.execute(select(PlayerRating).where(PlayerRating.user_id == user_id))
     player_rating = result.scalar_one_or_none()
     if not player_rating:

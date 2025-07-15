@@ -15,6 +15,8 @@ from .scoring import scoring_service
 from .websocket_manager import manager
 from shared.app.code_runner import execute_code, SubmissionParams, SubmissionResult
 from shared.app.ai.generator import generate_algorithm_problem
+import httpx
+from .elo import AI_OPPONENT_ID, AI_DEFAULT_ELO
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -268,6 +270,39 @@ async def _determine_winner(db: AsyncSession, duel: models.Duel) -> tuple[UUID |
 
     return winner_id, final_results
 
+async def notify_user_service_of_duel_completion(result_data: schemas.DuelResult):
+    """Notifies the user service that a duel has been completed."""
+    user_service_url = "http://user-service:8000/api/v1/users/internal/duel-completed"
+    
+    p1_id = UUID(result_data.player_one_result.player_id)
+
+    payload = {
+        "player_one_result": {
+            "player_id": str(p1_id),
+            "is_winner": result_data.player_one_result.is_winner
+        },
+        "is_ai_duel": result_data.is_ai_duel
+    }
+
+    if not result_data.is_ai_duel and result_data.player_two_result.player_id != "ai":
+        p2_id = UUID(result_data.player_two_result.player_id)
+        payload["player_two_result"] = {
+            "player_id": str(p2_id),
+            "is_winner": result_data.player_two_result.is_winner
+        }
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(user_service_url, json=payload, timeout=5.0)
+            response.raise_for_status()
+            logger.info(f"Successfully notified user_service of duel completion.")
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error notifying user_service: {e.response.status_code}")
+        logger.error(f"Response body: {e.response.text}")
+    except httpx.RequestError as e:
+        logger.error(f"Failed to notify user_service about duel completion: {e}")
+
+
 class DuelFlowService:
     async def handle_submission(
         self,
@@ -352,15 +387,23 @@ class DuelFlowService:
         status = models.DuelStatus.TIMED_OUT if is_timeout else models.DuelStatus.COMPLETED
         await service.end_duel(db, duel_id, final_results, status=status)
         
-        await service.update_user_stats_after_duel(db, duel_player_one_id, final_results.player_one_result)
-        if duel_player_two_id is not None and final_results.player_two_result:
-            await service.update_user_stats_after_duel(db, duel_player_two_id, final_results.player_two_result)
+        # Notify user_service instead of direct update
+        await notify_user_service_of_duel_completion(final_results)
 
-        if winner_id and not for_ai and isinstance(winner_id, UUID):
-            loser_id = duel_player_one_id if str(winner_id) != str(duel_player_one_id) else duel_player_two_id
-            if loser_id and isinstance(loser_id, UUID):
-                await service.update_ratings_after_duel(db, winner_id=winner_id, loser_id=loser_id)
-        
+        # Always update ratings now, handling AI duels specifically
+        if winner_id:
+            if isinstance(winner_id, UUID): # Human won
+                loser_id = duel_player_two_id if str(winner_id) == str(duel_player_one_id) else duel_player_one_id
+                if final_results.is_ai_duel:
+                    # Human vs AI: update human rating against AI's fixed rating
+                    await service.update_ratings_after_duel(db, winner_id=winner_id, loser_id=AI_OPPONENT_ID)
+                elif loser_id and isinstance(loser_id, UUID):
+                    # Human vs Human
+                    await service.update_ratings_after_duel(db, winner_id=winner_id, loser_id=loser_id)
+            elif winner_id == 'ai': # AI won
+                human_player_id = duel_player_one_id # In AI duels, player one is always human
+                await service.update_ratings_after_duel(db, winner_id=AI_OPPONENT_ID, loser_id=human_player_id)
+
         end_message = schemas.DuelEndMessage(
             type="duel_end",
             data=final_results.model_dump(mode='json')

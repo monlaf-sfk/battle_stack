@@ -1,17 +1,24 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import update
 import json
 import os
+from sqlalchemy import func, cast, Date
+from sqlalchemy.future import select
+from shared.app.duels.models import Duel
+from sqlalchemy import or_
 
 from shared.app.user.models import UserProfile as UserProfileModel, UserProgress, UserAchievement
 from shared.app.user.schemas import (
     UserProfileCreate, DashboardStats, ProgressData, Achievement, AIRecommendation,
-    UserProgressCreate, UserProgressResponse, UserAchievementCreate, UserAchievementResponse
+    UserProgressCreate, UserProgressResponse, UserAchievementCreate, UserAchievementResponse,
+    DailyActivity, DuelResultData, PlayerResultData
 )
+import random
+import httpx
 
 # Глобальный список всех достижений
 ACHIEVEMENTS_PATH = os.path.join(os.path.dirname(__file__), "achievements.json")
@@ -405,4 +412,53 @@ async def get_roadmap_events(db: AsyncSession, *, user_id: uuid.UUID):
 
 async def get_recent_duels(db: AsyncSession, *, user_id: uuid.UUID):
     profile = await get_or_create_user_profile(db, user_id=user_id)
-    return profile.recent_duels or [] 
+    return profile.recent_duels or []
+
+
+async def get_daily_activity(db: AsyncSession, *, user_id: uuid.UUID, year: int) -> List[DailyActivity]:
+    """
+    Fetches user's daily activity for a given year by calling the duels_service.
+    """
+    duels_service_url = f"http://duels-service:8000/api/v1/duels/activity/{user_id}?year={year}"
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(duels_service_url, timeout=10.0)
+            response.raise_for_status()  # Will raise an exception for 4xx/5xx responses
+            activity_data = response.json()
+            return [DailyActivity(**item) for item in activity_data]
+    except httpx.RequestError as e:
+        # Log the error and return an empty list or re-raise a custom exception
+        print(f"An error occurred while requesting {e.request.url!r}.")
+        # Depending on desired behavior, you might want to return empty list
+        # or raise a service-level exception.
+        return []
+    except httpx.HTTPStatusError as e:
+        print(f"Error response {e.response.status_code} while requesting {e.request.url!r}.")
+        return [] 
+
+async def _update_single_player_stats(db: AsyncSession, player_result: PlayerResultData, is_ai_duel: bool):
+    """Helper to update stats for a single player after a duel."""
+    profile = await get_or_create_user_profile(db, user_id=player_result.player_id)
+    
+    profile.total_duels += 1
+    if is_ai_duel:
+        profile.ai_duels += 1
+    else:
+        profile.pvp_duels += 1
+        
+    if player_result.is_winner:
+        profile.successful_duels += 1
+    
+    await db.commit()
+
+async def update_stats_from_duel(db: AsyncSession, result_data: DuelResultData):
+    """
+    Updates the statistics for players involved in a duel.
+    """
+    # Update stats for player one
+    await _update_single_player_stats(db, result_data.player_one_result, result_data.is_ai_duel)
+    
+    # Update stats for player two if it's a PvP duel
+    if result_data.player_two_result:
+        await _update_single_player_stats(db, result_data.player_two_result, result_data.is_ai_duel) 

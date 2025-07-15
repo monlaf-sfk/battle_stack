@@ -246,6 +246,17 @@ async def get_recent_matches(limit: int = 10, db: AsyncSession = Depends(get_db)
     match_history = await service.get_recent_matches(db, limit=limit)
     return match_history
 
+@router.get("/activity/{user_id}", response_model=list[schemas.DailyActivity])
+async def get_user_activity(
+    user_id: UUID,
+    year: int = Query(datetime.now(timezone.utc).year),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Retrieves the daily activity count for a specific user and year.
+    """
+    return await service.get_user_activity_by_year(db, user_id=user_id, year=year)
+
 @router.get("/{duel_id}", response_model=schemas.Duel)
 async def get_duel_details(
     duel_id: UUID,

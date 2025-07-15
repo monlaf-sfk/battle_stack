@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -60,6 +59,11 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const currentLanguageRef = useRef(currentLanguage);
   currentLanguageRef.current = currentLanguage;
 
+  const getStorageKey = useCallback((name: string) => {
+    if (!duelId) return null;
+    return `duel-${duelId}-${name}`;
+  }, [duelId]);
+
   const getWebSocketUrl = () => {
     if (import.meta.env.VITE_WEBSOCKET_URL) {
       return import.meta.env.VITE_WEBSOCKET_URL;
@@ -97,6 +101,125 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('WebSocket not open. Message not sent.', type, payload);
     }
   }, []);
+
+  const startAiTypingSimulation = useCallback((process: any[], startProgress = 0) => {
+    if (aiTypingTimerRef.current) clearTimeout(aiTypingTimerRef.current);
+  
+    let totalDelay = 0;
+    const startIndex = Math.floor((startProgress / 100) * process.length);
+
+    const executeStep = (stepIndex: number) => {
+      if (stepIndex >= process.length) {
+        aiTypingTimerRef.current = setTimeout(() => {
+          setAiFinishedTyping(true);
+          setOpponentTyping(false);
+          setAiProgress(100);
+          const progressKey = getStorageKey('ai-progress');
+          if (progressKey) localStorage.setItem(progressKey, '100');
+        }, 1000 + Math.random() * 1000); // Final pause before finishing
+        return;
+      }
+  
+      const step = process[stepIndex];
+      const action = step.root;
+      let stepDelay = 0;
+  
+      if (action.action === 'type') {
+        const typingSpeed = (250 / action.speed) * (0.8 + Math.random() * 0.4); // Human-like speed variation
+        for (let i = 0; i < action.content.length; i++) {
+          totalDelay += typingSpeed;
+          setTimeout(() => {
+            setOpponentCode(prev => prev + action.content[i]);
+            setOpponentTyping(true);
+          }, totalDelay);
+        }
+        stepDelay = totalDelay - (stepIndex > 0 ? process[stepIndex-1].delay || 0 : 0);
+  
+      } else if (action.action === 'pause') {
+        stepDelay = action.duration * 1000 * (0.5 + Math.random()); // "Thinking" time
+        totalDelay += stepDelay;
+        setTimeout(() => {
+            setOpponentTyping(false);
+        }, totalDelay);
+  
+      } else if (action.action === 'delete') {
+        const deleteSpeed = 150 * (0.8 + Math.random() * 0.4); // Human-like mistake correction
+        for (let i = 0; i < action.char_count; i++) {
+            totalDelay += deleteSpeed;
+            setTimeout(() => {
+                setOpponentCode(prev => prev.slice(0, -1));
+                setOpponentTyping(true);
+            }, totalDelay);
+        }
+        stepDelay = totalDelay - (stepIndex > 0 ? process[stepIndex-1].delay || 0 : 0);
+      }
+  
+      // Update progress after the action is visually complete
+      setTimeout(() => {
+        const newProgress = (stepIndex + 1) / process.length * 100;
+        setAiProgress(newProgress);
+        const progressKey = getStorageKey('ai-progress');
+        if (progressKey) {
+          localStorage.setItem(progressKey, JSON.stringify(newProgress));
+        }
+      }, totalDelay);
+      
+      // Store the cumulative delay for the next step's calculation
+      process[stepIndex].delay = totalDelay;
+  
+      // Schedule the next step
+      executeStep(stepIndex + 1);
+    };
+  
+    executeStep(startIndex);
+  
+  }, [getStorageKey]);
+
+  // Effect to load and reconstruct AI state on mount
+  useEffect(() => {
+    const processKey = getStorageKey('ai-process');
+    const progressKey = getStorageKey('ai-progress');
+
+    if (processKey && progressKey) {
+      const savedProcessJSON = localStorage.getItem(processKey);
+      const savedProgressJSON = localStorage.getItem(progressKey);
+
+      if (savedProcessJSON && savedProgressJSON) {
+        try {
+          const savedProcess = JSON.parse(savedProcessJSON);
+          const savedProgress = JSON.parse(savedProgressJSON);
+          
+          if (savedProcess.length > 0 && savedProgress > 0) {
+            let reconstructedCode = '';
+            const endIndex = Math.floor((savedProgress / 100) * savedProcess.length);
+            
+            for (let i = 0; i < endIndex; i++) {
+              const action = savedProcess[i].root;
+              if (action.action === 'type') {
+                reconstructedCode += action.content;
+              } else if (action.action === 'delete' && reconstructedCode.length > 0) {
+                reconstructedCode = reconstructedCode.slice(0, -action.char_count);
+              }
+            }
+
+            setOpponentCode(reconstructedCode);
+            setAiProgress(savedProgress);
+            setAiCodingProcess(savedProcess);
+            if(savedProgress < 100) {
+              startAiTypingSimulation(savedProcess, savedProgress);
+            } else {
+              setAiFinishedTyping(true);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to parse saved duel state:", e);
+          localStorage.removeItem(processKey);
+          localStorage.removeItem(progressKey);
+        }
+      }
+    }
+  }, [getStorageKey, startAiTypingSimulation]);
+
 
   const fetchDuelData = useCallback(async (id: string) => {
     try {
@@ -227,6 +350,12 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
         case 'duel_end':
           setDuelResult(message.data);
           setDuel(prev => prev ? { ...prev, status: message.data.is_timeout ? DuelStatus.TIMED_OUT : DuelStatus.COMPLETED } : null);
+          // Clear storage on duel end
+          const processKeyOnEnd = getStorageKey('ai-process');
+          const progressKeyOnEnd = getStorageKey('ai-progress');
+          if (processKeyOnEnd) localStorage.removeItem(processKeyOnEnd);
+          if (progressKeyOnEnd) localStorage.removeItem(progressKeyOnEnd);
+          
           disconnect(); // Disconnect after duel ends
           break;
         case 'error':
@@ -239,10 +368,18 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
            // No action needed, backend will push updates
            break;
         case 'ai_coding_process':
-          setAiCodingProcess(message.data);
-          setAiProgress(0); // Reset AI progress
+          const newProcess = message.data;
+          setAiCodingProcess(newProcess);
+          
+          const processKey = getStorageKey('ai-process');
+          if (processKey) {
+            localStorage.setItem(processKey, JSON.stringify(newProcess));
+          }
+
+          setOpponentCode('');
+          setAiProgress(0);
           setAiFinishedTyping(false);
-          startAiTypingSimulation(message.data);
+          startAiTypingSimulation(newProcess, 0);
           break;
         case 'ai_progress':
             if (message.data.code_chunk) {
@@ -299,7 +436,7 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     ws.current = socket;
-  }, [user?.id, token, addToast, setInitialLanguageFromDuel, fetchDuelData, sendMessage]);
+  }, [user?.id, token, addToast, setInitialLanguageFromDuel, fetchDuelData, sendMessage, aiProgress, startAiTypingSimulation]);
 
   const disconnect = useCallback(() => {
     if (ws.current) {
@@ -310,42 +447,6 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (timerRef.current) clearInterval(timerRef.current);
       if (aiTypingTimerRef.current) clearTimeout(aiTypingTimerRef.current);
     }
-  }, []);
-
-  const startAiTypingSimulation = useCallback((process: any[]) => {
-    if (aiTypingTimerRef.current) clearTimeout(aiTypingTimerRef.current);
-
-    let delay = 0;
-    process.forEach((step: any, index: number) => {
-      const action = step.root;
-      if (action.action === 'type') {
-        delay += action.content.length * (350 / action.speed); // Slower, more human-like typing
-        aiTypingTimerRef.current = setTimeout(() => {
-          setOpponentCode(prev => prev + action.content);
-          setAiProgress(index / process.length * 100);
-          setOpponentTyping(true); // Show typing indicator
-        }, delay);
-      } else if (action.action === 'pause') {
-        delay += action.duration * 2000; // Add pause duration
-        aiTypingTimerRef.current = setTimeout(() => {
-            setOpponentTyping(false); // Optionally stop typing animation during pause
-        }, delay);
-      } else if (action.action === 'delete') {
-        delay += action.char_count * 200; // Slower deleting
-        aiTypingTimerRef.current = setTimeout(() => {
-          setOpponentCode(prev => prev.slice(0, -action.char_count));
-          setAiProgress(index / process.length * 100); // Update progress after delete
-          setOpponentTyping(true); // Show typing indicator
-        }, delay);
-      }
-    });
-    aiTypingTimerRef.current = setTimeout(() => {
-        setAiFinishedTyping(true);
-        setOpponentTyping(false);
-        setAiProgress(100); // Ensure progress is 100% when done
-        // Optionally trigger AI submission here after a short delay
-    }, delay + 2000); // Add a small buffer after last action
-
   }, []);
 
   useEffect(() => {

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, UUID4
 
 class UserProfileBase(BaseModel):
     xp: int = Field(default=0, ge=0)
@@ -31,7 +31,7 @@ class UserProfileCreate(UserProfileBase):
     user_id: uuid.UUID
 
 class UserProfile(UserProfileBase):
-    id: uuid.UUID
+    id: UUID4
     user_id: uuid.UUID
     last_active: datetime
     created_at: datetime
@@ -131,4 +131,21 @@ class Duel(BaseModel):
     opponent: str
     result: str  # 'Won' | 'Lost'
     score: str
-    date: datetime 
+    date: datetime
+
+class DailyActivity(BaseModel):
+    date: str
+    count: int
+
+    class Config:
+        orm_mode = True
+
+
+class PlayerResultData(BaseModel):
+    player_id: UUID4
+    is_winner: bool
+
+class DuelResultData(BaseModel):
+    player_one_result: PlayerResultData
+    player_two_result: Optional[PlayerResultData] = None
+    is_ai_duel: bool

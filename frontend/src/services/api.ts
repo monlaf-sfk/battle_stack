@@ -51,6 +51,11 @@ const transformDuelResponse = (duelData: DuelResponse): DuelResponse => {
   return duelData;
 };
 
+export interface DailyActivity {
+  date: string;
+  count: number;
+}
+
 // Dashboard API endpoints
 export const dashboardApi = {
   // Get dashboard statistics
@@ -107,6 +112,11 @@ export const dashboardApi = {
   // Get news feed
   getNews: async () => {
     return await userApi.get('/news');
+  },
+  
+  getDailyActivity: async (year?: number): Promise<{ data: DailyActivity[] }> => {
+    const params = year ? `?year=${year}` : '';
+    return await userApi.get(`/activity/streak${params}`);
   },
   
   // Get roadmap events

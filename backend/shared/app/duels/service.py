@@ -1,11 +1,11 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import and_, desc, update, or_
+from sqlalchemy import and_, desc, update, or_, func, cast, Date
 from uuid import UUID
 from typing import Dict, Any, List
 from . import models, schemas
 from .models import Duel, DuelStatus, PlayerRating
-from .elo import update_elo_ratings, get_or_create_player_rating
+from .elo import update_elo_ratings, get_or_create_player_rating, AI_OPPONENT_ID
 from datetime import datetime, timezone, timedelta
 
 async def get_duel(db: AsyncSession, duel_id: UUID) -> models.Duel | None:
@@ -78,26 +78,11 @@ async def get_player_rating(db: AsyncSession, user_id: UUID) -> PlayerRating | N
     result = await db.execute(select(PlayerRating).where(PlayerRating.user_id == user_id))
     return result.scalar_one_or_none()
 
-async def update_user_stats_after_duel(db: AsyncSession, user_id: UUID, result: schemas.PlayerResult):
-    player_rating = await get_or_create_player_rating(db, user_id, f"user_{user_id}")
-    
-    if result.is_winner:
-        values_to_update = {
-            "total_matches": player_rating.total_matches + 1,
-            "wins": player_rating.wins + 1,
-            "current_streak": player_rating.current_streak + 1
-        }
-    else:
-        values_to_update = {
-            "total_matches": player_rating.total_matches + 1,
-            "losses": player_rating.losses + 1,
-            "current_streak": 0
-        }
-
-    await db.execute(update(PlayerRating).where(PlayerRating.user_id == user_id).values(**values_to_update))
-    await db.commit()
-
 async def update_ratings_after_duel(db: AsyncSession, winner_id: UUID, loser_id: UUID):
+    """
+    Updates Elo ratings and win/loss/streak stats for both players after a duel.
+    Handles AI opponents gracefully by not updating their stats in the database.
+    """
     winner_rating_obj = await get_or_create_player_rating(db, winner_id, f"user_{winner_id}")
     loser_rating_obj = await get_or_create_player_rating(db, loser_id, f"user_{loser_id}")
 
@@ -105,8 +90,24 @@ async def update_ratings_after_duel(db: AsyncSession, winner_id: UUID, loser_id:
         winner_rating_obj.elo_rating, loser_rating_obj.elo_rating
     )
     
-    await db.execute(update(PlayerRating).where(PlayerRating.user_id == winner_id).values(elo_rating=new_winner_elo))
-    await db.execute(update(PlayerRating).where(PlayerRating.user_id == loser_id).values(elo_rating=new_loser_elo))
+    # Update winner stats only if it's not an AI
+    if winner_id != AI_OPPONENT_ID:
+        await db.execute(update(PlayerRating).where(PlayerRating.user_id == winner_id).values(
+            elo_rating=new_winner_elo,
+            wins=PlayerRating.wins + 1,
+            total_matches=PlayerRating.total_matches + 1,
+            current_streak=PlayerRating.current_streak + 1
+        ))
+
+    # Update loser stats only if it's not an AI
+    if loser_id != AI_OPPONENT_ID:
+        await db.execute(update(PlayerRating).where(PlayerRating.user_id == loser_id).values(
+            elo_rating=new_loser_elo,
+            losses=PlayerRating.losses + 1,
+            total_matches=PlayerRating.total_matches + 1,
+            current_streak=0
+        ))
+        
     await db.commit()
 
 async def get_leaderboard(db: AsyncSession, limit: int = 100) -> List[PlayerRating]:
@@ -129,9 +130,9 @@ async def get_active_or_waiting_duel(db: AsyncSession, user_id: UUID) -> models.
     )
     return result.scalars().first()
 
-async def get_recent_matches(db: AsyncSession, limit: int = 10) -> list[schemas.MatchHistoryItem]:
+async def get_recent_matches(db: AsyncSession, limit: int = 10) -> List[schemas.MatchHistoryItem]:
     """
-    Retrieves the most recent public matches.
+    Retrieves a list of recently completed matches with their outcomes.
     """
     stmt = (
         select(models.Duel)
@@ -178,3 +179,29 @@ async def get_recent_matches(db: AsyncSession, limit: int = 10) -> list[schemas.
                 ))
 
     return matches
+
+async def get_user_activity_by_year(db: AsyncSession, *, user_id: UUID, year: int) -> List[schemas.DailyActivity]:
+    """
+    Retrieves the daily activity (duel count) for a specific user and year.
+    """
+    query = (
+        select(
+            cast(models.Duel.finished_at, Date).label("date"),
+            func.count(models.Duel.id).label("count")
+        )
+        .where(
+            or_(models.Duel.player_one_id == user_id, models.Duel.player_two_id == user_id),
+            func.extract('year', models.Duel.finished_at) == year,
+            models.Duel.finished_at.isnot(None)
+        )
+        .group_by(cast(models.Duel.finished_at, Date))
+        .order_by(cast(models.Duel.finished_at, Date))
+    )
+
+    result = await db.execute(query)
+    daily_activities = result.all()
+    
+    return [
+        schemas.DailyActivity(date=row.date.isoformat(), count=row.count)
+        for row in daily_activities
+    ]

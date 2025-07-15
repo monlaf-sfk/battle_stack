@@ -1,15 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import UUID4
-from typing import List
+from typing import List, Optional
 import uuid
+from datetime import datetime
 
 from shared.app.auth.service import get_user
 from shared.app.auth.security import get_current_user_id
 from shared.app.database import get_db
 from shared.app.schemas import User
 from shared.app.user.schemas import (
-    UserProfile, DashboardStats, Achievement, AIRecommendation, NewsItem, RoadmapEvent, Duel
+    UserProfile, DashboardStats, Achievement, AIRecommendation, NewsItem, RoadmapEvent, Duel, DailyActivity,
+    DuelResultData
 )
 from . import service
 
@@ -100,12 +102,30 @@ async def get_roadmap(
     return await service.get_roadmap_events(db, user_id=current_user_id)
 
 
-@router.get("/duels/recent", response_model=List[Duel], summary="Get recent duels")
+@router.get(
+    "/duels/recent", response_model=List[Duel], summary="Get recent duels"
+)
 async def get_recent_duels(
     db: AsyncSession = Depends(get_db),
     current_user_id: UUID4 = Depends(get_current_user_id),
 ):
     return await service.get_recent_duels(db, user_id=current_user_id)
+
+
+@router.get(
+    "/activity/streak",
+    response_model=List[DailyActivity],
+    summary="Get user's daily activity for a given year"
+)
+async def get_daily_activity(
+    db: AsyncSession = Depends(get_db),
+    current_user_id: UUID4 = Depends(get_current_user_id),
+    year: Optional[int] = None,
+):
+    """Get user's daily activity for a given year to display on the streak calendar."""
+    if year is None:
+        year = datetime.utcnow().year
+    return await service.get_daily_activity(db, user_id=current_user_id, year=year)
 
 
 @router.post(
@@ -290,3 +310,19 @@ async def mark_problem_solved(
         "new_level": new_level,
         "new_streak": new_streak
     } 
+
+
+@router.post(
+    "/internal/duel-completed",
+    summary="Update user stats after a duel",
+    include_in_schema=False  # Hide from public docs
+)
+async def duel_completed(
+    result_data: DuelResultData,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Internal endpoint for the duels_service to report duel results.
+    """
+    await service.update_stats_from_duel(db, result_data)
+    return {"status": "ok"} 

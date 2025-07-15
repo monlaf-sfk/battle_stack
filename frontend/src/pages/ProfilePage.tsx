@@ -13,7 +13,7 @@ import { StreakCalendar } from '../components/profile/StreakCalendar';
 import { getLucideIcon } from '../utils/iconMap';
 
 const ProfilePage: React.FC = () => {
-  const { data } = useDashboard();
+  const { data, fetchActivityForYear, activityLoading } = useDashboard();
   const { user } = useAuth();
   const { t } = useTranslation();
 
@@ -184,7 +184,12 @@ const ProfilePage: React.FC = () => {
         </motion.div>
 
         {/* Streak Calendar */}
-        <StreakCalendar currentStreak={currentStreak} />
+        <StreakCalendar 
+          currentStreak={currentStreak} 
+          dailyActivities={data.dailyActivity}
+          onYearChange={fetchActivityForYear}
+          isLoading={activityLoading}
+        />
 
         {/* Recent Achievements */}
         <motion.div
