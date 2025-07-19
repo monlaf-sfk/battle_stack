@@ -19,6 +19,11 @@ router = APIRouter()
 
 @router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
 async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)) -> User:
+    if user.username is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username is required",
+        )
     db_user = await get_user(db, user.username)
     if db_user:
         raise HTTPException(
@@ -35,6 +40,11 @@ async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     remember_me: bool = False
 ) -> dict:
+    if form_data.username is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username is required",
+        )
     user = await authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -358,6 +368,21 @@ async def update_current_user(
     return User.model_validate(user)
 
 
+@router.get("/users/{user_id}", response_model=User)
+async def get_user_by_id(user_id: str, db: AsyncSession = Depends(get_db)):
+    """Get user by ID."""
+    from uuid import UUID
+    try:
+        user_uuid = UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid user ID format")
+    
+    user = await db.get(UserModel, user_uuid)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return User.model_validate(user)
+
+
 class PasswordChangeRequest(BaseModel):
     old_password: str
     new_password: constr(min_length=6, max_length=128)
@@ -366,9 +391,11 @@ class PasswordChangeRequest(BaseModel):
 async def change_password(
     req: PasswordChangeRequest,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: "JWTUser" = Depends(get_current_user)
 ):
     user = await db.get(UserModel, current_user.id)
+    if user is None or user.hashed_password is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     if not verify_password(req.old_password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect current password")
     user.hashed_password = hash_password(req.new_password)

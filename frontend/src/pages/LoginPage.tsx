@@ -13,19 +13,19 @@ import { User, Lock, AlertCircle } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
+  const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
-  const emailRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { t } = useTranslation();
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      emailRef.current?.focus();
+      inputRef.current?.focus();
     }, 500);
     return () => clearTimeout(timer);
   }, []);
@@ -42,13 +42,9 @@ const LoginPage = () => {
   }, []);
 
   const validateForm = () => {
-    if (!email.trim()) {
-      setError(t('loginPage.emailRequired'));
-      emailRef.current?.focus();
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError(t('loginPage.emailInvalid'));
+    if (!usernameOrEmail.trim()) {
+      setError(t('loginPage.usernameOrEmailRequired'));
+      inputRef.current?.focus();
       return false;
     }
     if (!password) {
@@ -68,7 +64,7 @@ const LoginPage = () => {
 
     try {
       const formData = new URLSearchParams();
-      formData.append('username', email.trim()); // FastAPI expects 'username' for email in token endpoint
+      formData.append('username', usernameOrEmail.trim());
       formData.append('password', password);
 
       const response = await authApi.post('/token', formData, {
@@ -86,7 +82,7 @@ const LoginPage = () => {
       navigate('/dashboard');
     } catch (err: any) {
       let errorMessage = t('loginPage.loginFailed');
-      if (err.response?.status === 400) {
+      if (err.response?.status === 400 || err.response?.status === 401) {
         errorMessage = t('loginPage.invalidCredentials');
       } else if (err.response?.status === 429) {
         errorMessage = t('loginPage.rateLimited');
@@ -172,17 +168,17 @@ const LoginPage = () => {
                   transition={{ delay: 0.3, duration: 0.4 }}
                 >
                   <Input
-                    ref={emailRef}
-                    type="email"
-                    label={t('common.email')}
+                    ref={inputRef}
+                    type="text"
+                    label={t('loginPage.usernameOrEmail')}
                     icon={<User size={18} />}
                     required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    success={email.length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? t('loginPage.validEmail') : undefined}
-                    autoComplete="email"
+                    value={usernameOrEmail}
+                    onChange={(e) => setUsernameOrEmail(e.target.value)}
+                    success={usernameOrEmail.length > 0 ? t('loginPage.validInput') : undefined}
+                    autoComplete="username"
                     disabled={isLoading}
-                    className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
+                    className="bg-gray-800 border-gray-700 text-white"
                   />
                 </motion.div>
 
@@ -202,7 +198,7 @@ const LoginPage = () => {
                     autoComplete="current-password"
                     disabled={isLoading}
                     success={password.length >= 8 ? t('loginPage.strongPassword') : undefined}
-                    className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
+                    className="bg-gray-800 border-gray-700 text-white"
                   />
                 </motion.div>
 
@@ -247,7 +243,7 @@ const LoginPage = () => {
                     type="submit"
                     className="w-full text-lg py-4 font-bold bg-white text-black hover:bg-gray-200 font-mono"
                     loading={isLoading}
-                    disabled={isLoading || !email || !password}
+                    disabled={isLoading || !usernameOrEmail || !password}
                   >
                     {isLoading ? t('common.loading') : t('common.login')}
                   </Button>

@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
-import { type DuelResponse, DuelStatus, type DuelResult, type DuelTestResponse } from '../services/duelService';
+import { DuelStatus, type DuelResponse, type DuelResult, type DuelTestResponse } from '../services/duelService';
 import { duelsApiService } from '../services/api';
 import { codeExecutionService, type SupportedLanguage } from '../services/codeExecutionService';
 import type { SubmissionResultData } from '../components/coding/SubmissionResult';
@@ -12,12 +12,16 @@ interface DuelContextType {
   duel: DuelResponse | null;
   isLoading: boolean;
   error: string | null;
+  opponent: any | null;
   connect: (duelId: string) => void;
   disconnect: () => void;
+  startPollingForDuel: (userId: string) => void;
   sendCodeUpdate: (code: string, language: SupportedLanguage) => void;
   sendTypingStatus: (isTyping: boolean) => void;
   submitSolution: (code: string, language: SupportedLanguage) => Promise<SubmissionResultData | null>;
   runTests: (code: string, language: SupportedLanguage) => Promise<SubmissionResultData | null>;
+  sendReadyState: (isReady: boolean) => void;
+  sendStartDuel: () => void;
   isConnected: boolean;
   opponentCode: string;
   opponentTyping: boolean;
@@ -38,6 +42,7 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { user, isAuthenticated, token } = useAuth();
   const { addToast } = useToast();
   const { duelId } = useParams<{ duelId: string }>();
+  const navigate = useNavigate();
 
   const [duel, setDuel] = useState<DuelResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,6 +50,7 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isConnected, setIsConnected] = useState(false);
   const [opponentCode, setOpponentCode] = useState('');
   const [opponentTyping, setOpponentTyping] = useState(false);
+  const [opponent, setOpponent] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [aiCodingProcess, setAiCodingProcess] = useState<any[]>([]);
   const [aiProgress, setAiProgress] = useState(0);
@@ -56,6 +62,7 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const ws = useRef<WebSocket | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const aiTypingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const currentLanguageRef = useRef(currentLanguage);
   currentLanguageRef.current = currentLanguage;
 
@@ -77,7 +84,7 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setInitialLanguageFromDuel = useCallback(async (duelData: DuelResponse) => {
     if (duelData.problem && !currentLanguageRef.current) {
       const supportedLangs = await codeExecutionService.getSupportedLanguages();
-      const problemLangs = duelData.problem.code_templates?.map(t => t.language) || [];
+      const problemLangs = duelData.problem.code_templates?.map((t: any) => t.language) || [];
       const defaultLangId = 'python';
       
       let langToSetId = problemLangs.includes(defaultLangId) ? defaultLangId : problemLangs[0];
@@ -220,6 +227,18 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [getStorageKey, startAiTypingSimulation]);
 
+  const disconnect = useCallback(() => {
+    if (ws.current) {
+      console.log('Closing WebSocket connection.');
+      ws.current.close(1000, 'Client disconnected');
+      ws.current = null;
+      setIsConnected(false);
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (aiTypingTimerRef.current) clearTimeout(aiTypingTimerRef.current);
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      setOpponent(null);
+    }
+  }, []);
 
   const fetchDuelData = useCallback(async (id: string) => {
     try {
@@ -304,6 +323,30 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const message = JSON.parse(event.data);
       console.log('Received WS message:', message);
       switch (message.type) {
+        case 'player_joined':
+        case 'player_left':
+        case 'player_ready_changed':
+          // These events will contain the full updated duel object
+          if (message.data && typeof message.data === 'object' && message.data.id) {
+            const updatedDuel = message.data as DuelResponse;
+            setDuel(updatedDuel);
+          }
+          break;
+        case 'match_found':
+          // Match found, connect to the new duel ID
+          const newDuelId = message.data.duel_id;
+          // Disconnect from the old matchmaking connection if any
+          disconnect();
+          // Connect to the new duel
+          connect(newDuelId);
+          break;
+        case 'problem_generated':
+          // This is a signal that the duel problem is ready, we can refetch the duel data
+          // to get the problem details.
+          if (duelId) {
+            fetchDuelData(duelId);
+          }
+          break;
         case 'code_update':
           if (message.user_id !== user?.id) {
             setOpponentCode(message.code);
@@ -335,7 +378,13 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           break;
         case 'duel_start':
-          fetchDuelData(id);
+          const duelData = message.data as DuelResponse;
+          setDuel(duelData);
+          setInitialLanguageFromDuel(duelData);
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+          }
+          navigate(`/duel/${duelData.id}`);
           break;
         case 'test_result':
            const adaptedData: SubmissionResultData = {
@@ -436,18 +485,34 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     ws.current = socket;
-  }, [user?.id, token, addToast, setInitialLanguageFromDuel, fetchDuelData, sendMessage, aiProgress, startAiTypingSimulation]);
+  }, [user?.id, token, addToast, setInitialLanguageFromDuel, fetchDuelData, sendMessage, aiProgress, startAiTypingSimulation, disconnect, navigate]);
 
-  const disconnect = useCallback(() => {
-    if (ws.current) {
-      console.log('Closing WebSocket connection.');
-      ws.current.close(1000, 'Client disconnected');
-      ws.current = null;
-      setIsConnected(false);
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (aiTypingTimerRef.current) clearTimeout(aiTypingTimerRef.current);
+  const sendReadyState = useCallback((isReady: boolean) => {
+    sendMessage('set_ready', { is_ready: isReady });
+  }, [sendMessage]);
+
+  const sendStartDuel = useCallback(() => {
+    sendMessage('start_duel', {});
+  }, [sendMessage]);
+
+  const startPollingForDuel = useCallback((userId: string) => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
     }
-  }, []);
+    pollingRef.current = setInterval(async () => {
+      try {
+        const activeDuel = await duelsApiService.getDuelForUser(userId);
+        if (activeDuel) {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          // Found an active duel, navigate to it
+          navigate(`/duel/${activeDuel.id}`);
+        }
+      } catch (error) {
+        // It's expected to get 404s here, so we don't need to show a toast
+        console.log("Polling for duel, no active duel found yet...");
+      }
+    }, 3000); // Poll every 3 seconds
+  }, [connect, navigate]);
 
   useEffect(() => {
     // If there's a duelId in the URL, we are joining a specific duel.
@@ -456,31 +521,12 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return; // Exit early to avoid checking for active duels
     }
   
-    // If no duelId in URL, check if the user has an active or waiting duel.
-    const checkForActiveDuel = async () => {
-      if (isAuthenticated && user?.id) {
-        setIsLoading(true);
-        try {
-          const activeDuel = await duelsApiService.getDuelForUser(user.id);
-          if (activeDuel) {
-            // Found an active duel, connect to it
-            connect(activeDuel.id);
-          } else {
-            // No active duel, finished loading
-            setIsLoading(false);
-          }
-        } catch (error) {
-          console.error('Error checking for active duel:', error);
-          setError('Failed to check for an active duel.');
-          setIsLoading(false);
-        }
-      } else {
-        setIsLoading(false);
-      }
-    };
-  
-    checkForActiveDuel();
-  
+    // If no duelId in URL, we don't need to do anything automatically,
+    // as matchmaking flow will now be handled explicitly by component calls.
+    if (!duelId) {
+      setIsLoading(false);
+    }
+
     return () => {
       disconnect();
     };
@@ -552,12 +598,16 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
         duel,
         isLoading,
         error,
+        opponent,
         connect,
         disconnect,
+        startPollingForDuel,
         sendCodeUpdate,
         sendTypingStatus,
         submitSolution,
         runTests,
+        sendReadyState,
+        sendStartDuel,
         isConnected,
         opponentCode,
         opponentTyping,

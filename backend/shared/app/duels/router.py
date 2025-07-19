@@ -4,7 +4,7 @@ from uuid import UUID
 import logging
 from typing import Dict, Any, cast
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.app.database import get_db
@@ -19,10 +19,17 @@ from shared.app.ai_opponent.core import generate_ai_coding_process
 from shared.app.duels.websocket_manager import manager
 from shared.app.auth.security import get_current_user_id, get_user_id_from_token
 from datetime import datetime, timezone
+from shared.app.duels.matchmaking_service import MatchmakingService
+from shared.app.config import settings
+from shared.app.schemas import Message # Import Message from shared.app.schemas
+from ast import literal_eval
 
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# Initialize Matchmaking Service
+matchmaking_service = MatchmakingService(settings.REDIS_URL)
 
 # In-memory store for AI-generated problems
 # {duel_id: GeneratedProblem}
@@ -32,17 +39,14 @@ generated_problem_cache: Dict[UUID, Any] = {}
 @router.post("/ai-duel-custom", response_model=schemas.Duel, status_code=201)
 async def create_custom_ai_duel(
     settings: problem_generator.CustomAIDuelSettings,
+    background_tasks: BackgroundTasks,
     user_id: UUID = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
-    background_tasks: BackgroundTasks = None,
 ):
     """
     Creates a new duel against an AI opponent with custom settings.
     A background task is started to generate the problem.
     """
-    if background_tasks is None:
-        raise HTTPException(status_code=500, detail="BackgroundTasks dependency not found.")
-
     duel = await service.create_duel(db, schemas.DuelCreate(
         player_one_id=user_id,
         status=models.DuelStatus.GENERATING_PROBLEM,
@@ -52,7 +56,7 @@ async def create_custom_ai_duel(
     background_tasks.add_task(
         generate_problem_and_run_ai, 
         db, 
-        duel.id, 
+        duel.id, # Pass the UUID value directly
         user_id, 
         settings
     )
@@ -77,6 +81,70 @@ async def get_user_active_or_waiting_duel(
     if not duel:
         raise HTTPException(status_code=404, detail="No active or waiting duel found for this user.")
         
+    return duel
+
+
+@router.post("/rooms", response_model=schemas.Duel)
+async def create_private_room(
+    req: schemas.PrivateRoomCreateRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Creates a private duel room and returns the duel with a room code."""
+    import random
+    import string
+    
+    room_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    
+    duel = await service.create_duel(db, schemas.DuelCreate(
+        player_one_id=UUID(req.user_id),
+        status=models.DuelStatus.PENDING,
+        problem_id=UUID(int=0) # Placeholder
+    ))
+    
+    # Store duel settings to be used when the second player joins
+    duel_settings = {
+        "difficulty": req.difficulty,
+        "category": req.category,
+        "theme": req.theme,
+        "language": req.language_id,
+    }
+
+    await db.execute(
+        models.Duel.__table__.update()
+        .where(models.Duel.id == duel.id)
+        .values(room_code=room_code, results=duel_settings)
+    )
+    await db.commit()
+    await db.refresh(duel)
+    
+    return duel
+
+
+@router.post("/rooms/join", response_model=schemas.Duel)
+async def join_private_room(
+    req: schemas.PrivateRoomJoinRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Joins a private duel room and returns the duel."""
+    duel = await service.get_duel_by_room_code(db, req.room_code.upper())
+    
+    if not duel:
+        raise HTTPException(status_code=404, detail="Room not found.")
+    
+    if duel.player_two_id is not None:
+        raise HTTPException(status_code=400, detail="Room is already full.")
+
+    if str(duel.player_one_id) == req.user_id:
+        raise HTTPException(status_code=400, detail="You cannot join your own room.")
+        
+    await db.execute(
+        models.Duel.__table__.update()
+        .where(models.Duel.id == duel.id)
+        .values(player_two_id=UUID(req.user_id), status=models.DuelStatus.WAITING)
+    )
+    await db.commit()
+    await db.refresh(duel)
+    
     return duel
 
 
@@ -209,10 +277,15 @@ async def get_leaderboard(
     
     response_data = []
     for i, entry in enumerate(leaderboard_data):
-        # Handle case where draws attribute might not exist yet (migration not applied)
-        draws = getattr(entry, 'draws', 0)
-        total_matches = entry.wins + entry.losses + draws
-        win_rate = (entry.wins / total_matches * 100) if total_matches > 0 else 0.0
+        # Safely access attributes, ensuring they are Python scalar types
+        wins = int(entry.wins)
+        losses = int(entry.losses)
+        draws = int(entry.draws)
+        total_matches = int(entry.total_matches) # Cast here as well
+        elo_rating = int(entry.elo_rating) # Cast here
+        current_streak = int(entry.current_streak) # Cast here
+
+        win_rate = (float(wins) / total_matches * 100) if total_matches > 0 else 0.0
         
         # Get user details from the user_details_map
         user_details = user_details_map.get(str(entry.user_id))
@@ -224,13 +297,13 @@ async def get_leaderboard(
             user_id=str(entry.user_id),
             username=username,
             full_name=full_name,
-            elo_rating=entry.elo_rating,
+            elo_rating=elo_rating,
             total_matches=total_matches,
-            wins=entry.wins,
-            losses=entry.losses,
+            wins=wins,
+            losses=losses,
             draws=draws,
             win_rate=round(win_rate, 1),
-            current_streak=entry.current_streak
+            current_streak=current_streak
         )
         response_data.append(leaderboard_entry)
         
@@ -268,6 +341,26 @@ async def get_duel_details(
     duel = await service.get_duel(db, duel_id)
     if not duel:
         raise HTTPException(status_code=404, detail="Duel not found")
+    
+    # Explicitly load problem data if available in duel.results
+    if duel.results is not None and isinstance(duel.results, dict) and "ai_problem_data" in duel.results:
+        try:
+            # Access the data directly as it's already a dictionary from the ORM
+            problem_data = dict(duel.results.get("ai_problem_data", {}))
+            
+            # Convert code_templates to starter_code dictionary
+            starter_code = {
+                template['language']: template['template_code']
+                for template in problem_data.get('code_templates', [])
+            }
+            problem_data['starter_code'] = starter_code
+
+            duel.problem = schemas.DuelProblem.model_validate(problem_data)
+        except Exception as e:
+            logger.error(f"Error parsing problem data for duel {duel.id}: {e}")
+            # Optionally, clear problem data to prevent frontend issues
+            duel.problem = None
+
     return duel
 
 @router.post("/{duel_id}/submit", response_model=schemas.SubmissionResult)
@@ -302,10 +395,10 @@ async def run_public_tests(
     Runs the user's code against the public test cases for the duel's problem.
     """
     duel = await service.get_duel(db, duel_id)
-    if not duel or not duel.results or "ai_problem_data" not in duel.results:
+    if not duel or not isinstance(duel.results, dict) or "ai_problem_data" not in duel.results:
         raise HTTPException(status_code=404, detail="Duel or problem data not found.")
     
-    problem_data = cast(Dict[str, Any], duel.results.get("ai_problem_data"))
+    problem_data = dict(duel.results.get("ai_problem_data", {}))
     
     result = await _execute_code_against_public_tests(submission, problem_data)
     details_str = None
@@ -384,13 +477,56 @@ async def run_ai_coding_simulation(db: AsyncSession, duel_id: UUID, steps: list,
 
     # After simulation, "submit" the final, correct code
     duel = await service.get_duel(db, duel_id)
-    if duel and duel.status == models.DuelStatus.IN_PROGRESS:
+    if duel and duel.status == models.DuelStatus.IN_PROGRESS: # Check status as actual enum value
         current_results = duel.results or {}
-        current_results["ai_solved_at"] = datetime.now(timezone.utc).isoformat()
-        
-        # Check if AI is the first solver
-        if 'p1_solved_at' not in current_results:
-            current_results['first_solver'] = 'ai'
-        
-        await service.update_duel_results(db, duel_id, current_results)
-        await duel_flow_service.end_duel_and_broadcast(db, duel_id, for_ai=True)
+        if isinstance(current_results, dict):
+            current_results["ai_solved_at"] = datetime.now(timezone.utc).isoformat()
+            
+            # Check if AI is the first solver
+            if 'p1_solved_at' not in current_results:
+                current_results['first_solver'] = 'ai'
+            
+            await service.update_duel_results(db, duel.id, current_results)
+            await duel_flow_service.end_duel_and_broadcast(db, duel.id, for_ai=True)
+
+@router.post("/matchmaking/join", response_model=Message)
+async def join_matchmaking_queue(
+    request: schemas.MatchmakingRequest,
+    user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Endpoint for a user to join the matchmaking queue.
+    """
+    # Check if user is already in a duel or waiting for one
+    existing_duel = await service.get_active_or_waiting_duel(db, user_id)
+    if existing_duel and existing_duel.status in [models.DuelStatus.IN_PROGRESS, models.DuelStatus.GENERATING_PROBLEM, models.DuelStatus.WAITING]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You are already in an active or waiting duel."
+        )
+
+    await matchmaking_service.enqueue_player(
+        user_id=user_id,
+        difficulty=request.difficulty,
+        category=request.category
+    )
+    logger.info(f"User {user_id} joined matchmaking queue for {request.difficulty} {request.category} duel.")
+    
+    return Message(message="Joined matchmaking queue.")
+
+@router.post("/matchmaking/cancel", response_model=Message)
+async def leave_matchmaking_queue(
+    request: schemas.MatchmakingRequest,
+    user_id: UUID = Depends(get_current_user_id),
+):
+    """
+    Endpoint for a user to leave the matchmaking queue.
+    """
+    await matchmaking_service.dequeue_player(
+        user_id=user_id,
+        difficulty=request.difficulty,
+        category=request.category
+    )
+    logger.info(f"User {user_id} left matchmaking queue for {request.difficulty} {request.category} duel.")
+    return Message(message="Left matchmaking queue.")

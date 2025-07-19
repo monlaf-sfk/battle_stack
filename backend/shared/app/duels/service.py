@@ -39,6 +39,15 @@ async def get_duel_by_user_and_status(
     )
     return result.scalars().first()
 
+async def get_duel_by_room_code(db: AsyncSession, room_code: str) -> models.Duel | None:
+    """
+    Finds a duel by its room code.
+    """
+    result = await db.execute(
+        select(models.Duel).where(models.Duel.room_code == room_code)
+    )
+    return result.scalar_one_or_none()
+
 async def update_duel_results(db: AsyncSession, duel_id: UUID, results: Dict[str, Any]):
     await db.execute(update(Duel).where(Duel.id == duel_id).values(results=results))
     await db.commit()

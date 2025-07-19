@@ -22,10 +22,11 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useDuel } from '@/hooks/useDuelManager';
-import { DuelStatus } from '@/services/duelService';
+import { DuelStatus, type TestCase } from '@/services/duelService';
 import { CodeEditor } from '@/components/ui/CodeEditor';
 import { Button } from '@/components/ui/Button';
 import DuelLoadingScreen from '@/components/duels/DuelLoadingScreen';
+import Lobby from '@/components/duels/Lobby'; // Import the new Lobby component
 import { codeExecutionService } from '@/services/codeExecutionService';
 import type { SupportedLanguage } from '@/services/codeExecutionService';
 import { useLayout } from '@/contexts/LayoutContext';
@@ -46,6 +47,53 @@ const CustomResizeHandle = ({ direction = 'horizontal' }: { direction?: 'horizon
   </PanelResizeHandle>
 );
 
+const WaitingLobby: React.FC<{ roomCode?: string | null }> = ({ roomCode }) => {
+  const { t } = useTranslation();
+  const { addToast } = useToast();
+
+  const handleCopyCode = () => {
+    if (roomCode) {
+      navigator.clipboard.writeText(roomCode);
+      addToast({
+        type: 'success',
+        title: t('joinPrivateRoom.roomCodeCopiedMessage'),
+        message: t('joinPrivateRoom.roomCodeCopiedToClipboard'),
+      });
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-arena-dark via-arena-surface to-arena-dark flex items-center justify-center text-white">
+      <div className="text-center p-8 bg-arena-surface/80 rounded-2xl shadow-2xl backdrop-blur-xl border border-arena-border/50 max-w-lg mx-auto">
+        <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-arena-accent to-blue-400 bg-clip-text text-transparent">
+          {t('duels.privateLobbyTitle')}
+        </h1>
+        <p className="text-arena-text-muted mb-8 text-lg">
+          {t('duels.waitingForOpponentToJoin')}
+        </p>
+        
+        {roomCode && (
+          <div className="mb-8">
+            <p className="text-sm uppercase text-arena-text-muted mb-2 tracking-widest">{t('duels.roomCode')}</p>
+            <div 
+              className="text-4xl font-mono font-bold tracking-widest bg-arena-dark/50 border-2 border-dashed border-arena-border rounded-lg p-4 cursor-pointer hover:bg-arena-dark/70 transition-colors"
+              onClick={handleCopyCode}
+            >
+              {roomCode}
+            </div>
+          </div>
+        )}
+        
+        <div className="animate-pulse flex items-center justify-center gap-4">
+          <Clock className="w-6 h-6 text-arena-accent" />
+          <span className="font-medium text-lg">{t('duels.waitingStatus')}...</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 const DuelArenaPage: React.FC = () => {
   const { duelId } = useParams<{ duelId: string }>();
   const navigate = useNavigate();
@@ -58,6 +106,7 @@ const DuelArenaPage: React.FC = () => {
     duel, 
     isLoading, 
     error, 
+    opponent,
     connect, 
     disconnect, 
     sendCodeUpdate, 
@@ -71,6 +120,8 @@ const DuelArenaPage: React.FC = () => {
     currentLanguage,
     setCurrentLanguage,
     submissionResult,
+    sendReadyState, // Add this from useDuel
+    sendStartDuel,  // Add this from useDuel
   } = useDuel();
 
   const [userCode, setUserCode] = useState<string>('');
@@ -174,6 +225,14 @@ const DuelArenaPage: React.FC = () => {
     }
   }, [sendCodeUpdate, currentLanguage, getUserCodeStorageKey]);
 
+  const handleReady = () => {
+    sendReadyState(true);
+  };
+
+  const handleStart = () => {
+    sendStartDuel();
+  };
+
   const handleRunTests = async () => {
     if (!userCode.trim() || !currentLanguage || !duel?.id) {
       addToast({ type: 'error', title: t('common.error'), message: 'Code or language missing.' });
@@ -221,14 +280,25 @@ const DuelArenaPage: React.FC = () => {
     }
   };
 
-  if (isLoading || !duel || !duel.problem || !currentLanguage || duel.status === DuelStatus.PENDING || duel.status === DuelStatus.GENERATING_PROBLEM) {
+  if (isLoading || !duel || duel.status === DuelStatus.GENERATING_PROBLEM) {
     return (
       <DuelLoadingScreen
         statusText={getLoadingStatusText()}
         player1Name={user?.username}
+        player2Name={opponent?.username}
         isAiDuel={duel ? !duel.player_two_id || duel.player_two_id === 'ai' : true}
       />
     );
+  }
+
+  if (duel.status === DuelStatus.WAITING) {
+    const isCurrentUserReady = (user?.id === duel.player_one_id && duel.player_one_ready) || 
+                               (user?.id === duel.player_two_id && duel.player_two_ready);
+    return <Lobby duel={duel} onReady={handleReady} onStart={handleStart} isPlayerReady={isCurrentUserReady} />;
+  }
+
+  if (duel.status === DuelStatus.PENDING) {
+    return <WaitingLobby roomCode={duel.room_code} />;
   }
 
   if (error) {
@@ -439,7 +509,7 @@ const DuelArenaPage: React.FC = () => {
                       <h3 className="text-lg font-semibold text-white">Public Test Cases</h3>
                       {testCases.length > 0 ? (
                         <div className="space-y-4">
-                          {testCases.map((testCase, index) => (
+                          {testCases.map((testCase: TestCase, index: number) => (
                             <div key={index} className="bg-arena-dark/30 rounded-xl p-4 border border-arena-border/30">
                               <div className="flex items-center gap-2 mb-3">
                                 <div className="w-8 h-8 bg-arena-accent/20 rounded-lg flex items-center justify-center">
@@ -560,7 +630,7 @@ const DuelArenaPage: React.FC = () => {
                                 <div className={`w-3 h-3 rounded-full ${opponentTyping ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
                               </div>
                               {opponentIsAi ? <Bot className="w-5 h-5 text-purple-400" /> : <User className="w-5 h-5 text-red-400" />}
-                              <span className="font-semibold text-arena-text-primary text-lg">{isPVP ? 'Opponent' : 'AI Opponent'}</span>
+                              <span className="font-semibold text-arena-text-primary text-lg">{isPVP ? opponent?.username : 'AI Opponent'}</span>
                               {opponentTyping && <span className="text-sm text-green-400 italic ml-2 animate-pulse">typing...</span>}
                             </div>
                             <div className="flex items-center gap-2">

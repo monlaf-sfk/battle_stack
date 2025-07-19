@@ -339,7 +339,7 @@ const RegisterPage = () => {
                     success={username.length >= 3 && usernameAvailable === true ? t('registerPage.validUsername') : undefined}
                     autoComplete="username"
                     disabled={isLoading}
-                    className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
+                    className="bg-gray-800 border-gray-700 text-white"
                   />
                 </motion.div>
 
@@ -358,7 +358,7 @@ const RegisterPage = () => {
                     success={/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(email) && emailAvailable === true ? t('registerPage.validEmail') : undefined}
                     autoComplete="email"
                     disabled={isLoading}
-                    className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
+                    className="bg-gray-800 border-gray-700 text-white"
                   />
                 </motion.div>
 
@@ -378,7 +378,7 @@ const RegisterPage = () => {
                     autoComplete="new-password"
                     disabled={isLoading}
                     success={passwordStrength.score >= 2 ? t('registerPage.strongPassword') : undefined}
-                    className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
+                    className="bg-gray-800 border-gray-700 text-white"
                   />
                   {password.length > 0 && (
                     <div className="flex items-center mt-2 text-sm">
@@ -411,7 +411,7 @@ const RegisterPage = () => {
                     autoComplete="new-password"
                     disabled={isLoading}
                     success={password === confirmPassword && confirmPassword.length > 0 ? t('registerPage.passwordsMatch') : undefined}
-                    className="bg-gray-800 border-gray-700 text-white focus:border-gray-600"
+                    className="bg-gray-800 border-gray-700 text-white"
                   />
                 </motion.div>
 

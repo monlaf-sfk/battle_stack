@@ -210,13 +210,13 @@ export const duelsApiService = {
   },
 
   // Join matchmaking
-  joinMatchmaking: async (problemId: string, userId: string) => {
-    return await duelsApi.post('/matchmaking/join', null, {
-      params: {
-        problem_id: problemId,
-        current_user_id: userId,
-      }
-    });
+  joinMatchmaking: async (difficulty: string, category: string) => {
+    return await duelsApi.post('/matchmaking/join', { difficulty, category });
+  },
+
+  // Leave matchmaking
+  leaveMatchmaking: async (difficulty: string, category: string) => {
+    return await duelsApi.post('/matchmaking/leave', { difficulty, category });
   },
 
   // Start AI opponent for a duel
@@ -268,12 +268,8 @@ export const duelsApiService = {
   },
 
   // Create a private room duel
-  createPrivateRoom: async (userId: string, difficulty: any, category: string) => {
-    const response = await duelsApi.post('/rooms', {
-      user_id: userId,
-      difficulty,
-      category,
-    });
+  createPrivateRoom: async (request: { user_id: string, difficulty: any, category: string, theme: string, language_id: string }) => {
+    const response = await duelsApi.post('/rooms', request);
     return response.data;
   },
 
@@ -281,6 +277,12 @@ export const duelsApiService = {
   joinRoom: async (roomCode: string, userId: string) => {
     const response = await duelsApi.post('/rooms/join', { room_code: roomCode, user_id: userId });
     return response.data;
+  },
+  
+  // Get user by ID
+  getUserById: async (userId: string) => {
+    // This should ideally call the user service, but for now, we'll use the auth service endpoint
+    return await authApi.get(`/users/${userId}`);
   },
 };
 

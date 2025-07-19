@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy import Enum as SAEnum
@@ -12,6 +12,7 @@ Base = declarative_base()
 
 class DuelStatus(str, enum.Enum):
     PENDING = "pending"
+    WAITING = "waiting" # Waiting for players to ready up in a lobby
     GENERATING_PROBLEM = "generating_problem"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -34,12 +35,18 @@ class Duel(Base):
     player_one_id = Column(UUID(as_uuid=True), nullable=False) # Foreign key to users table
     player_two_id = Column(UUID(as_uuid=True), nullable=True) # Can be AI or another user
 
+    player_one_ready = Column(Boolean, default=False, nullable=False)
+    player_two_ready = Column(Boolean, default=False, nullable=False)
+
     player_one_code = Column(String, nullable=True)
     player_two_code = Column(String, nullable=True)
     
     results = Column(JSONB, nullable=True) # winner, scores, etc.
     
     time_limit_seconds = Column(Integer, nullable=True, default=900) # Default 15 minutes
+    
+    # Room code for private duels
+    room_code = Column(String(10), unique=True, index=True, nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     started_at = Column(DateTime(timezone=True), nullable=True)

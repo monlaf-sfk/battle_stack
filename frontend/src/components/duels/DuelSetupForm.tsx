@@ -6,25 +6,32 @@ import { Label } from '../ui/label';
 import { Loader2, Swords, ThermometerSnowflake, Thermometer, Flame, Sparkles, BrainCircuit, Database } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../ui/Toast';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { codeExecutionService, type SupportedLanguage } from '../../services/codeExecutionService';
-import { duelsApiService } from '../../services/api';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-interface AIDuelSetupModalProps {
+interface DuelSetupFormProps {
   isOpen: boolean;
   onClose: () => void;
+  onSubmit: (settings: DuelSettings) => Promise<void>;
+  title: string;
+  description: string;
+}
+
+export interface DuelSettings {
+  difficulty: Difficulty;
+  category: Category;
+  theme: string;
+  language: SupportedLanguage;
 }
 
 type Difficulty = 'easy' | 'medium' | 'hard' | 'expert';
 type Category = 'algorithms' | 'sql';
 
-const AIDuelSetupModal: React.FC<AIDuelSetupModalProps> = ({ isOpen, onClose }) => {
+const DuelSetupForm: React.FC<DuelSetupFormProps> = ({ isOpen, onClose, onSubmit, title, description }) => {
   const { user } = useAuth();
   const { addToast } = useToast();
-  const navigate = useNavigate();
   const { t } = useTranslation();
 
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
@@ -73,26 +80,16 @@ const AIDuelSetupModal: React.FC<AIDuelSetupModalProps> = ({ isOpen, onClose }) 
 
     setIsLoading(true);
     try {
-      const newDuel = await duelsApiService.createAIDuel({
-        user_id: user.id,
-        theme,
+      await onSubmit({
         difficulty,
-        language: language.id,
         category,
+        theme,
+        language,
       });
-
-      addToast({
-        type: 'success',
-        title: t('duels.duelStartedTitle'),
-        message: t('duels.waitingForProblemGeneration'),
-      });
-
-      onClose();
-      navigate(`/duel/${newDuel.id}`);
     } catch (error: any) {
       addToast({
         type: 'error',
-        title: t('duels.failedToStartAIDuel'),
+        title: t('duels.failedToStartDuel'), // Generic error message
         message: error.response?.data?.detail || t('common.tryAgain'),
       });
     } finally {
@@ -118,10 +115,10 @@ const AIDuelSetupModal: React.FC<AIDuelSetupModalProps> = ({ isOpen, onClose }) 
               >
                 <Swords size={28} className="text-arena-accent" />
               </motion.div>
-              {t('duels.aiDuelSetupTitle')}
+              {title}
             </DialogTitle>
             <DialogDescription className="text-arena-text-muted">
-              {t('duels.aiDuelSetupSubtitle')}
+              {description}
             </DialogDescription>
           </DialogHeader>
 
@@ -241,4 +238,4 @@ const CategoryButton: React.FC<{ value: Category, label: string, icon: React.Rea
   )
 };
 
-export default AIDuelSetupModal; 
+export default DuelSetupForm; 

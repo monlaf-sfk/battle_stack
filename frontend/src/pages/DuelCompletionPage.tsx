@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Award, ThumbsDown, ThumbsUp, Repeat, BarChart2, User, Bot, Clock, Hash, Trophy, TrendingUp } from 'lucide-react';
-import type { DuelResult, PlayerResult } from '@/services/duelService';
+import type { DuelResult, PlayerResult } from '@/types/duel';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Link, useParams } from 'react-router-dom';
@@ -87,10 +87,10 @@ const DuelCompletionScreen: React.FC<DuelCompletionScreenProps> = ({ onPlayAgain
   const { t } = useTranslation();
   const { user } = useAuth();
   const { duelId } = useParams<{ duelId: string }>();
-  const [result, setResult] = React.useState<DuelResult | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [result, setResult] = useState<DuelResult | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchResult = async () => {
       if (!duelId) {
         setIsLoading(false);
@@ -100,8 +100,7 @@ const DuelCompletionScreen: React.FC<DuelCompletionScreenProps> = ({ onPlayAgain
         // We need to fetch the full duel details which should contain the result
         const duelDetails = await duelsApiService.getDuel(duelId);
         if (duelDetails.results) {
-           // Assuming duelDetails.results is of type DuelResult
-           setResult(duelDetails.results as unknown as DuelResult);
+           setResult(duelDetails.results as DuelResult);
         }
       } catch (error) {
         console.error('Failed to fetch duel results:', error);

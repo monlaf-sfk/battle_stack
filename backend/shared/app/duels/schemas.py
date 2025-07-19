@@ -65,6 +65,7 @@ class Duel(BaseModel):
     started_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None
     problem: Optional[DuelProblem] = None
+    room_code: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True, extra='ignore')
 
@@ -103,6 +104,24 @@ class DuelSubmission(BaseModel):
     language: str
     code: str
 
+
+class PrivateRoomCreateRequest(BaseModel):
+    user_id: str
+    difficulty: str = "medium"
+    category: str = "algorithms"
+    theme: str = "dynamic_programming"
+    language_id: str = "python"
+
+
+class PrivateRoomJoinRequest(BaseModel):
+    room_code: str
+    user_id: str
+
+
+class MatchmakingRequest(BaseModel):
+    difficulty: str
+    category: str
+
 class SubmissionResult(BaseModel):
     is_correct: bool
     details: Optional[str] = None
@@ -137,7 +156,7 @@ class LeaderboardEntry(BaseModel):
     win_rate: float
     current_streak: int
     
-    model_config = ConfigDict(from_attributes=True, coerce_numbers_to_str=True)
+    model_config = ConfigDict(from_attributes=True)
 
 class MatchHistoryItem(BaseModel):
     id: str

@@ -15,7 +15,7 @@ docker
 openai
 httpx
 celery[redis]
-redis
+redis>=5.0.0
 aioredis
 kombu
 google-auth
@@ -47,3 +47,5 @@ prometheus-fastapi-instrumentator
 # Test dependencies
 aiosqlite
 pytest-asyncio
+azure-identity
+azure-keyvault-secrets

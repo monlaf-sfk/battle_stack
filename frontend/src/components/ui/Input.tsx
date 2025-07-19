@@ -196,17 +196,6 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Focus Ring Enhancement */}
-        {isFocused && (
-          <motion.div
-            className="absolute inset-0 rounded-xl border-2 border-arena-accent/30 pointer-events-none"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-          />
-        )}
       </div>
     );
   }

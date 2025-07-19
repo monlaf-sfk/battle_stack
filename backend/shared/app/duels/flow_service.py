@@ -104,12 +104,13 @@ try:
         # It's expected to be a list or tuple literal, e.g., "[1, 2, 3]" or "('a', 'b')"
         parsed_input = ast.literal_eval(input_str)
         
-        # Handle different input patterns
-        if isinstance(parsed_input, tuple):
-            # Assumes the function takes multiple arguments
+        # Handle different input patterns by trying to unpack first
+        try:
+            # This will work for multi-argument functions expecting a tuple or list of arguments
             result = {function_name}(*parsed_input)
-        else:
-            # Assumes the function takes a single argument (e.g., a list)
+        except TypeError:
+            # If unpacking fails (e.g., function takes 1 argument but receives many),
+            # it's likely a single argument.
             result = {function_name}(parsed_input)
             
         # Print the result to stdout

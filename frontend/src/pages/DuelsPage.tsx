@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
-import AIDuelSetupModal from '../components/duels/AIDuelSetupModal'; // Will create this
-import PrivateRoomModal from '../components/ui/JoinPrivateRoomModal'; // Will create this
+import DuelSetupForm, { type DuelSettings } from '../components/duels/DuelSetupForm';
+import PrivateRoomModal from '../components/duels/PrivateRoomModal';
+import MatchmakingModal from '../components/duels/MatchmakingModal';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { duelsApiService } from '../services/api';
@@ -50,6 +51,7 @@ const DuelsPage: React.FC = () => {
 
   const [isAIDuelModalOpen, setAIDuelModalOpen] = useState(false);
   const [isPrivateRoomModalOpen, setPrivateRoomModalOpen] = useState(false);
+  const [isMatchmakingModalOpen, setMatchmakingModalOpen] = useState(false);
   
   useEffect(() => {
     const checkForActiveDuel = async () => {
@@ -66,7 +68,7 @@ const DuelsPage: React.FC = () => {
                 onClick: () => navigate(`/duel/${activeDuel.id}`)
               }
             });
-            navigate(`/duel/${activeDuel.id}`);
+            // No automatic navigation here, let the user decide.
           }
         } catch (error) {
           // No active duel found, which is fine.
@@ -78,21 +80,47 @@ const DuelsPage: React.FC = () => {
     checkForActiveDuel();
   }, [isAuthenticated, user, navigate, addToast, t]);
 
-  const handleStartAIDuel = () => {
-    if (!isAuthenticated) {
+  const handleStartAIDuel = async (settings: DuelSettings) => {
+    if (!user?.id) {
       addToast({
-        type: 'info',
-        title: t('duels.loginToStartDuelTitle'),
-        message: t('duels.loginToStartDuel'),
+        type: 'error',
+        title: t('common.error'),
+        message: t('common.loginToContinue'),
       });
       navigate('/login');
       return;
     }
-    setAIDuelModalOpen(true);
+
+    const { difficulty, category, theme, language } = settings;
+    
+    try {
+      const newDuel = await duelsApiService.createAIDuel({
+        user_id: user.id,
+        theme,
+        difficulty,
+        language: language.id,
+        category,
+      });
+
+      addToast({
+        type: 'success',
+        title: t('duels.duelStartedTitle'),
+        message: t('duels.waitingForProblemGeneration'),
+      });
+
+      setAIDuelModalOpen(false);
+      navigate(`/duel/${newDuel.id}`);
+    } catch (error: any) {
+      // The DuelSetupForm will show its own error toast.
+      // We could add more specific handling here if needed.
+      console.error('Failed to create AI duel:', error);
+      throw error; // Re-throw to be caught by the form
+    }
   };
 
+
   const handleStartPVP = () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !user) {
       addToast({
         type: 'info',
         title: t('duels.loginToStartDuelTitle'),
@@ -101,11 +129,8 @@ const DuelsPage: React.FC = () => {
       navigate('/login');
       return;
     }
-    addToast({
-      type: 'info',
-      title: t('duels.comingSoonTitle'),
-      message: t('duels.pvpComingSoonMessage'),
-    });
+    // No navigation here. The modal will handle starting the search.
+    setMatchmakingModalOpen(true);
   };
 
   const handleOpenPrivateRoomModal = () => {
@@ -135,14 +160,14 @@ const DuelsPage: React.FC = () => {
           icon={<Bot size={48} />}
           title="duels.playerVsAITitle"
           description="duels.playerVsAIDescription"
-          onClick={handleStartAIDuel}
+          onClick={() => setAIDuelModalOpen(true)}
         />
         <DuelTypeCard
           icon={<Users size={48} />}
           title="duels.playerVsPlayerTitle"
           description="duels.playerVsPlayerDescription"
           onClick={handleStartPVP}
-          comingSoon={true}
+          comingSoon={false}
         />
         <DuelTypeCard
           icon={<Lock size={48} />}
@@ -153,10 +178,22 @@ const DuelsPage: React.FC = () => {
       </div>
 
       {isAIDuelModalOpen && (
-        <AIDuelSetupModal isOpen={isAIDuelModalOpen} onClose={() => setAIDuelModalOpen(false)} />
+        <DuelSetupForm
+          isOpen={isAIDuelModalOpen}
+          onClose={() => setAIDuelModalOpen(false)}
+          onSubmit={handleStartAIDuel}
+          title={t('duels.aiDuelSetupTitle')}
+          description={t('duels.aiDuelSetupSubtitle')}
+        />
       )}
       {isPrivateRoomModalOpen && (
         <PrivateRoomModal isOpen={isPrivateRoomModalOpen} onClose={() => setPrivateRoomModalOpen(false)} />
+      )}
+      {isMatchmakingModalOpen && (
+        <MatchmakingModal 
+          isOpen={isMatchmakingModalOpen} 
+          onClose={() => setMatchmakingModalOpen(false)}
+        />
       )}
     </motion.div>
   );

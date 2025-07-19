@@ -35,8 +35,8 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         # Note: 'burst' allows a certain number of requests to exceed the rate
         # 'nodelay' means no requests are served if they exceed 'burst'
         rate_limits = {
-            "/api/v1/auth/token": ("auth:token_login", 2, 0),    # 2 requests per minute, no burst for login
-            "/api/v1/auth/register": ("auth:register", 2, 0), # 2 requests per minute, no burst for registration
+            "/api/v1/auth/token": ("auth:token_login", 20, 0),    # 2 requests per minute, no burst for login
+            "/api/v1/auth/register": ("auth:register", 20, 0), # 2 requests per minute, no burst for registration
             "/api/v1/duels/{duel_id}/submit": ("duel:submit", 10, 5), # 10 requests/minute, burst of 5 for duel submissions
             "/api/v1/duels/{duel_id}/run-public-tests": ("duel:test", 30, 10), # 30 requests/minute, burst of 10 for duel tests
         }
