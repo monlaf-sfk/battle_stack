@@ -115,6 +115,8 @@ const DuelArenaPage: React.FC = () => {
     isConnected, 
     opponentCode, 
     opponentTyping, 
+    aiStatus,
+    generationStatus,
     elapsedTime, 
     aiProgress,
     currentLanguage,
@@ -287,6 +289,7 @@ const DuelArenaPage: React.FC = () => {
         player1Name={user?.username}
         player2Name={opponent?.username}
         isAiDuel={duel ? !duel.player_two_id || duel.player_two_id === 'ai' : true}
+        generationStatus={generationStatus}
       />
     );
   }
@@ -631,12 +634,34 @@ const DuelArenaPage: React.FC = () => {
                               </div>
                               {opponentIsAi ? <Bot className="w-5 h-5 text-purple-400" /> : <User className="w-5 h-5 text-red-400" />}
                               <span className="font-semibold text-arena-text-primary text-lg">{isPVP ? opponent?.username : 'AI Opponent'}</span>
-                              {opponentTyping && <span className="text-sm text-green-400 italic ml-2 animate-pulse">typing...</span>}
+                              {opponentIsAi && aiStatus && (
+                                <span className={`text-sm italic ml-2 ${
+                                  aiStatus === 'thinking' ? 'text-yellow-400 animate-pulse' :
+                                  aiStatus === 'typing' ? 'text-green-400 animate-pulse' :
+                                  aiStatus === 'struggling' ? 'text-orange-400 animate-bounce' :
+                                  aiStatus === 'solved' ? 'text-green-500' :
+                                  aiStatus === 'gave_up' ? 'text-red-400' : 'text-gray-400'
+                                }`}>
+                                  {aiStatus === 'thinking' && '🤔 thinking...'}
+                                  {aiStatus === 'typing' && '⌨️ typing...'}
+                                  {aiStatus === 'struggling' && '😰 struggling...'}
+                                  {aiStatus === 'solved' && '✅ solved!'}
+                                  {aiStatus === 'gave_up' && '😵 gave up'}
+                                </span>
+                              )}
+                              {!opponentIsAi && opponentTyping && <span className="text-sm text-green-400 italic ml-2 animate-pulse">typing...</span>}
                             </div>
                             <div className="flex items-center gap-2">
                               {opponentIsAi && (
-                                <div className="bg-arena-dark/80 px-3 py-1 rounded-lg text-sm font-mono">
-                                  AI: {Math.round(aiProgress)}%
+                                <div className="bg-arena-dark/80 px-3 py-1 rounded-lg text-sm font-mono flex items-center gap-2">
+                                  <div className={`w-2 h-2 rounded-full ${
+                                    aiStatus === 'thinking' ? 'bg-yellow-400 animate-pulse' :
+                                    aiStatus === 'typing' ? 'bg-green-400 animate-pulse' :
+                                    aiStatus === 'struggling' ? 'bg-orange-400 animate-bounce' :
+                                    aiStatus === 'solved' ? 'bg-green-500' :
+                                    aiStatus === 'gave_up' ? 'bg-red-400' : 'bg-gray-400'
+                                  }`}></div>
+                                  <span>AI: {Math.round(aiProgress)}%</span>
                                 </div>
                               )}
                               <Button 

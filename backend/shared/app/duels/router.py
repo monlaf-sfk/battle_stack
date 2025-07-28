@@ -1,6 +1,8 @@
 import asyncio
 import json
+import random
 from uuid import UUID
+import uuid
 import logging
 from typing import Dict, Any, cast
 
@@ -160,8 +162,17 @@ async def generate_problem_and_run_ai(
     MAX_RETRIES = 3
     generated_problem_obj = None
 
+    # Start keepalive task to prevent WebSocket timeout
+    keepalive_task = asyncio.create_task(send_periodic_keepalive(str(duel_id)))
+
     try:
         logger.info(f"🤖 Generating AI problem for duel {duel_id}...")
+        
+        # Send initial status to keep WebSocket alive
+        await manager.broadcast_to_all(
+            str(duel_id),
+            json.dumps({"type": "generation_status", "data": {"message": "🤖 AI is thinking of a problem...", "stage": "generating"}})
+        )
         
         for attempt in range(MAX_RETRIES):
             try:
@@ -170,17 +181,27 @@ async def generate_problem_and_run_ai(
                 )
                 
                 logger.info(f"Validating generated problem ({settings.category}), attempt {attempt + 1}...")
+                
+                # Send validation status
+                await manager.broadcast_to_all(
+                    str(duel_id),
+                    json.dumps({"type": "generation_status", "data": {"message": f"🔍 Validating problem (attempt {attempt + 1})...", "stage": "validating"}})
+                )
 
                 if settings.category == "algorithms" and isinstance(problem_candidate, problem_generator.GeneratedProblem):
                     validation_submission = schemas.CodeSubmission(
                         code=problem_candidate.solution,
                         language=settings.language
                     )
-                    problem_dict = problem_candidate.model_dump()
+                    problem_dict = problem_candidate.model_dump(mode='json')
                     execution_result = await _execute_code_against_tests(validation_submission, problem_dict)
 
                     if execution_result.is_correct:
                         logger.info("✅ Generated algorithm problem passed validation.")
+                        await manager.broadcast_to_all(
+                            str(duel_id),
+                            json.dumps({"type": "generation_status", "data": {"message": "✅ Problem validated! Starting AI opponent...", "stage": "starting_ai"}})
+                        )
                         generated_problem_obj = problem_candidate
                         break
                     else:
@@ -200,7 +221,8 @@ async def generate_problem_and_run_ai(
         if not generated_problem_obj:
             raise Exception("Failed to generate a valid problem after multiple retries.")
 
-        duel_results = {"ai_problem_data": generated_problem_obj.model_dump()}
+        # Use mode='json' to properly serialize UUID and other complex types
+        duel_results = {"ai_problem_data": generated_problem_obj.model_dump(mode='json')}
         await service.update_duel_results(db, duel_id, duel_results)
 
         await db.execute(
@@ -228,7 +250,7 @@ async def generate_problem_and_run_ai(
 
         await manager.broadcast_to_all(
             str(duel_id),
-            json.dumps({"type": "problem_generated", "data": generated_problem_obj.model_dump()})
+            json.dumps({"type": "problem_generated", "data": generated_problem_obj.model_dump(mode='json')})
         )
 
     except Exception as e:
@@ -245,6 +267,22 @@ async def generate_problem_and_run_ai(
                 "data": {"error": "Could not generate an AI problem. Please try again."}
             })
         )
+    finally:
+        # Cancel keepalive task
+        keepalive_task.cancel()
+        try:
+            await keepalive_task
+        except asyncio.CancelledError:
+            pass
+
+async def send_periodic_keepalive(duel_id: str):
+    """Send periodic keepalive messages during long operations"""
+    try:
+        while True:
+            await asyncio.sleep(10)  # Send keepalive every 10 seconds
+            await manager.send_keepalive(duel_id)
+    except asyncio.CancelledError:
+        pass
 
 @router.get("/leaderboard", response_model=list[schemas.LeaderboardEntry])
 async def get_leaderboard(
@@ -348,6 +386,10 @@ async def get_duel_details(
             # Access the data directly as it's already a dictionary from the ORM
             problem_data = dict(duel.results.get("ai_problem_data", {}))
             
+            # Ensure id field exists for DuelProblem validation
+            if 'id' not in problem_data:
+                problem_data['id'] = uuid.uuid4()
+            
             # Convert code_templates to starter_code dictionary
             starter_code = {
                 template['language']: template['template_code']
@@ -447,47 +489,102 @@ async def websocket_endpoint(
 async def run_ai_coding_simulation(db: AsyncSession, duel_id: UUID, steps: list, solution: str):
     """
     Simulates the AI opponent's coding process, sending updates via WebSocket.
+    Ensures the final code matches the solution exactly.
     """
     full_code = ""
+    solution_index = 0  # Track position in the target solution
+    
     for step in steps:
         action = step.root.action
         
         if action == "type":
             content = step.root.content
             speed = step.root.speed
-            # Simulate typing character by character with a delay
+            # Simulate typing character by character with realistic delays
             for char in content:
-                full_code += char
-                await manager.broadcast_to_all(
-                    str(duel_id),
-                    json.dumps({"type": "ai_progress", "data": {"code_chunk": char}})
-                )
-                await asyncio.sleep(0.1 / speed)
+                # Make sure we're typing the correct character from the solution
+                if solution_index < len(solution):
+                    correct_char = solution[solution_index]
+                    full_code += correct_char
+                    solution_index += 1
+                    
+                    await manager.broadcast_to_all(
+                        str(duel_id),
+                        json.dumps({"type": "ai_progress", "data": {"code_chunk": correct_char}})
+                    )
+                    
+                    # More realistic typing delay
+                    base_delay = 0.1 / speed
+                    delay_variation = random.uniform(0.8, 1.2)
+                    
+                    # Extra delay for complex characters
+                    if correct_char in '()[]{}:;,."\'':
+                        delay_variation *= 1.3
+                    # Longer delay after spaces
+                    if correct_char == ' ':
+                        delay_variation *= 1.5
+                    # Even longer delay after newlines
+                    if correct_char == '\n':
+                        delay_variation *= 2.0
+                        
+                    await asyncio.sleep(base_delay * delay_variation)
         
         elif action == "pause":
             await asyncio.sleep(step.root.duration)
             
         elif action == "delete":
             char_count = step.root.char_count
-            full_code = full_code[:-char_count]
-            await manager.broadcast_to_all(
-                str(duel_id),
-                json.dumps({"type": "ai_delete", "data": {"char_count": char_count}})
-            )
+            # Make sure we don't delete more than what we have
+            actual_delete_count = min(char_count, len(full_code))
+            if actual_delete_count > 0:
+                full_code = full_code[:-actual_delete_count]
+                solution_index = max(0, solution_index - actual_delete_count)  # Adjust solution index
+                await manager.broadcast_to_all(
+                    str(duel_id),
+                    json.dumps({"type": "ai_delete", "data": {"char_count": actual_delete_count}})
+                )
 
-    # After simulation, "submit" the final, correct code
+    # After simulation, decide if AI "solves" the problem
+    # Make AI more human-like by not always succeeding
+    ai_success_rate = 0.75  # 75% success rate - sometimes AI fails like humans
+    
     duel = await service.get_duel(db, duel_id)
-    if duel and duel.status == models.DuelStatus.IN_PROGRESS: # Check status as actual enum value
+    if duel and duel.status == models.DuelStatus.IN_PROGRESS:
         current_results = duel.results or {}
         if isinstance(current_results, dict):
-            current_results["ai_solved_at"] = datetime.now(timezone.utc).isoformat()
             
-            # Check if AI is the first solver
-            if 'p1_solved_at' not in current_results:
-                current_results['first_solver'] = 'ai'
-            
-            await service.update_duel_results(db, duel.id, current_results)
-            await duel_flow_service.end_duel_and_broadcast(db, duel.id, for_ai=True)
+            if random.random() < ai_success_rate:
+                # AI "solves" the problem
+                current_results["ai_solved_at"] = datetime.now(timezone.utc).isoformat()
+                
+                # Check if AI is the first solver
+                if 'p1_solved_at' not in current_results:
+                    current_results['first_solver'] = 'ai'
+                
+                await service.update_duel_results(db, duel.id, current_results)
+                await duel_flow_service.end_duel_and_broadcast(db, duel.id, for_ai=True)
+                
+                # Broadcast that AI solved
+                await manager.broadcast_to_all(
+                    str(duel_id),
+                    json.dumps({"type": "ai_solved", "data": {"message": "AI opponent solved the problem!"}})
+                )
+            else:
+                # AI "gives up" or makes mistakes - more human-like
+                await manager.broadcast_to_all(
+                    str(duel_id),
+                    json.dumps({"type": "ai_struggling", "data": {"message": "AI opponent is having trouble with this problem..."}})
+                )
+                
+                # Add some more time for the human to solve
+                await asyncio.sleep(random.uniform(30.0, 60.0))  # AI "keeps trying" for 30-60 more seconds
+                
+                # Sometimes AI gives up completely
+                if random.random() < 0.3:  # 30% chance AI gives up
+                    await manager.broadcast_to_all(
+                        str(duel_id),
+                        json.dumps({"type": "ai_gave_up", "data": {"message": "AI opponent gave up. You have more time to solve!"}})
+                    )
 
 @router.post("/matchmaking/join", response_model=Message)
 async def join_matchmaking_queue(

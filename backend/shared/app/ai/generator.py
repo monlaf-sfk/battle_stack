@@ -104,6 +104,7 @@ class CodeTemplate(BaseModel):
     template_code: str
 
 class GeneratedProblem(BaseModel):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, description="Unique identifier for the problem.")
     title: str = Field(..., description="A clear, descriptive title for the problem (e.g., 'Two Sum', 'Reverse a Linked List').")
     slug: str = Field(..., description="A URL-friendly slug for the problem (e.g., 'two-sum', 'reverse-linked-list').")
     description: str = Field(..., description="A detailed explanation of the problem, including input/output formats and constraints.")
@@ -115,11 +116,7 @@ class GeneratedProblem(BaseModel):
     time_limit_ms: int = 2000
     memory_limit_mb: int = 128
 
-    def __init__(self, **data):
-        # Ensure id is set if not provided
-        if 'id' not in data:
-            data['id'] = uuid.uuid4()
-        super().__init__(**data)
+
 
 def generate_algorithm_problem_prompt(theme: str, difficulty: str, language: str) -> str:
     """Generate prompt for algorithmic programming problems"""
@@ -128,7 +125,7 @@ def generate_algorithm_problem_prompt(theme: str, difficulty: str, language: str
         "title": "string - Short, descriptive title",
         "description": "string - Detailed problem description with examples",
         "difficulty": "string - easy, medium, or hard",
-        "solution": "string - The complete, correct solution code for the problem.",
+        "solution": "string - The complete, correct Python function definition (must start with 'def function_name(...):')",
         "test_cases": [
             {
                 "input_data": "string - Input for the test case",
@@ -155,7 +152,7 @@ def generate_algorithm_problem_prompt(theme: str, difficulty: str, language: str
     
     Requirements:
     1. Create a high-quality, solvable, and interesting problem suitable for competitive programming.
-    2. Provide a COMPLETE and **100% CORRECT** solution in the `solution` field. This field must contain **ONLY** the function definition(s) required to solve the problem, with no top-level script, example calls, or `print` statements.
+    2. Provide a COMPLETE and **100% CORRECT** solution in the `solution` field. This field must contain **ONLY** the function definition(s) required to solve the problem, with no top-level script, example calls, or `print` statements. The solution MUST start with a valid Python function definition (e.g., "def solve_problem(...):").
     3. The `code_templates` field should contain only boilerplate/starter code with a 'TODO' comment, NOT the solution. It must be a full, runnable script that handles input and output.
     4. **MANDATORY**: Include exactly 10-15 diverse and comprehensive test cases, including edge cases, boundary conditions, and stress tests.
     5. **CRITICAL**: For each test case, the `expected_output` MUST be the result of running your provided `solution` code with the `input_data`. You must verify this yourself. Double-check for correctness. Do not include incorrect test cases.
@@ -230,9 +227,14 @@ async def generate_algorithm_problem(theme: str, difficulty: str, language: str 
         # Extract function name from the generated solution before validation
         function_name = None
         if language == "python":
-            match = re.search(r"def\s+(\w+)\s*\(", response_json.get("solution", ""))
+            solution_code = response_json.get("solution", "")
+            match = re.search(r"def\s+(\w+)\s*\(", solution_code)
             if match:
                 function_name = match.group(1)
+            else:
+                # If we can't extract function name, this is an invalid response
+                logger.error(f"Could not extract function name from solution: {solution_code}")
+                raise GeneratorInvalidResponse("Generated solution does not contain a valid Python function definition")
         
         # Add the extracted function name and a generated slug to the response data
         response_json['function_name'] = function_name

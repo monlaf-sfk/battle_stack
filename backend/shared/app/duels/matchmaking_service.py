@@ -70,7 +70,7 @@ class MatchmakingService:
                 if not problem:
                     raise Exception("Problem generation failed.")
 
-                duel_results = {"ai_problem_data": problem.model_dump()}
+                duel_results = {"ai_problem_data": problem.model_dump(mode='json')}
                 await duel_service.update_duel_results(db, duel_id, duel_results)
 
                 await db.execute(

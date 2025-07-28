@@ -8,9 +8,10 @@ interface DuelLoadingScreenProps {
   player1Name?: string;
   player2Name?: string;
   isAiDuel?: boolean;
+  generationStatus?: string;
 }
 
-const DuelLoadingScreen: React.FC<DuelLoadingScreenProps> = ({ statusText, player1Name = "Player 1", player2Name = "Player 2", isAiDuel = false }) => {
+const DuelLoadingScreen: React.FC<DuelLoadingScreenProps> = ({ statusText, player1Name = "Player 1", player2Name = "Player 2", isAiDuel = false, generationStatus }) => {
   const { t } = useTranslation();
 
   return (
@@ -64,10 +65,21 @@ const DuelLoadingScreen: React.FC<DuelLoadingScreenProps> = ({ statusText, playe
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.5 }}
-          className="flex items-center justify-center gap-4 text-2xl font-semibold mb-4 text-arena-text-muted"
+          className="flex flex-col items-center justify-center gap-4 text-2xl font-semibold mb-4 text-arena-text-muted"
         >
-          <Loader2 className="animate-spin" size={32} />
-          <p>{statusText}</p>
+          <div className="flex items-center gap-4">
+            <Loader2 className="animate-spin" size={32} />
+            <p>{statusText}</p>
+          </div>
+          {generationStatus && (
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-sm text-arena-accent italic"
+            >
+              {generationStatus}
+            </motion.p>
+          )}
         </motion.div>
         <p className="text-sm text-arena-text-dim max-w-md mx-auto">
           {t('duels.loadingHint', 'The battle is about to begin. Prepare your mind, sharpen your code, and may the best algorithm win.')}

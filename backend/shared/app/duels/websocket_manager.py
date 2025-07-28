@@ -2,6 +2,7 @@ from fastapi import WebSocket
 from typing import Dict, List, Tuple
 import json
 import logging
+import asyncio
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -111,5 +112,15 @@ class DuelConnectionManager:
                 if conn_user_id == user_id:
                     await connection.send_text(message)
                     return # Assume one connection per user per duel
+
+    async def send_keepalive(self, duel_id: str):
+        """Send keepalive ping to all connections in a duel"""
+        if duel_id in self.active_connections:
+            keepalive_message = json.dumps({"type": "ping", "data": {"timestamp": asyncio.get_event_loop().time()}})
+            for _, connection in self.active_connections[duel_id]:
+                try:
+                    await connection.send_text(keepalive_message)
+                except Exception as e:
+                    logger.warning(f"Failed to send keepalive to connection: {e}")
 
 manager = DuelConnectionManager() 

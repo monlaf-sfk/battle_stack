@@ -105,7 +105,7 @@ const DuelSetupForm: React.FC<DuelSetupFormProps> = ({ isOpen, onClose, onSubmit
           backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
           backgroundSize: '2rem 2rem'
         }} />
-        
+
         <div className="relative z-10 p-8 space-y-8">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
@@ -132,7 +132,7 @@ const DuelSetupForm: React.FC<DuelSetupFormProps> = ({ isOpen, onClose, onSubmit
               <DifficultyButton value="expert" label={t('duels.difficultyExpert')} icon={<Sparkles />} current={difficulty} onSelect={setDifficulty} disabled />
             </div>
           </div>
-          
+
           {/* Category & Theme */}
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-4">
@@ -145,18 +145,18 @@ const DuelSetupForm: React.FC<DuelSetupFormProps> = ({ isOpen, onClose, onSubmit
             <div className="space-y-4">
               <Label htmlFor="theme" className="text-lg font-semibold text-white">{t('duels.problemTheme')}</Label>
               <Select onValueChange={setTheme} value={theme}>
-                  <SelectTrigger id="theme" className="w-full bg-arena-surface border-arena-border focus:ring-arena-accent text-base py-6">
-                    <SelectValue placeholder={t('duels.selectThemePlaceholder')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {themes[category].map((t) => (
-                      <SelectItem key={t.value} value={t.value} className="text-base py-2">{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SelectTrigger id="theme" className="w-full bg-arena-surface border-arena-border focus:ring-arena-accent text-base py-6">
+                  <SelectValue placeholder={t('duels.selectThemePlaceholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {themes[category].map((t) => (
+                    <SelectItem key={t.value} value={t.value} className="text-base py-2">{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          
+
           {/* Language */}
           <div className="space-y-4">
             <Label htmlFor="language" className="text-lg font-semibold text-white">{t('duels.programmingLanguage')}</Label>
@@ -171,7 +171,7 @@ const DuelSetupForm: React.FC<DuelSetupFormProps> = ({ isOpen, onClose, onSubmit
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="flex justify-end gap-4 pt-8 border-t border-arena-border/50">
             <Button variant="ghost" onClick={onClose} disabled={isLoading} className="text-base px-6 py-3">
               {t('common.cancel')}
@@ -191,51 +191,51 @@ const DuelSetupForm: React.FC<DuelSetupFormProps> = ({ isOpen, onClose, onSubmit
   );
 };
 
-const DifficultyButton: React.FC<{ value: Difficulty, label: string, icon: React.ReactNode, current: Difficulty, onSelect: (d: Difficulty) => void, disabled?: boolean }> = 
-({ value, label, icon, current, onSelect, disabled }) => {
-  const isSelected = value === current;
-  const styles = {
-    easy: 'border-green-500/50 text-green-400',
-    medium: 'border-yellow-500/50 text-yellow-400',
-    hard: 'border-red-500/50 text-red-400',
-    expert: 'border-purple-500/50 text-purple-400',
+const DifficultyButton: React.FC<{ value: Difficulty, label: string, icon: React.ReactNode, current: Difficulty, onSelect: (d: Difficulty) => void, disabled?: boolean }> =
+  ({ value, label, icon, current, onSelect, disabled }) => {
+    const isSelected = value === current;
+    const styles = {
+      easy: 'border-green-500/50 text-green-400',
+      medium: 'border-yellow-500/50 text-yellow-400',
+      hard: 'border-red-500/50 text-red-400',
+      expert: 'border-purple-500/50 text-purple-400',
+    };
+    return (
+      <motion.button
+        onClick={() => !disabled && onSelect(value)}
+        className={cn(
+          "p-4 rounded-lg border-2 text-center transition-all duration-300 space-y-2",
+          "bg-arena-surface/50 hover:bg-arena-light/20",
+          isSelected ? `shadow-lg ${styles[value]}` : 'border-arena-border',
+          disabled && "opacity-50 cursor-not-allowed"
+        )}
+        whileHover={{ y: disabled ? 0 : -5 }}
+      >
+        <div className={cn("mx-auto w-fit", !isSelected && "text-arena-text-muted")}>{icon}</div>
+        <h4 className={cn("font-bold", !isSelected && "text-white")}>{label}</h4>
+        {disabled && <span className="text-xs font-bold uppercase">({useTranslation().t('common.comingSoon')})</span>}
+      </motion.button>
+    )
   };
-  return (
-    <motion.button
-      onClick={() => !disabled && onSelect(value)}
-      className={cn(
-        "p-4 rounded-lg border-2 text-center transition-all duration-300 space-y-2",
-        "bg-arena-surface/50 hover:bg-arena-light/20",
-        isSelected ? `shadow-lg ${styles[value]}` : 'border-arena-border',
-        disabled && "opacity-50 cursor-not-allowed"
-      )}
-      whileHover={{ y: disabled ? 0 : -5 }}
-    >
-      <div className={cn("mx-auto w-fit", !isSelected && "text-arena-text-muted")}>{icon}</div>
-      <h4 className={cn("font-bold", !isSelected && "text-white")}>{label}</h4>
-      {disabled && <span className="text-xs font-bold uppercase">({useTranslation().t('common.comingSoon')})</span>}
-    </motion.button>
-  )
-};
 
-const CategoryButton: React.FC<{ value: Category, label: string, icon: React.ReactNode, current: Category, onSelect: (c: Category) => void, disabled?: boolean }> = 
-({ value, label, icon, current, onSelect, disabled }) => {
-  const isSelected = value === current;
-  return (
-    <motion.button
-      onClick={() => !disabled && onSelect(value)}
-      className={cn(
-        "p-4 rounded-lg border-2 text-center transition-all duration-300 space-y-2",
-        "bg-arena-surface/50 hover:bg-arena-light/20",
-        isSelected ? 'border-arena-accent text-arena-accent shadow-lg' : 'border-arena-border text-white',
-        disabled && "opacity-50 cursor-not-allowed"
-      )}
-      whileHover={{ y: disabled ? 0 : -5 }}
-    >
-      <div className="mx-auto w-fit">{icon}</div>
-      <h4 className="font-bold">{label}</h4>
-    </motion.button>
-  )
-};
+const CategoryButton: React.FC<{ value: Category, label: string, icon: React.ReactNode, current: Category, onSelect: (c: Category) => void, disabled?: boolean }> =
+  ({ value, label, icon, current, onSelect, disabled }) => {
+    const isSelected = value === current;
+    return (
+      <motion.button
+        onClick={() => !disabled && onSelect(value)}
+        className={cn(
+          "p-4 rounded-lg border-2 text-center transition-all duration-300 space-y-2",
+          "bg-arena-surface/50 hover:bg-arena-light/20",
+          isSelected ? 'border-arena-accent text-arena-accent shadow-lg' : 'border-arena-border text-white',
+          disabled && "opacity-50 cursor-not-allowed"
+        )}
+        whileHover={{ y: disabled ? 0 : -5 }}
+      >
+        <div className="mx-auto w-fit">{icon}</div>
+        <h4 className="font-bold">{label}</h4>
+      </motion.button>
+    )
+  };
 
 export default DuelSetupForm; 

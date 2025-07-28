@@ -25,6 +25,8 @@ interface DuelContextType {
   isConnected: boolean;
   opponentCode: string;
   opponentTyping: boolean;
+  aiStatus: 'thinking' | 'typing' | 'struggling' | 'solved' | 'gave_up' | null;
+  generationStatus: string;
   elapsedTime: number;
   aiCodingProcess: any[]; // To simulate AI typing animation
   aiProgress: number;
@@ -50,6 +52,8 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isConnected, setIsConnected] = useState(false);
   const [opponentCode, setOpponentCode] = useState('');
   const [opponentTyping, setOpponentTyping] = useState(false);
+  const [aiStatus, setAiStatus] = useState<'thinking' | 'typing' | 'struggling' | 'solved' | 'gave_up' | null>(null);
+  const [generationStatus, setGenerationStatus] = useState<string>('');
   const [opponent, setOpponent] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [aiCodingProcess, setAiCodingProcess] = useState<any[]>([]);
@@ -86,7 +90,7 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const supportedLangs = await codeExecutionService.getSupportedLanguages();
       const problemLangs = duelData.problem.code_templates?.map((t: any) => t.language) || [];
       const defaultLangId = 'python';
-      
+
       let langToSetId = problemLangs.includes(defaultLangId) ? defaultLangId : problemLangs[0];
 
       if (langToSetId) {
@@ -95,8 +99,8 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setCurrentLanguage(langObject);
         }
       } else {
-         const pythonLang = supportedLangs.find(l => l.id === 'python');
-         if (pythonLang) setCurrentLanguage(pythonLang);
+        const pythonLang = supportedLangs.find(l => l.id === 'python');
+        if (pythonLang) setCurrentLanguage(pythonLang);
       }
     }
   }, []);
@@ -111,7 +115,7 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const startAiTypingSimulation = useCallback((process: any[], startProgress = 0) => {
     if (aiTypingTimerRef.current) clearTimeout(aiTypingTimerRef.current);
-  
+
     let totalDelay = 0;
     const startIndex = Math.floor((startProgress / 100) * process.length);
 
@@ -126,11 +130,11 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }, 1000 + Math.random() * 1000); // Final pause before finishing
         return;
       }
-  
+
       const step = process[stepIndex];
       const action = step.root;
       let stepDelay = 0;
-  
+
       if (action.action === 'type') {
         const typingSpeed = (250 / action.speed) * (0.8 + Math.random() * 0.4); // Human-like speed variation
         for (let i = 0; i < action.content.length; i++) {
@@ -140,27 +144,27 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setOpponentTyping(true);
           }, totalDelay);
         }
-        stepDelay = totalDelay - (stepIndex > 0 ? process[stepIndex-1].delay || 0 : 0);
-  
+        stepDelay = totalDelay - (stepIndex > 0 ? process[stepIndex - 1].delay || 0 : 0);
+
       } else if (action.action === 'pause') {
         stepDelay = action.duration * 1000 * (0.5 + Math.random()); // "Thinking" time
         totalDelay += stepDelay;
         setTimeout(() => {
-            setOpponentTyping(false);
+          setOpponentTyping(false);
         }, totalDelay);
-  
+
       } else if (action.action === 'delete') {
         const deleteSpeed = 150 * (0.8 + Math.random() * 0.4); // Human-like mistake correction
         for (let i = 0; i < action.char_count; i++) {
-            totalDelay += deleteSpeed;
-            setTimeout(() => {
-                setOpponentCode(prev => prev.slice(0, -1));
-                setOpponentTyping(true);
-            }, totalDelay);
+          totalDelay += deleteSpeed;
+          setTimeout(() => {
+            setOpponentCode(prev => prev.slice(0, -1));
+            setOpponentTyping(true);
+          }, totalDelay);
         }
-        stepDelay = totalDelay - (stepIndex > 0 ? process[stepIndex-1].delay || 0 : 0);
+        stepDelay = totalDelay - (stepIndex > 0 ? process[stepIndex - 1].delay || 0 : 0);
       }
-  
+
       // Update progress after the action is visually complete
       setTimeout(() => {
         const newProgress = (stepIndex + 1) / process.length * 100;
@@ -170,16 +174,16 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem(progressKey, JSON.stringify(newProgress));
         }
       }, totalDelay);
-      
+
       // Store the cumulative delay for the next step's calculation
       process[stepIndex].delay = totalDelay;
-  
+
       // Schedule the next step
       executeStep(stepIndex + 1);
     };
-  
+
     executeStep(startIndex);
-  
+
   }, [getStorageKey]);
 
   // Effect to load and reconstruct AI state on mount
@@ -195,11 +199,11 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const savedProcess = JSON.parse(savedProcessJSON);
           const savedProgress = JSON.parse(savedProgressJSON);
-          
+
           if (savedProcess.length > 0 && savedProgress > 0) {
             let reconstructedCode = '';
             const endIndex = Math.floor((savedProgress / 100) * savedProcess.length);
-            
+
             for (let i = 0; i < endIndex; i++) {
               const action = savedProcess[i].root;
               if (action.action === 'type') {
@@ -212,7 +216,7 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setOpponentCode(reconstructedCode);
             setAiProgress(savedProgress);
             setAiCodingProcess(savedProcess);
-            if(savedProgress < 100) {
+            if (savedProgress < 100) {
               startAiTypingSimulation(savedProcess, savedProgress);
             } else {
               setAiFinishedTyping(true);
@@ -277,7 +281,7 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (fetchedDuel.status === DuelStatus.COMPLETED || fetchedDuel.status === DuelStatus.TIMED_OUT) {
         // If already completed, calculate final time and show results
         if (fetchedDuel.started_at && fetchedDuel.finished_at) {
-            setElapsedTime(Math.floor((new Date(fetchedDuel.finished_at).getTime() - new Date(fetchedDuel.started_at).getTime()) / 1000));
+          setElapsedTime(Math.floor((new Date(fetchedDuel.finished_at).getTime() - new Date(fetchedDuel.started_at).getTime()) / 1000));
         }
         if (fetchedDuel.results) {
           setDuelResult(fetchedDuel.results as DuelResult);
@@ -292,7 +296,7 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
     }
   }, [user?.id, addToast, setInitialLanguageFromDuel]);
-  
+
   const connect = useCallback((id: string) => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
       console.log('WebSocket already connected.');
@@ -364,13 +368,13 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const updatedDuel = message.data as DuelResponse;
             setDuel(updatedDuel);
             setInitialLanguageFromDuel(updatedDuel);
-            
+
             // Start timer if it hasn't started
             if (updatedDuel.status === DuelStatus.IN_PROGRESS && updatedDuel.started_at && !timerRef.current) {
-                const start = new Date(updatedDuel.started_at).getTime();
-                timerRef.current = setInterval(() => {
-                    setElapsedTime(Math.floor((Date.now() - start) / 1000));
-                }, 1000);
+              const start = new Date(updatedDuel.started_at).getTime();
+              timerRef.current = setInterval(() => {
+                setElapsedTime(Math.floor((Date.now() - start) / 1000));
+              }, 1000);
             }
           } else if (id) {
             // Fallback to refetching if no data is present
@@ -387,15 +391,15 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
           navigate(`/duel/${duelData.id}`);
           break;
         case 'test_result':
-           const adaptedData: SubmissionResultData = {
-             is_correct: message.data.is_correct,
-             error: message.data.error,
-             details: message.data.details,
-             passed: message.data.passed,
-             total: message.data.total,
-           };
-           setSubmissionResult(adaptedData);
-           break;
+          const adaptedData: SubmissionResultData = {
+            is_correct: message.data.is_correct,
+            error: message.data.error,
+            details: message.data.details,
+            passed: message.data.passed,
+            total: message.data.total,
+          };
+          setSubmissionResult(adaptedData);
+          break;
         case 'duel_end':
           setDuelResult(message.data);
           setDuel(prev => prev ? { ...prev, status: message.data.is_timeout ? DuelStatus.TIMED_OUT : DuelStatus.COMPLETED } : null);
@@ -404,7 +408,7 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const progressKeyOnEnd = getStorageKey('ai-progress');
           if (processKeyOnEnd) localStorage.removeItem(processKeyOnEnd);
           if (progressKeyOnEnd) localStorage.removeItem(progressKeyOnEnd);
-          
+
           disconnect(); // Disconnect after duel ends
           break;
         case 'error':
@@ -413,13 +417,14 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
           disconnect();
           break;
         case 'ai_start':
-           console.log("AI opponent has started.");
-           // No action needed, backend will push updates
-           break;
+          console.log("AI opponent has started.");
+          setAiStatus('thinking');
+          // No action needed, backend will push updates
+          break;
         case 'ai_coding_process':
           const newProcess = message.data;
           setAiCodingProcess(newProcess);
-          
+
           const processKey = getStorageKey('ai-process');
           if (processKey) {
             localStorage.setItem(processKey, JSON.stringify(newProcess));
@@ -431,19 +436,70 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
           startAiTypingSimulation(newProcess, 0);
           break;
         case 'ai_progress':
-            if (message.data.code_chunk) {
-              setOpponentCode(prev => prev + message.data.code_chunk);
-            }
-            if (message.data.progress) {
-              setAiProgress(message.data.progress);
-            }
-            setOpponentTyping(true);
-            break;
+          if (message.data.code_chunk) {
+            setOpponentCode(prev => prev + message.data.code_chunk);
+          }
+          if (message.data.progress) {
+            setAiProgress(message.data.progress);
+          }
+          setOpponentTyping(true);
+          setAiStatus('typing');
+          break;
         case 'ai_delete':
-            if (message.data && message.data.char_count) {
-                setOpponentCode(prev => prev.slice(0, -message.data.char_count));
-            }
-            break;
+          if (message.data && message.data.char_count) {
+            setOpponentCode(prev => prev.slice(0, -message.data.char_count));
+          }
+          break;
+        case 'ai_solved':
+          addToast({
+            type: 'success',
+            title: 'AI Solved!',
+            message: message.data.message || 'AI opponent solved the problem!',
+          });
+          setOpponentTyping(false);
+          setAiFinishedTyping(true);
+          setAiStatus('solved');
+          break;
+        case 'ai_struggling':
+          addToast({
+            type: 'info',
+            title: 'AI Struggling',
+            message: message.data.message || 'AI opponent is having trouble...',
+          });
+          setAiStatus('struggling');
+          break;
+        case 'ai_gave_up':
+          addToast({
+            type: 'warning',
+            title: 'AI Gave Up',
+            message: message.data.message || 'AI opponent gave up. You have more time!',
+          });
+          setOpponentTyping(false);
+          setAiFinishedTyping(true);
+          setAiStatus('gave_up');
+          break;
+        case 'generation_status':
+          // Keep connection alive during problem generation
+          console.log('Generation status:', message.data.message);
+          setGenerationStatus(message.data.message);
+          // Optionally show a toast for important stages
+          if (message.data.stage === 'starting_ai') {
+            addToast({
+              type: 'info',
+              title: 'Problem Ready',
+              message: message.data.message,
+            });
+          }
+          break;
+        case 'ping':
+          // Respond to keepalive ping with pong
+          if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+            ws.current.send(JSON.stringify({
+              type: 'pong',
+              data: { timestamp: message.data.timestamp }
+            }));
+          }
+          break;
         case 'duel_creation_failed':
           addToast({
             type: 'error',
@@ -520,7 +576,7 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
       connect(duelId);
       return; // Exit early to avoid checking for active duels
     }
-  
+
     // If no duelId in URL, we don't need to do anything automatically,
     // as matchmaking flow will now be handled explicitly by component calls.
     if (!duelId) {
@@ -563,15 +619,15 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     try {
       const result: DuelTestResponse = await duelsApiService.testCode(duel.id, { code, language: language.id });
-      
+
       const detailsArray = Array.isArray(result.details)
         ? result.details.map((tc, index) => {
-            if (tc.status === 'COMPILATION_ERROR') {
-              return `Compilation Error: ${tc.error_message}`;
-            }
-            const status = tc.status === 'PASSED' ? 'passed' : 'failed';
-            return `Test case #${index + 1} ${status}: Input: '${tc.input}', Expected: '${tc.expected}', Got: '${tc.got}'`;
-          })
+          if (tc.status === 'COMPILATION_ERROR') {
+            return `Compilation Error: ${tc.error_message}`;
+          }
+          const status = tc.status === 'PASSED' ? 'passed' : 'failed';
+          return `Test case #${index + 1} ${status}: Input: '${tc.input}', Expected: '${tc.expected}', Got: '${tc.got}'`;
+        })
         : result.details ? [result.details] : [];
 
       const adaptedData: SubmissionResultData = {
@@ -611,6 +667,8 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isConnected,
         opponentCode,
         opponentTyping,
+        aiStatus,
+        generationStatus,
         elapsedTime,
         aiCodingProcess,
         aiProgress,
