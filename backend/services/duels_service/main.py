@@ -83,6 +83,24 @@ async def get_supported_languages():
     
     return supported_languages
 
+@problems_router.get("/performance/insights")
+async def get_performance_insights(language: str = None):
+    """Get performance insights and analytics"""
+    from shared.app.ai.performance_metrics import performance_tracker
+    return performance_tracker.get_performance_insights(language)
+
+@problems_router.get("/performance/leaderboard")
+async def get_performance_leaderboard(limit: int = 10):
+    """Get performance leaderboard"""
+    from shared.app.ai.performance_metrics import performance_tracker
+    return performance_tracker.get_leaderboard_data(limit)
+
+@problems_router.get("/performance/languages")
+async def get_language_performance_ranking():
+    """Get languages ranked by performance"""
+    from shared.app.ai.performance_metrics import performance_tracker
+    return performance_tracker.get_language_ranking()
+
 # Define a constant for the duel time limit in seconds (e.g., 15 minutes)
 DUEL_TIME_LIMIT_SECONDS = 15 * 60
 

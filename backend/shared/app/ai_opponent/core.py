@@ -6,6 +6,55 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def get_false_start_for_language(language: str) -> str:
+    """Get a typical false start pattern for each programming language"""
+    false_starts = {
+        "python": "def solve",
+        "javascript": "function solve",
+        "typescript": "function solve",
+        "java": "public class",
+        "cpp": "int main",
+        "c": "int main",
+        "go": "func solve",
+        "rust": "fn solve",
+        "sql": "SELECT"
+    }
+    return false_starts.get(language.lower(), "")
+
+def get_complex_chars_for_language(language: str) -> str:
+    """Get complex characters that require slower typing for each language"""
+    base_chars = '()[]{}:;,."\'`'
+    
+    language_specific = {
+        "python": base_chars + "@#",
+        "javascript": base_chars + "=>$",
+        "typescript": base_chars + "=><>",
+        "java": base_chars + "<>@",
+        "cpp": base_chars + "<>::",
+        "c": base_chars + "*&",
+        "go": base_chars + ":=<>",
+        "rust": base_chars + "|&<>",
+        "sql": base_chars + "*%"
+    }
+    
+    return language_specific.get(language.lower(), base_chars)
+
+def get_keywords_for_language(language: str) -> list:
+    """Get keywords that require extra thinking time for each language"""
+    keywords = {
+        "python": ['def', 'class', 'if', 'for', 'while', 'try', 'with', 'import'],
+        "javascript": ['function', 'class', 'if', 'for', 'while', 'try', 'const', 'let'],
+        "typescript": ['function', 'class', 'if', 'for', 'while', 'try', 'const', 'let', 'interface', 'type'],
+        "java": ['public', 'private', 'class', 'if', 'for', 'while', 'try', 'static'],
+        "cpp": ['int', 'class', 'if', 'for', 'while', 'try', 'template', 'namespace'],
+        "c": ['int', 'struct', 'if', 'for', 'while', 'typedef', 'static'],
+        "go": ['func', 'struct', 'if', 'for', 'range', 'type', 'var', 'const'],
+        "rust": ['fn', 'struct', 'if', 'for', 'while', 'match', 'let', 'mut'],
+        "sql": ['SELECT', 'FROM', 'WHERE', 'JOIN', 'GROUP', 'ORDER', 'HAVING']
+    }
+    
+    return keywords.get(language.lower(), ['if', 'for', 'while'])
+
 class CodeTypingAction(BaseModel):
     action: Literal["type"] = "type"
     content: str = Field(..., description="The code snippet to type out.")
@@ -39,23 +88,25 @@ async def generate_ai_coding_process(
     steps.append(CodingStep(root=PauseAction(duration=initial_thinking)))
 
     # Sometimes start with wrong approach and delete it (like humans do)
-    if random.random() < 0.2:  # Reduced from 40% to 20% chance of false start
-        false_start = "def solve" if language == "python" else "function solve"
-        steps.append(CodingStep(root=CodeTypingAction(content=false_start, speed=0.5)))
-        steps.append(CodingStep(root=PauseAction(duration=random.uniform(2.0, 4.0))))
-        steps.append(CodingStep(root=DeleteAction(char_count=len(false_start))))
-        steps.append(CodingStep(root=PauseAction(duration=random.uniform(3.0, 6.0))))
+    if random.random() < 0.2:  # 20% chance of false start
+        false_start = get_false_start_for_language(language)
+        if false_start:
+            steps.append(CodingStep(root=CodeTypingAction(content=false_start, speed=0.5)))
+            steps.append(CodingStep(root=PauseAction(duration=random.uniform(2.0, 4.0))))
+            steps.append(CodingStep(root=DeleteAction(char_count=len(false_start))))
+            steps.append(CodingStep(root=PauseAction(duration=random.uniform(3.0, 6.0))))
 
     # Simulate typing the solution with realistic behavior but fewer mistakes
     remaining_code = full_code_target
     
     while remaining_code:
-        # Moderate thinking pauses (40% chance instead of 70%)
+        # Moderate thinking pauses (40% chance)
         if random.random() < 0.4:
             # Shorter thinking pauses
             thinking_time = random.uniform(1.0, 5.0)
-            # Extra pause at complex parts but shorter
-            if any(keyword in remaining_code[:20] for keyword in ['for', 'while', 'if', 'def', 'class']):
+            # Extra pause at complex parts for this language
+            keywords = get_keywords_for_language(language)
+            if any(keyword in remaining_code[:20] for keyword in keywords):
                 thinking_time += random.uniform(2.0, 4.0)
             steps.append(CodingStep(root=PauseAction(duration=thinking_time)))
 
@@ -74,8 +125,9 @@ async def generate_ai_coding_process(
         # Moderate typing speed
         typing_speed = random.uniform(0.4, 0.8)
         
-        # Slightly slower for complex characters
-        if any(char in code_chunk for char in ['(', ')', '[', ']', '{', '}', ':', ';']):
+        # Slightly slower for complex characters specific to this language
+        complex_chars = get_complex_chars_for_language(language)
+        if any(char in code_chunk for char in complex_chars):
             typing_speed *= 0.8
             
         steps.append(CodingStep(root=CodeTypingAction(content=code_chunk, speed=typing_speed)))

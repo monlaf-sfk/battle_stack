@@ -26,6 +26,203 @@ def _create_slug(title: str) -> str:
     slug = slug.strip('-')
     return slug
 
+def get_language_id(language: str) -> int:
+    """Get Judge0 language ID for the given language"""
+    language_ids = {
+        "python": 71,      # Python 3.8.1
+        "javascript": 63,  # JavaScript (Node.js 12.14.0)
+        "typescript": 74,  # TypeScript (3.7.4)
+        "java": 62,        # Java (OpenJDK 13.0.1)
+        "cpp": 54,         # C++ (GCC 9.2.0)
+        "c": 50,           # C (GCC 9.2.0)
+        "go": 60,          # Go (1.13.5)
+        "rust": 73,        # Rust (1.40.0)
+        "sql": 82,         # SQL (SQLite 3.27.2)
+    }
+    return language_ids.get(language.lower(), 71)  # Default to Python
+
+def create_language_wrapper(language: str, function_name: str) -> str:
+    """Create language-specific wrapper for testing solutions using LeetCode-style approach"""
+    from .language_templates import get_language_template
+    
+    template = get_language_template(language)
+    # For now, we'll use a simplified approach, but this can be extended
+    # to use the full template system
+    
+    if language.lower() == "python":
+        return f"""
+import sys
+import ast
+import json
+
+# User's solution is above this line
+try:
+    input_str = sys.stdin.read().strip()
+    if input_str:
+        parsed_input = ast.literal_eval(input_str)
+        
+        try:
+            # First try: pass input as single argument (most common for algorithms)
+            result = {function_name}(parsed_input)
+        except TypeError:
+            # If that fails and input is a list/tuple, try unpacking
+            if isinstance(parsed_input, (list, tuple)) and len(parsed_input) > 1:
+                result = {function_name}(*parsed_input)
+            else:
+                raise
+            
+        if result is not None:
+            # Format output similar to LeetCode
+            if isinstance(result, (list, dict)):
+                print(json.dumps(result))
+            else:
+                print(result)
+
+except Exception as e:
+    import traceback
+    print(f"Execution Error: {{type(e).__name__}}: {{e}}", file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
+"""
+    
+    elif language.lower() in ["javascript", "typescript"]:
+        return f"""
+// LeetCode-style JavaScript runner
+{function_name} = {function_name} || function() {{ return null; }};
+
+let input = '';
+process.stdin.on('data', (chunk) => {{
+    input += chunk;
+}});
+
+process.stdin.on('end', () => {{
+    try {{
+        const trimmedInput = input.trim();
+        if (trimmedInput) {{
+            // Convert Python-style input to JavaScript
+            let testInput = trimmedInput;
+            
+            // Handle Python tuples -> arrays
+            if (testInput.startsWith('(') && testInput.endsWith(')')) {{
+                testInput = '[' + testInput.slice(1, -1) + ']';
+            }}
+            
+            // Handle Python literals
+            testInput = testInput.replace(/None/g, 'null')
+                               .replace(/True/g, 'true')
+                               .replace(/False/g, 'false')
+                               .replace(/'/g, '"');
+            
+            const parsedInput = JSON.parse(testInput);
+            
+            // Check if function exists
+            if (typeof {function_name} !== 'function') {{
+                console.error('EXECUTION_ERROR: Function {function_name} is not defined');
+                return;
+            }}
+            
+            // Validate input
+            if (!Array.isArray(parsedInput)) {{
+                console.error('EXECUTION_ERROR: Expected array input, got:', typeof parsedInput);
+                return;
+            }}
+            
+            // Call function (for algorithm problems, pass array directly)
+            const result = {function_name}(parsedInput);
+            
+            // Validate and format result
+            if (result === null) {{
+                console.log('null');
+            }} else if (result === undefined) {{
+                console.log('undefined');
+            }} else if (typeof result === 'number') {{
+                if (isNaN(result)) {{
+                    console.error('EXECUTION_ERROR: Function returned NaN');
+                    return;
+                }}
+                if (!isFinite(result)) {{
+                    console.error('EXECUTION_ERROR: Function returned Infinity');
+                    return;
+                }}
+                console.log(result.toString());
+            }} else if (typeof result === 'boolean') {{
+                console.log(result.toString());
+            }} else if (typeof result === 'string') {{
+                console.log(JSON.stringify(result));
+            }} else if (typeof result === 'object') {{
+                console.log(JSON.stringify(result));
+            }} else {{
+                console.log(result.toString());
+            }}
+        }}
+    }} catch (error) {{
+        console.error('Error:', error.message);
+    }}
+}});
+"""
+    
+    elif language.lower() == "java":
+        return f"""
+import java.util.*;
+import java.io.*;
+import com.google.gson.*;
+
+// User's solution class should be above this line
+
+public class Main {{
+    public static void main(String[] args) {{
+        try {{
+            Scanner scanner = new Scanner(System.in);
+            String input = scanner.nextLine().trim();
+            
+            if (!input.isEmpty()) {{
+                Gson gson = new Gson();
+                Object[] testData = gson.fromJson(input, Object[].class);
+                
+                // This would need dynamic generation based on function signature
+                // For now, simplified approach
+                System.out.println("Java execution not fully implemented");
+            }}
+        }} catch (Exception e) {{
+            System.err.println("Execution Error: " + e.getMessage());
+        }}
+    }}
+}}
+"""
+    
+    else:
+        # For other languages, use Python wrapper as fallback
+        return f"""
+import sys
+import ast
+import json
+
+try:
+    input_str = sys.stdin.read().strip()
+    if input_str:
+        parsed_input = ast.literal_eval(input_str)
+        
+        try:
+            # First try: pass input as single argument (most common for algorithms)
+            result = {function_name}(parsed_input)
+        except TypeError:
+            # If that fails and input is a list/tuple, try unpacking
+            if isinstance(parsed_input, (list, tuple)) and len(parsed_input) > 1:
+                result = {function_name}(*parsed_input)
+            else:
+                raise
+            
+        if result is not None:
+            if isinstance(result, (list, dict)):
+                print(json.dumps(result))
+            else:
+                print(result)
+
+except Exception as e:
+    import traceback
+    print(f"Execution Error: {{type(e).__name__}}: {{e}}", file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
+"""
+
 # It's good practice to initialize the client once and reuse it.
 if not all([settings.AZURE_OPENAI_ENDPOINT, settings.AZURE_OPENAI_API_KEY]):
     logger.warning("Azure OpenAI settings are not fully configured. AI generator will not be available.")
@@ -125,7 +322,7 @@ def generate_algorithm_problem_prompt(theme: str, difficulty: str, language: str
         "title": "string - Short, descriptive title",
         "description": "string - Detailed problem description with examples",
         "difficulty": "string - easy, medium, or hard",
-        "solution": "string - The complete, correct Python function definition (must start with 'def function_name(...):')",
+        "solution": f"string - The complete, correct {language} solution code",
         "test_cases": [
             {
                 "input_data": "string - Input for the test case",
@@ -152,11 +349,12 @@ def generate_algorithm_problem_prompt(theme: str, difficulty: str, language: str
     
     Requirements:
     1. Create a high-quality, solvable, and interesting problem suitable for competitive programming.
-    2. Provide a COMPLETE and **100% CORRECT** solution in the `solution` field. This field must contain **ONLY** the function definition(s) required to solve the problem, with no top-level script, example calls, or `print` statements. The solution MUST start with a valid Python function definition (e.g., "def solve_problem(...):").
-    3. The `code_templates` field should contain only boilerplate/starter code with a 'TODO' comment, NOT the solution. It must be a full, runnable script that handles input and output.
+    2. Provide a COMPLETE and **100% CORRECT** solution in the `solution` field for {language}. This field must contain **ONLY** the function/method definition(s) required to solve the problem, with no top-level script, example calls, or output statements.
+    3. The `code_templates` field should contain ONLY the function signature with the EXACT same function name as in your solution. Users will implement the body but cannot change the function name.
     4. **MANDATORY**: Include exactly 10-15 diverse and comprehensive test cases, including edge cases, boundary conditions, and stress tests.
     5. **CRITICAL**: For each test case, the `expected_output` MUST be the result of running your provided `solution` code with the `input_data`. You must verify this yourself. Double-check for correctness. Do not include incorrect test cases.
-    6. Provide code templates for at least Python.
+    6. **FUNCTION NAME CONSISTENCY**: The function name in `code_templates` MUST exactly match the function name in `solution`. This is critical for the system to work properly.
+    7. Provide code templates for {language} and optionally other languages.
     7. Make sure the problem can be solved in under 5-10 minutes for the given difficulty.
     8. Include proper function signatures, clear variable names, and a detailed description with examples and constraints.
     
@@ -170,16 +368,18 @@ def generate_algorithm_problem_prompt(theme: str, difficulty: str, language: str
     - Ensure comprehensive coverage of the problem space.
     
     IMPORTANT CODE TEMPLATE REQUIREMENTS:
-    - The `code_templates` must contain ONLY the function signature and a 'TODO' comment. It should NOT include any input/output handling (like `input()` or `print()` calls). The system will handle I/O automatically.
-    - The function body should be empty or contain a 'pass' statement with a 'TODO' comment.
-    - Example Python `template_code`:
-      ```python
-      def function_name(params):
-          # TODO: Implement solution
-          pass
-      ```
+    - The `code_templates` must contain the EXACT function signature that users will implement. Users should NOT be able to change the function name.
+    - The function body should contain only a 'TODO' comment and placeholder return statement.
+    - The function name MUST match exactly with the `solution` field function name.
+    
+    Language-specific template examples (use the EXACT function name from your solution):
+    - Python: `def your_function_name(params):\n    # TODO: Implement your solution here\n    pass`
+    - JavaScript: `function yourFunctionName(params) {{\n    // TODO: Implement your solution here\n    return null;\n}}`
+    - Java: `public static ReturnType yourFunctionName(ParamType params) {{\n    // TODO: Implement your solution here\n    return null;\n}}`
+    - C++: `ReturnType yourFunctionName(ParamType params) {{\n    // TODO: Implement your solution here\n    return ReturnType();\n}}`
 
-    The `solution` field must contain ONLY the raw function definition(s), like `def my_function(a, b): ...`.
+    CRITICAL: The function name in the template MUST be identical to the function name in your solution.
+    The `solution` field must contain ONLY the raw function definition(s) for {language}.
     
     **Verification Step (Internal Monologue for you, the AI):**
     - "After generating the solution and test cases, I will mentally (or actually) run the solution against each input to confirm the output is correct. For `[4, 4, 4]`, the subarrays are [4], [4], [4], [4,4], [4,4], [4,4,4]. The maxes are 4, 4, 4, 4, 4, 4. The sum is 24. My `expected_output` for this test case must be '24'."
@@ -226,15 +426,34 @@ async def generate_algorithm_problem(theme: str, difficulty: str, language: str 
         
         # Extract function name from the generated solution before validation
         function_name = None
-        if language == "python":
-            solution_code = response_json.get("solution", "")
-            match = re.search(r"def\s+(\w+)\s*\(", solution_code)
-            if match:
-                function_name = match.group(1)
-            else:
-                # If we can't extract function name, this is an invalid response
-                logger.error(f"Could not extract function name from solution: {solution_code}")
-                raise GeneratorInvalidResponse("Generated solution does not contain a valid Python function definition")
+        solution_code = response_json.get("solution", "")
+        
+        # Language-specific function name extraction patterns
+        patterns = {
+            "python": r"def\s+(\w+)\s*\(",
+            "javascript": r"function\s+(\w+)\s*\(",
+            "typescript": r"function\s+(\w+)\s*\(",
+            "java": r"(?:public\s+)?(?:static\s+)?\w+\s+(\w+)\s*\(",
+            "cpp": r"\w+\s+(\w+)\s*\(",
+            "c": r"\w+\s+(\w+)\s*\(",
+            "go": r"func\s+(\w+)\s*\(",
+            "rust": r"fn\s+(\w+)\s*\(",
+            "sql": r"" # SQL doesn't have functions in the same way
+        }
+        
+        if language.lower() == "sql":
+            # For SQL, we don't have a function name, so use a default
+            function_name = "sql_query"
+        else:
+            pattern = patterns.get(language.lower(), r"(\w+)\s*\(")
+            if pattern:
+                match = re.search(pattern, solution_code)
+                if match:
+                    function_name = match.group(1)
+                else:
+                    # If we can't extract function name, this is an invalid response
+                    logger.error(f"Could not extract function name from {language} solution: {solution_code}")
+                    raise GeneratorInvalidResponse(f"Generated solution does not contain a valid {language} function definition")
         
         # Add the extracted function name and a generated slug to the response data
         response_json['function_name'] = function_name
@@ -254,52 +473,41 @@ async def generate_algorithm_problem(theme: str, difficulty: str, language: str 
             logger.warning(f"Could not determine function name for self-correction. Skipping.")
             return problem # Or handle as an error
             
-        # Safer I/O wrapper using ast.literal_eval
-        wrapper = f"""
-import sys
-import ast
-
-# User's solution is above this line
-try:
-    input_str = sys.stdin.read().strip()
-    if input_str:
-        # Safely parse the input string into a Python object
-        # It's expected to be a list or tuple literal, e.g., "[1, 2, 3]" or "('a', 'b')"
-        parsed_input = ast.literal_eval(input_str)
-        
-        # Handle different input patterns by trying to unpack first
-        try:
-            # This will work for multi-argument functions expecting a tuple or list of arguments
-            result = {function_name}(*parsed_input)
-        except TypeError:
-            # If unpacking fails (e.g., function takes 1 argument but receives many),
-            # it's likely a single argument.
-            result = {function_name}(parsed_input)
-            
-        # Print the result to stdout
-        if result is not None:
-            print(result)
-
-except Exception as e:
-    import traceback
-    print(f"Execution Error: {{type(e).__name__}}: {{e}}", file=sys.stderr)
-    traceback.print_exc(file=sys.stderr)
-"""
+        # Create language-specific wrapper
+        wrapper = create_language_wrapper(language, function_name)
         source_to_run = problem.solution + "\n" + wrapper
 
         validation_successful = True
         corrected_test_cases = []
 
         for i, test_case in enumerate(problem.test_cases):
-            # The input data should be a string literal of the python object
-            # e.g., "[1, 2, 3]" for a list
-            stdin_to_run = str(test_case.input_data)
+            # Prepare input data based on language
+            if language.lower() in ["javascript", "typescript"]:
+                # For JavaScript, convert Python-style input to JSON
+                input_str = str(test_case.input_data)
+                # Convert Python literals to JSON
+                import ast
+                try:
+                    # Parse Python literal and convert to JSON
+                    python_obj = ast.literal_eval(input_str)
+                    import json
+                    stdin_to_run = json.dumps(python_obj)
+                except:
+                    # Fallback to original string
+                    stdin_to_run = input_str
+            else:
+                # For Python and other languages, use original format
+                stdin_to_run = str(test_case.input_data)
             
             logger.info(f"Running solution against test case {i+1} input: {stdin_to_run}")
+            logger.info(f"Language: {language}, Language ID: {get_language_id(language)}")
 
+            # Get the correct language_id for the language
+            language_id = get_language_id(language)
+            
             params = SubmissionParams(
                 source_code=source_to_run,
-                language_id=71, # Python
+                language_id=language_id,
                 stdin=stdin_to_run,
                 expected_output=None,
                 cpu_time_limit=problem.time_limit_ms / 1000,

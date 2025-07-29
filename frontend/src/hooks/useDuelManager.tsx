@@ -6,6 +6,10 @@ import { DuelStatus, type DuelResponse, type DuelResult, type DuelTestResponse }
 import { duelsApiService } from '../services/api';
 import { codeExecutionService, type SupportedLanguage } from '../services/codeExecutionService';
 import type { SubmissionResultData } from '../components/coding/SubmissionResult';
+import { getDuelStorageKeys, clearDuelStorage } from '../utils/duelStorage';
+import { logDuelState, logWebSocketMessage, logLanguageSetup } from '../utils/duelDebug';
+import { logAiState, checkAiCodeConsistency, validateAiRestore } from '../utils/aiStateDebug';
+import { startLocalStorageMonitoring, stopLocalStorageMonitoring } from '../utils/localStorageMonitor';
 // import type { UUID } from 'uuid'; // Removed as UUIDs are strings on frontend
 
 interface DuelContextType {
@@ -72,8 +76,14 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const getStorageKey = useCallback((name: string) => {
     if (!duelId) return null;
-    return `duel-${duelId}-${name}`;
-  }, [duelId]);
+    const keys = getDuelStorageKeys(duelId, user?.id);
+    switch (name) {
+      case 'ai-process': return keys.aiProcess;
+      case 'ai-progress': return keys.aiProgress;
+      case 'ai-code': return keys.aiCode;
+      default: return `duel-${duelId}-${name}`;
+    }
+  }, [duelId, user?.id]);
 
   const getWebSocketUrl = () => {
     if (import.meta.env.VITE_WEBSOCKET_URL) {
@@ -86,21 +96,60 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const setInitialLanguageFromDuel = useCallback(async (duelData: DuelResponse) => {
-    if (duelData.problem && !currentLanguageRef.current) {
-      const supportedLangs = await codeExecutionService.getSupportedLanguages();
-      const problemLangs = duelData.problem.code_templates?.map((t: any) => t.language) || [];
-      const defaultLangId = 'python';
+    logDuelState('Setting initial language', { duelData, currentLanguage: currentLanguageRef.current });
 
-      let langToSetId = problemLangs.includes(defaultLangId) ? defaultLangId : problemLangs[0];
+    // Always try to set language if we don't have one, or if problem is available
+    if (!currentLanguageRef.current || (duelData.problem && !currentLanguageRef.current)) {
+      try {
+        const supportedLangs = await codeExecutionService.getSupportedLanguages();
 
-      if (langToSetId) {
-        const langObject = supportedLangs.find(l => l.id === langToSetId);
-        if (langObject) {
-          setCurrentLanguage(langObject);
+        const debugData = {
+          currentLanguage: currentLanguageRef.current,
+          supportedLanguages: supportedLangs,
+          problemLanguages: duelData.problem?.code_templates?.map((t: any) => t.language) || [],
+          duelProblem: !!duelData.problem
+        };
+
+        logLanguageSetup('Initial setup', debugData);
+
+        if (duelData.problem?.code_templates) {
+          const problemLangs = duelData.problem.code_templates.map((t: any) => t.language) || [];
+          console.log('Problem languages:', problemLangs);
+          const defaultLangId = 'python';
+
+          let langToSetId = problemLangs.includes(defaultLangId) ? defaultLangId : problemLangs[0];
+
+          if (langToSetId) {
+            const langObject = supportedLangs.find(l => l.id === langToSetId);
+            if (langObject) {
+              console.log('Setting language to:', langObject);
+              setCurrentLanguage(langObject);
+              return;
+            }
+          }
         }
-      } else {
+
+        // Fallback to Python if available
         const pythonLang = supportedLangs.find(l => l.id === 'python');
-        if (pythonLang) setCurrentLanguage(pythonLang);
+        if (pythonLang) {
+          console.log('Fallback to Python:', pythonLang);
+          setCurrentLanguage(pythonLang);
+        } else if (supportedLangs.length > 0) {
+          // Last resort: use first available language
+          console.log('Last resort language:', supportedLangs[0]);
+          setCurrentLanguage(supportedLangs[0]);
+        }
+      } catch (error) {
+        console.error('Error setting initial language:', error);
+        // Try to set a default language anyway
+        try {
+          const supportedLangs = await codeExecutionService.getSupportedLanguages();
+          if (supportedLangs.length > 0) {
+            setCurrentLanguage(supportedLangs[0]);
+          }
+        } catch (fallbackError) {
+          console.error('Fallback language setting failed:', fallbackError);
+        }
       }
     }
   }, []);
@@ -126,7 +175,15 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setOpponentTyping(false);
           setAiProgress(100);
           const progressKey = getStorageKey('ai-progress');
+          const codeKey = getStorageKey('ai-code');
           if (progressKey) localStorage.setItem(progressKey, '100');
+          // Save final AI code
+          if (codeKey) {
+            setOpponentCode(currentCode => {
+              localStorage.setItem(codeKey, currentCode);
+              return currentCode;
+            });
+          }
         }, 1000 + Math.random() * 1000); // Final pause before finishing
         return;
       }
@@ -140,7 +197,13 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
         for (let i = 0; i < action.content.length; i++) {
           totalDelay += typingSpeed;
           setTimeout(() => {
-            setOpponentCode(prev => prev + action.content[i]);
+            setOpponentCode(prev => {
+              const newCode = prev + action.content[i];
+              // Save code incrementally
+              const codeKey = getStorageKey('ai-code');
+              if (codeKey) localStorage.setItem(codeKey, newCode);
+              return newCode;
+            });
             setOpponentTyping(true);
           }, totalDelay);
         }
@@ -158,7 +221,13 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
         for (let i = 0; i < action.char_count; i++) {
           totalDelay += deleteSpeed;
           setTimeout(() => {
-            setOpponentCode(prev => prev.slice(0, -1));
+            setOpponentCode(prev => {
+              const newCode = prev.slice(0, -1);
+              // Save code after deletion
+              const codeKey = getStorageKey('ai-code');
+              if (codeKey) localStorage.setItem(codeKey, newCode);
+              return newCode;
+            });
             setOpponentTyping(true);
           }, totalDelay);
         }
@@ -190,17 +259,82 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const processKey = getStorageKey('ai-process');
     const progressKey = getStorageKey('ai-progress');
+    const codeKey = getStorageKey('ai-code');
 
-    if (processKey && progressKey) {
-      const savedProcessJSON = localStorage.getItem(processKey);
-      const savedProgressJSON = localStorage.getItem(progressKey);
+    console.log('Loading AI state from localStorage:', { processKey, progressKey, codeKey });
 
+    // Start monitoring localStorage changes for debugging
+    if (duelId) {
+      startLocalStorageMonitoring(duelId);
+    }
+
+    if (codeKey) {
+      const savedCode = localStorage.getItem(codeKey);
+      const savedProgressJSON = localStorage.getItem(progressKey || '');
+      const savedProcessJSON = localStorage.getItem(processKey || '');
+
+      console.log('Saved AI data:', {
+        savedCode: savedCode ? savedCode.length + ' chars' : 'none',
+        savedProgress: savedProgressJSON,
+        savedProcess: savedProcessJSON ? 'exists' : 'none'
+      });
+
+      // Priority 1: Use saved code directly if available
+      if (savedCode) {
+        console.log('🔄 Restoring AI code from localStorage');
+        console.log('Saved code length:', savedCode.length);
+        console.log('Saved code content:', savedCode);
+
+        logAiState('Restoring from saved code', {
+          codeLength: savedCode.length,
+          codePreview: savedCode.substring(0, 100) + '...',
+          fullCode: savedCode
+        });
+
+        setOpponentCode(savedCode);
+
+        // Set progress if available
+        if (savedProgressJSON) {
+          try {
+            const savedProgress = JSON.parse(savedProgressJSON);
+            console.log('Restored AI progress:', savedProgress);
+            setAiProgress(savedProgress);
+            if (savedProgress >= 100) {
+              setAiFinishedTyping(true);
+            }
+          } catch (e) {
+            console.error('Failed to parse saved progress:', e);
+          }
+        }
+
+        // Set process if available (for animation continuation)
+        if (savedProcessJSON) {
+          try {
+            const savedProcess = JSON.parse(savedProcessJSON);
+            console.log('Restored AI process steps:', savedProcess.length);
+            setAiCodingProcess(savedProcess);
+          } catch (e) {
+            console.error('Failed to parse saved process:', e);
+          }
+        }
+
+        // Validate the restore
+        if (duelId) {
+          validateAiRestore(duelId, savedCode);
+        }
+
+        return; // Exit early since we have the code
+      }
+
+      // Priority 2: Reconstruct from process if no direct code saved
       if (savedProcessJSON && savedProgressJSON) {
         try {
           const savedProcess = JSON.parse(savedProcessJSON);
           const savedProgress = JSON.parse(savedProgressJSON);
 
           if (savedProcess.length > 0 && savedProgress > 0) {
+            console.log('Reconstructing AI code from process, progress:', savedProgress);
+
             let reconstructedCode = '';
             const endIndex = Math.floor((savedProgress / 100) * savedProcess.length);
 
@@ -213,9 +347,16 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }
             }
 
+            console.log('🔧 Reconstructed AI code length:', reconstructedCode.length);
+            console.log('🔧 Reconstructed AI code content:', reconstructedCode);
             setOpponentCode(reconstructedCode);
             setAiProgress(savedProgress);
             setAiCodingProcess(savedProcess);
+
+            // Save the reconstructed code for next time
+            console.log('💾 Saving reconstructed code to localStorage');
+            localStorage.setItem(codeKey, reconstructedCode);
+
             if (savedProgress < 100) {
               startAiTypingSimulation(savedProcess, savedProgress);
             } else {
@@ -224,8 +365,9 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } catch (e) {
           console.error("Failed to parse saved duel state:", e);
-          localStorage.removeItem(processKey);
-          localStorage.removeItem(progressKey);
+          if (processKey) localStorage.removeItem(processKey);
+          if (progressKey) localStorage.removeItem(progressKey);
+          localStorage.removeItem(codeKey);
         }
       }
     }
@@ -242,11 +384,16 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (pollingRef.current) clearInterval(pollingRef.current);
       setOpponent(null);
     }
+
+    // Stop localStorage monitoring
+    stopLocalStorageMonitoring();
   }, []);
 
   const fetchDuelData = useCallback(async (id: string) => {
     try {
+      console.log('Fetching duel data for ID:', id);
       const fetchedDuel = await duelsApiService.getDuel(id);
+      console.log('Fetched duel:', fetchedDuel);
       setDuel(fetchedDuel);
       await setInitialLanguageFromDuel(fetchedDuel);
 
@@ -325,18 +472,19 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     socket.onmessage = (event) => {
       const message = JSON.parse(event.data);
-      console.log('Received WS message:', message);
+      logWebSocketMessage(message);
       switch (message.type) {
         case 'player_joined':
         case 'player_left':
-        case 'player_ready_changed':
+        case 'player_ready_changed': {
           // These events will contain the full updated duel object
           if (message.data && typeof message.data === 'object' && message.data.id) {
             const updatedDuel = message.data as DuelResponse;
             setDuel(updatedDuel);
           }
           break;
-        case 'match_found':
+        }
+        case 'match_found': {
           // Match found, connect to the new duel ID
           const newDuelId = message.data.duel_id;
           // Disconnect from the old matchmaking connection if any
@@ -344,6 +492,7 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Connect to the new duel
           connect(newDuelId);
           break;
+        }
         case 'problem_generated':
           // This is a signal that the duel problem is ready, we can refetch the duel data
           // to get the problem details.
@@ -354,6 +503,9 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
         case 'code_update':
           if (message.user_id !== user?.id) {
             setOpponentCode(message.code);
+            // Save opponent code updates
+            const codeKey = getStorageKey('ai-code');
+            if (codeKey) localStorage.setItem(codeKey, message.code);
           }
           break;
         case 'typing_status':
@@ -362,12 +514,17 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           break;
         case 'duel_state':
-        case 'duel_update':
+        case 'duel_update': {
           // This message can be a simple signal or contain the full duel object
           if (message.data && typeof message.data === 'object' && message.data.id) {
             const updatedDuel = message.data as DuelResponse;
+            logDuelState('Duel update received', updatedDuel);
             setDuel(updatedDuel);
-            setInitialLanguageFromDuel(updatedDuel);
+
+            // Only set language if we don't have one yet
+            if (!currentLanguageRef.current) {
+              setInitialLanguageFromDuel(updatedDuel);
+            }
 
             // Start timer if it hasn't started
             if (updatedDuel.status === DuelStatus.IN_PROGRESS && updatedDuel.started_at && !timerRef.current) {
@@ -381,16 +538,24 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
             fetchDuelData(id);
           }
           break;
-        case 'duel_start':
+        }
+        case 'duel_start': {
           const duelData = message.data as DuelResponse;
+          logDuelState('Duel started', duelData);
           setDuel(duelData);
-          setInitialLanguageFromDuel(duelData);
+
+          // Only set language if we don't have one yet
+          if (!currentLanguageRef.current) {
+            setInitialLanguageFromDuel(duelData);
+          }
+
           if (pollingRef.current) {
             clearInterval(pollingRef.current);
           }
           navigate(`/duel/${duelData.id}`);
           break;
-        case 'test_result':
+        }
+        case 'test_result': {
           const adaptedData: SubmissionResultData = {
             is_correct: message.data.is_correct,
             error: message.data.error,
@@ -400,14 +565,14 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
           setSubmissionResult(adaptedData);
           break;
+        }
         case 'duel_end':
           setDuelResult(message.data);
           setDuel(prev => prev ? { ...prev, status: message.data.is_timeout ? DuelStatus.TIMED_OUT : DuelStatus.COMPLETED } : null);
           // Clear storage on duel end
-          const processKeyOnEnd = getStorageKey('ai-process');
-          const progressKeyOnEnd = getStorageKey('ai-progress');
-          if (processKeyOnEnd) localStorage.removeItem(processKeyOnEnd);
-          if (progressKeyOnEnd) localStorage.removeItem(progressKeyOnEnd);
+          if (duelId && user?.id) {
+            clearDuelStorage(duelId, user.id);
+          }
 
           disconnect(); // Disconnect after duel ends
           break;
@@ -416,40 +581,139 @@ export const DuelProvider: React.FC<{ children: React.ReactNode }> = ({ children
           addToast({ type: 'error', title: 'Duel Error', message: message.message });
           disconnect();
           break;
-        case 'ai_start':
+        case 'ai_start': {
           console.log("AI opponent has started.");
           setAiStatus('thinking');
+
+          // Check if we already have AI code saved
+          const codeKey = getStorageKey('ai-code');
+          const existingCode = codeKey ? localStorage.getItem(codeKey) : null;
+
+          if (existingCode && existingCode.length > 0) {
+            console.log('AI already has code saved, not restarting:', existingCode.length, 'characters');
+            // Don't reset AI state if we already have code
+            setAiStatus('typing');
+          }
           // No action needed, backend will push updates
           break;
-        case 'ai_coding_process':
+        }
+        case 'ai_coding_process': {
           const newProcess = message.data;
-          setAiCodingProcess(newProcess);
+          console.log('Received new AI coding process:', newProcess);
 
+          // Check if this is a duplicate process (same as already saved)
           const processKey = getStorageKey('ai-process');
-          if (processKey) {
-            localStorage.setItem(processKey, JSON.stringify(newProcess));
+          const codeKey = getStorageKey('ai-code');
+          const existingCode = codeKey ? localStorage.getItem(codeKey) : null;
+          const existingProcessJSON = processKey ? localStorage.getItem(processKey) : null;
+
+          let isDuplicateProcess = false;
+          if (existingProcessJSON) {
+            try {
+              const existingProcess = JSON.parse(existingProcessJSON);
+              // Simple check: compare first few actions
+              if (existingProcess.length > 0 && newProcess.length > 0) {
+                const firstExisting = existingProcess[0]?.root?.content || '';
+                const firstNew = newProcess[0]?.root?.content || '';
+                isDuplicateProcess = firstExisting === firstNew && existingProcess.length === newProcess.length;
+              }
+            } catch (e) {
+              console.error('Error comparing processes:', e);
+            }
           }
 
-          setOpponentCode('');
-          setAiProgress(0);
-          setAiFinishedTyping(false);
-          startAiTypingSimulation(newProcess, 0);
+          console.log('Process analysis:', {
+            isDuplicate: isDuplicateProcess,
+            existingCodeLength: existingCode ? existingCode.length : 0,
+            newProcessLength: newProcess.length
+          });
+
+          // Only reset if this is truly a new process and we don't have significant existing code
+          if (!isDuplicateProcess && (!existingCode || existingCode.length < 50)) {
+            console.log('Starting new AI process - resetting code');
+            setAiCodingProcess(newProcess);
+
+            if (processKey) {
+              localStorage.setItem(processKey, JSON.stringify(newProcess));
+            }
+
+            setOpponentCode('');
+            setAiProgress(0);
+            setAiFinishedTyping(false);
+
+            // Clear saved code when new process starts
+            if (codeKey) localStorage.removeItem(codeKey);
+            startAiTypingSimulation(newProcess, 0);
+          } else {
+            console.log('Ignoring duplicate or continuing existing AI process');
+            // Just update the process but keep existing code
+            setAiCodingProcess(newProcess);
+            if (processKey) {
+              localStorage.setItem(processKey, JSON.stringify(newProcess));
+            }
+          }
           break;
-        case 'ai_progress':
+        }
+        case 'ai_progress': {
+          logAiState('Progress received', message.data);
+
           if (message.data.code_chunk) {
-            setOpponentCode(prev => prev + message.data.code_chunk);
+            setOpponentCode(prev => {
+              const newCode = prev + message.data.code_chunk;
+
+              console.log('📝 AI code chunk received:', {
+                chunk: message.data.code_chunk,
+                chunkLength: message.data.code_chunk.length,
+                previousLength: prev.length,
+                newLength: newCode.length,
+                previousCode: prev,
+                newCode: newCode
+              });
+
+              logAiState('Code updated', {
+                previousLength: prev.length,
+                newLength: newCode.length,
+                chunk: message.data.code_chunk,
+                chunkLength: message.data.code_chunk.length
+              });
+
+              // Save code incrementally
+              const codeKey = getStorageKey('ai-code');
+              if (codeKey) {
+                console.log('💾 Saving AI code to localStorage:', newCode);
+                localStorage.setItem(codeKey, newCode);
+              }
+              return newCode;
+            });
           }
           if (message.data.progress) {
             setAiProgress(message.data.progress);
+            const progressKey = getStorageKey('ai-progress');
+            if (progressKey) {
+              localStorage.setItem(progressKey, JSON.stringify(message.data.progress));
+            }
           }
           setOpponentTyping(true);
           setAiStatus('typing');
-          break;
-        case 'ai_delete':
-          if (message.data && message.data.char_count) {
-            setOpponentCode(prev => prev.slice(0, -message.data.char_count));
+
+          // Check consistency after update
+          if (duelId) {
+            setTimeout(() => checkAiCodeConsistency(duelId), 100);
           }
           break;
+        }
+        case 'ai_delete': {
+          if (message.data && message.data.char_count) {
+            setOpponentCode(prev => {
+              const newCode = prev.slice(0, -message.data.char_count);
+              // Save code after AI deletion
+              const codeKey = getStorageKey('ai-code');
+              if (codeKey) localStorage.setItem(codeKey, newCode);
+              return newCode;
+            });
+          }
+          break;
+        }
         case 'ai_solved':
           addToast({
             type: 'success',

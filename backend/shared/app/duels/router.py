@@ -517,8 +517,8 @@ async def run_ai_coding_simulation(db: AsyncSession, duel_id: UUID, steps: list,
                     base_delay = 0.1 / speed
                     delay_variation = random.uniform(0.8, 1.2)
                     
-                    # Extra delay for complex characters
-                    if correct_char in '()[]{}:;,."\'':
+                    # Extra delay for complex characters (language-agnostic)
+                    if correct_char in '()[]{}:;,."\'`<>=&|*%@#$':
                         delay_variation *= 1.3
                     # Longer delay after spaces
                     if correct_char == ' ':

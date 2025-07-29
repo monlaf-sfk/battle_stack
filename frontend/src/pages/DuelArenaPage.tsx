@@ -3,16 +3,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/Toast';
 import { useTranslation } from 'react-i18next';
-import { 
-  Swords, 
-  CheckCircle, 
-  Clock, 
-  User, 
-  Bot, 
-  Target, 
-  Eye, 
+import {
+  Swords,
+  CheckCircle,
+  Clock,
+  User,
+  Bot,
+  Target,
+  Eye,
   EyeOff,
-  Play, 
+  Play,
   Code2,
   TestTube,
   FileText,
@@ -27,6 +27,7 @@ import { CodeEditor } from '@/components/ui/CodeEditor';
 import { Button } from '@/components/ui/Button';
 import DuelLoadingScreen from '@/components/duels/DuelLoadingScreen';
 import Lobby from '@/components/duels/Lobby'; // Import the new Lobby component
+import CodeSaveIndicator from '@/components/duels/CodeSaveIndicator';
 import { codeExecutionService } from '@/services/codeExecutionService';
 import type { SupportedLanguage } from '@/services/codeExecutionService';
 import { useLayout } from '@/contexts/LayoutContext';
@@ -36,11 +37,13 @@ import {
   PanelGroup,
   PanelResizeHandle,
 } from 'react-resizable-panels';
+import { getDuelStorageKeys, clearDuelStorage } from '@/utils/duelStorage';
+import { checkDuelHealth } from '@/utils/duelDebug';
 import './DuelArenaPage.css';
 
 // Custom resize handle component
 const CustomResizeHandle = ({ direction = 'horizontal' }: { direction?: 'horizontal' | 'vertical' }) => (
-  <PanelResizeHandle 
+  <PanelResizeHandle
     className={`resize-handle ${direction === 'horizontal' ? 'resize-handle-horizontal' : 'resize-handle-vertical'}`}
   >
     <div className="resize-handle-inner" />
@@ -71,11 +74,11 @@ const WaitingLobby: React.FC<{ roomCode?: string | null }> = ({ roomCode }) => {
         <p className="text-arena-text-muted mb-8 text-lg">
           {t('duels.waitingForOpponentToJoin')}
         </p>
-        
+
         {roomCode && (
           <div className="mb-8">
             <p className="text-sm uppercase text-arena-text-muted mb-2 tracking-widest">{t('duels.roomCode')}</p>
-            <div 
+            <div
               className="text-4xl font-mono font-bold tracking-widest bg-arena-dark/50 border-2 border-dashed border-arena-border rounded-lg p-4 cursor-pointer hover:bg-arena-dark/70 transition-colors"
               onClick={handleCopyCode}
             >
@@ -83,7 +86,7 @@ const WaitingLobby: React.FC<{ roomCode?: string | null }> = ({ roomCode }) => {
             </div>
           </div>
         )}
-        
+
         <div className="animate-pulse flex items-center justify-center gap-4">
           <Clock className="w-6 h-6 text-arena-accent" />
           <span className="font-medium text-lg">{t('duels.waitingStatus')}...</span>
@@ -102,23 +105,24 @@ const DuelArenaPage: React.FC = () => {
   const { t } = useTranslation();
   const { setSidebarOpen } = useLayout();
 
-  const { 
-    duel, 
-    isLoading, 
-    error, 
+  const {
+    duel,
+    isLoading,
+    error,
     opponent,
-    connect, 
-    disconnect, 
-    sendCodeUpdate, 
-    submitSolution, 
-    runTests, 
-    isConnected, 
-    opponentCode, 
-    opponentTyping, 
+    connect,
+    disconnect,
+    sendCodeUpdate,
+    submitSolution,
+    runTests,
+    isConnected,
+    opponentCode,
+    opponentTyping,
     aiStatus,
     generationStatus,
-    elapsedTime, 
+    elapsedTime,
     aiProgress,
+    aiFinishedTyping,
     currentLanguage,
     setCurrentLanguage,
     submissionResult,
@@ -135,7 +139,8 @@ const DuelArenaPage: React.FC = () => {
   // Function to get the localStorage key for user code
   const getUserCodeStorageKey = useCallback(() => {
     if (!duelId || !user?.id) return null;
-    return `duel-${duelId}-user-${user.id}-code`;
+    const keys = getDuelStorageKeys(duelId, user.id);
+    return keys.userCode;
   }, [duelId, user?.id]);
 
   // Collapse sidebar on enter, expand on leave
@@ -193,7 +198,7 @@ const DuelArenaPage: React.FC = () => {
     if (duel?.problem && currentLanguage && !userCode) {
       const storageKey = getUserCodeStorageKey();
       const savedCode = storageKey ? localStorage.getItem(storageKey) : null;
-      
+
       if (savedCode) {
         setUserCode(savedCode);
       } else {
@@ -203,17 +208,54 @@ const DuelArenaPage: React.FC = () => {
     }
   }, [duel?.problem, currentLanguage, userCode, getUserCodeStorageKey]);
 
+  // Force language initialization if duel is loaded but no language is set
+  useEffect(() => {
+    if (duel && !currentLanguage && supportedLanguages.length > 0) {
+      console.log('Force setting language for duel:', duel.id);
+      const pythonLang = supportedLanguages.find(l => l.id === 'python');
+      if (pythonLang) {
+        setCurrentLanguage(pythonLang);
+      } else {
+        setCurrentLanguage(supportedLanguages[0]);
+      }
+    }
+  }, [duel, currentLanguage, supportedLanguages, setCurrentLanguage]);
+
+  // Emergency language fallback - if duel is IN_PROGRESS and no language after 3 seconds
+  useEffect(() => {
+    if (duel?.status === DuelStatus.IN_PROGRESS && !currentLanguage) {
+      const timeout = setTimeout(async () => {
+        console.warn('Emergency language fallback triggered');
+        try {
+          const langs = await codeExecutionService.getSupportedLanguages();
+          if (langs.length > 0) {
+            const pythonLang = langs.find(l => l.id === 'python') || langs[0];
+            setCurrentLanguage(pythonLang);
+            addToast({
+              type: 'info',
+              title: 'Language Set',
+              message: `Automatically set language to ${pythonLang.name}`
+            });
+          }
+        } catch (error) {
+          console.error('Emergency language fallback failed:', error);
+        }
+      }, 3000);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [duel?.status, currentLanguage, setCurrentLanguage, addToast]);
+
   // Navigate to completion screen when duel is completed and clear storage
   useEffect(() => {
     if (duel?.status === DuelStatus.COMPLETED || duel?.status === DuelStatus.TIMED_OUT) {
-      const userCodeKey = getUserCodeStorageKey();
-      if (userCodeKey) {
-        localStorage.removeItem(userCodeKey);
+      // Clear all duel storage when duel ends
+      if (duelId && user?.id) {
+        clearDuelStorage(duelId, user.id);
       }
-      // Opponent code key is handled in useDuelManager
       navigate(`/duel/${duelId}/complete`);
     }
-  }, [duel?.status, duelId, navigate, getUserCodeStorageKey]);
+  }, [duel?.status, duelId, navigate, user?.id]);
 
   const handleUserCodeChange = useCallback((code: string | undefined) => {
     const newCode = code || '';
@@ -277,10 +319,17 @@ const DuelArenaPage: React.FC = () => {
         return t('duels.waitingForOpponent');
       case DuelStatus.GENERATING_PROBLEM:
         return t('duels.waitingForProblemGeneration');
+      case DuelStatus.IN_PROGRESS:
+        return 'Duel in progress...';
       default:
         return t('duels.loadingDuel');
     }
   };
+
+  // Debug logging and health check
+  useEffect(() => {
+    checkDuelHealth(duel, currentLanguage, isConnected);
+  }, [duel, currentLanguage, isConnected]);
 
   if (isLoading || !duel || duel.status === DuelStatus.GENERATING_PROBLEM) {
     return (
@@ -294,9 +343,22 @@ const DuelArenaPage: React.FC = () => {
     );
   }
 
+  // If duel is in progress but no language is set, show loading
+  if (duel.status === DuelStatus.IN_PROGRESS && !currentLanguage) {
+    return (
+      <DuelLoadingScreen
+        statusText="Initializing coding environment..."
+        player1Name={user?.username}
+        player2Name={opponent?.username}
+        isAiDuel={duel ? !duel.player_two_id || duel.player_two_id === 'ai' : true}
+        generationStatus="Setting up code editor..."
+      />
+    );
+  }
+
   if (duel.status === DuelStatus.WAITING) {
-    const isCurrentUserReady = (user?.id === duel.player_one_id && duel.player_one_ready) || 
-                               (user?.id === duel.player_two_id && duel.player_two_ready);
+    const isCurrentUserReady = (user?.id === duel.player_one_id && duel.player_one_ready) ||
+      (user?.id === duel.player_two_id && duel.player_two_ready);
     return <Lobby duel={duel} onReady={handleReady} onStart={handleStart} isPlayerReady={isCurrentUserReady} />;
   }
 
@@ -321,7 +383,62 @@ const DuelArenaPage: React.FC = () => {
   if (!currentLanguage) {
     return (
       <div className="min-h-screen bg-arena-dark flex items-center justify-center">
-        <p className="text-arena-text">{t('duels.duelNotFound')}</p>
+        <div className="text-center">
+          <p className="text-arena-text mb-4">
+            {duel ? 'Initializing coding environment...' : t('duels.duelNotFound')}
+          </p>
+          {duel && (
+            <div className="text-sm text-arena-text-muted mb-6">
+              <p>Duel ID: {duelId}</p>
+              <p>Status: {duel.status}</p>
+              <p>Problem: {duel.problem ? 'Available' : 'Loading...'}</p>
+              <p>Connected: {isConnected ? 'Yes' : 'No'}</p>
+            </div>
+          )}
+
+          {/* Emergency actions */}
+          <div className="space-y-2">
+            <Button
+              onClick={async () => {
+                try {
+                  const langs = await codeExecutionService.getSupportedLanguages();
+                  if (langs.length > 0) {
+                    const pythonLang = langs.find(l => l.id === 'python') || langs[0];
+                    setCurrentLanguage(pythonLang);
+                    addToast({
+                      type: 'success',
+                      title: 'Language Set',
+                      message: `Set language to ${pythonLang.name}`
+                    });
+                  }
+                } catch (error) {
+                  addToast({
+                    type: 'error',
+                    title: 'Error',
+                    message: 'Failed to set language'
+                  });
+                }
+              }}
+              variant="secondary"
+              size="sm"
+            >
+              Force Set Language
+            </Button>
+
+            <Button
+              onClick={() => {
+                if (duelId) {
+                  disconnect();
+                  setTimeout(() => connect(duelId), 1000);
+                }
+              }}
+              variant="ghost"
+              size="sm"
+            >
+              Reconnect
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -337,7 +454,7 @@ const DuelArenaPage: React.FC = () => {
       {/* Animated background mesh */}
       <div className="absolute inset-0 bg-gradient-to-br from-arena-accent/5 via-transparent to-purple-500/5 animate-pulse"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_40%_20%,rgba(0,255,136,0.1)_0%,transparent_50%),radial-gradient(circle_at_80%_0%,rgba(139,92,246,0.1)_0%,transparent_50%),radial-gradient(circle_at_0%_50%,rgba(6,182,212,0.1)_0%,transparent_50%)]"></div>
-      
+
       {/* Top Status Bar */}
       <div className="relative z-10 h-16 md:h-20 bg-gradient-to-r from-arena-surface/95 via-arena-surface/90 to-arena-surface/95 border-b border-arena-border/50 backdrop-blur-md flex items-center justify-between px-4 md:px-8 shadow-2xl">
         <div className="flex items-center gap-4 md:gap-8">
@@ -356,18 +473,17 @@ const DuelArenaPage: React.FC = () => {
               <div className="text-xs md:text-sm text-arena-text-muted font-medium hidden sm:block">Live Coding Battle</div>
             </div>
           </div>
-          
+
           <div className="hidden lg:flex items-center gap-4">
             <div className="flex items-center gap-3 text-sm">
               <div className="p-2 bg-arena-accent/10 rounded-lg border border-arena-accent/20">
                 <Target size={18} className="text-arena-accent" />
               </div>
               <span className="text-arena-text-muted font-medium">Difficulty:</span>
-              <span className={`px-4 py-2 rounded-xl text-sm font-bold border backdrop-blur-sm ${
-                duel.problem?.difficulty === 'easy' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shadow-lg shadow-emerald-500/10' :
+              <span className={`px-4 py-2 rounded-xl text-sm font-bold border backdrop-blur-sm ${duel.problem?.difficulty === 'easy' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shadow-lg shadow-emerald-500/10' :
                 duel.problem?.difficulty === 'medium' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 shadow-lg shadow-amber-500/10' :
-                'bg-red-500/15 text-red-400 border-red-500/30 shadow-lg shadow-red-500/10'
-              }`}>
+                  'bg-red-500/15 text-red-400 border-red-500/30 shadow-lg shadow-red-500/10'
+                }`}>
                 {duel.problem?.difficulty?.toUpperCase() || 'N/A'}
               </span>
             </div>
@@ -387,7 +503,7 @@ const DuelArenaPage: React.FC = () => {
               <div className="text-xs text-arena-text-muted font-medium uppercase tracking-wider hidden md:block">Elapsed</div>
             </div>
           </div>
-          
+
           {/* Enhanced Connection Status */}
           <div className="hidden md:flex items-center gap-3 px-4 py-3 bg-gradient-to-br from-arena-dark/60 to-arena-surface/60 rounded-2xl border border-arena-border/50 backdrop-blur-lg shadow-lg">
             <div className={`relative w-4 h-4 rounded-full flex-shrink-0 ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`}>
@@ -420,7 +536,7 @@ const DuelArenaPage: React.FC = () => {
                   <span className="text-xs text-arena-text-muted font-mono font-bold">{Math.round(aiProgress)}%</span>
                 </div>
                 <div className="w-28 h-2.5 bg-arena-border/50 rounded-full overflow-hidden backdrop-blur-sm">
-                  <div 
+                  <div
                     className="h-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-400 transition-all duration-700 ease-out relative overflow-hidden"
                     style={{ width: `${Math.round(aiProgress)}%` }}
                   >
@@ -455,11 +571,10 @@ const DuelArenaPage: React.FC = () => {
                 <div className="flex items-center border-b border-arena-border/50 bg-arena-surface rounded-t-2xl">
                   <button
                     onClick={() => setActiveTab('description')}
-                    className={`flex items-center gap-2 px-6 py-4 font-medium transition-all relative ${
-                      activeTab === 'description'
-                        ? 'text-arena-accent'
-                        : 'text-arena-text-muted hover:text-arena-text'
-                    }`}
+                    className={`flex items-center gap-2 px-6 py-4 font-medium transition-all relative ${activeTab === 'description'
+                      ? 'text-arena-accent'
+                      : 'text-arena-text-muted hover:text-arena-text'
+                      }`}
                   >
                     <FileText size={18} />
                     <span>Problem Description</span>
@@ -469,11 +584,10 @@ const DuelArenaPage: React.FC = () => {
                   </button>
                   <button
                     onClick={() => setActiveTab('testcases')}
-                    className={`flex items-center gap-2 px-6 py-4 font-medium transition-all relative ${
-                      activeTab === 'testcases'
-                        ? 'text-arena-accent'
-                        : 'text-arena-text-muted hover:text-arena-text'
-                    }`}
+                    className={`flex items-center gap-2 px-6 py-4 font-medium transition-all relative ${activeTab === 'testcases'
+                      ? 'text-arena-accent'
+                      : 'text-arena-text-muted hover:text-arena-text'
+                      }`}
                   >
                     <TestTube size={18} />
                     <span>Test Cases</span>
@@ -490,13 +604,13 @@ const DuelArenaPage: React.FC = () => {
                       <h2 className="text-2xl font-bold text-white mb-4">{duel.problem?.title || 'Loading...'}</h2>
                       <div className="prose prose-invert prose-sm max-w-none">
                         {duel.problem?.description ? (
-                          <div 
+                          <div
                             className="text-arena-text leading-relaxed"
-                            dangerouslySetInnerHTML={{ 
+                            dangerouslySetInnerHTML={{
                               __html: duel.problem.description
                                 .replace(/\n/g, '<br>')
                                 .replace(/`([^`]+)`/g, '<code class="bg-arena-dark/50 px-2 py-1 rounded text-arena-accent font-mono text-sm border border-arena-accent/20">$1</code>')
-                            }} 
+                            }}
                           />
                         ) : (
                           <div className="animate-pulse space-y-4">
@@ -520,7 +634,7 @@ const DuelArenaPage: React.FC = () => {
                                 </div>
                                 <span className="text-sm font-medium text-arena-text-muted">Test Case</span>
                               </div>
-                              
+
                               <div className="space-y-3">
                                 <div>
                                   <label className="text-xs font-medium text-arena-text-muted uppercase tracking-wider">Input:</label>
@@ -528,14 +642,14 @@ const DuelArenaPage: React.FC = () => {
                                     {testCase.input_data}
                                   </div>
                                 </div>
-                                
+
                                 <div>
                                   <label className="text-xs font-medium text-arena-text-muted uppercase tracking-wider">Expected Output:</label>
                                   <div className="mt-1 bg-arena-dark/50 rounded-lg p-3 font-mono text-sm text-emerald-400 border border-arena-border/20">
                                     {testCase.expected_output}
                                   </div>
                                 </div>
-                                
+
                                 {testCase.explanation && (
                                   <div>
                                     <label className="text-xs font-medium text-arena-text-muted uppercase tracking-wider">Explanation:</label>
@@ -578,6 +692,13 @@ const DuelArenaPage: React.FC = () => {
                           </div>
                           <Code2 className="w-5 h-5 text-blue-400" />
                           <span className="font-semibold text-arena-text-primary text-lg">{user?.username || 'You'}</span>
+                          {duelId && user?.id && (
+                            <CodeSaveIndicator
+                              code={userCode}
+                              duelId={duelId}
+                              userId={user.id}
+                            />
+                          )}
                         </div>
                         <div className="flex items-center gap-3">
                           <select
@@ -622,7 +743,7 @@ const DuelArenaPage: React.FC = () => {
                 {showOpponentCode && (
                   <>
                     <CustomResizeHandle direction="vertical" />
-                    
+
                     {/* Opponent Code Editor */}
                     <Panel defaultSize={40} minSize={20}>
                       <div className="h-full pt-2">
@@ -635,13 +756,12 @@ const DuelArenaPage: React.FC = () => {
                               {opponentIsAi ? <Bot className="w-5 h-5 text-purple-400" /> : <User className="w-5 h-5 text-red-400" />}
                               <span className="font-semibold text-arena-text-primary text-lg">{isPVP ? opponent?.username : 'AI Opponent'}</span>
                               {opponentIsAi && aiStatus && (
-                                <span className={`text-sm italic ml-2 ${
-                                  aiStatus === 'thinking' ? 'text-yellow-400 animate-pulse' :
+                                <span className={`text-sm italic ml-2 ${aiStatus === 'thinking' ? 'text-yellow-400 animate-pulse' :
                                   aiStatus === 'typing' ? 'text-green-400 animate-pulse' :
-                                  aiStatus === 'struggling' ? 'text-orange-400 animate-bounce' :
-                                  aiStatus === 'solved' ? 'text-green-500' :
-                                  aiStatus === 'gave_up' ? 'text-red-400' : 'text-gray-400'
-                                }`}>
+                                    aiStatus === 'struggling' ? 'text-orange-400 animate-bounce' :
+                                      aiStatus === 'solved' ? 'text-green-500' :
+                                        aiStatus === 'gave_up' ? 'text-red-400' : 'text-gray-400'
+                                  }`}>
                                   {aiStatus === 'thinking' && '🤔 thinking...'}
                                   {aiStatus === 'typing' && '⌨️ typing...'}
                                   {aiStatus === 'struggling' && '😰 struggling...'}
@@ -654,19 +774,18 @@ const DuelArenaPage: React.FC = () => {
                             <div className="flex items-center gap-2">
                               {opponentIsAi && (
                                 <div className="bg-arena-dark/80 px-3 py-1 rounded-lg text-sm font-mono flex items-center gap-2">
-                                  <div className={`w-2 h-2 rounded-full ${
-                                    aiStatus === 'thinking' ? 'bg-yellow-400 animate-pulse' :
+                                  <div className={`w-2 h-2 rounded-full ${aiStatus === 'thinking' ? 'bg-yellow-400 animate-pulse' :
                                     aiStatus === 'typing' ? 'bg-green-400 animate-pulse' :
-                                    aiStatus === 'struggling' ? 'bg-orange-400 animate-bounce' :
-                                    aiStatus === 'solved' ? 'bg-green-500' :
-                                    aiStatus === 'gave_up' ? 'bg-red-400' : 'bg-gray-400'
-                                  }`}></div>
+                                      aiStatus === 'struggling' ? 'bg-orange-400 animate-bounce' :
+                                        aiStatus === 'solved' ? 'bg-green-500' :
+                                          aiStatus === 'gave_up' ? 'bg-red-400' : 'bg-gray-400'
+                                    }`}></div>
                                   <span>AI: {Math.round(aiProgress)}%</span>
                                 </div>
                               )}
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => setShowOpponentCode(false)}
                                 className="hover:bg-arena-surface/50"
                               >
@@ -703,8 +822,8 @@ const DuelArenaPage: React.FC = () => {
               {/* Show Opponent Button */}
               {!showOpponentCode && (
                 <div className="mt-4 flex justify-center">
-                  <Button 
-                    variant="secondary" 
+                  <Button
+                    variant="secondary"
                     onClick={() => setShowOpponentCode(true)}
                     className="bg-arena-surface/50 hover:bg-arena-surface/70 border-arena-border"
                   >
@@ -725,8 +844,8 @@ const DuelArenaPage: React.FC = () => {
                 {/* Actions */}
                 <div className="space-y-4 mb-6">
                   <h3 className="text-lg font-bold text-arena-text-primary border-b border-arena-border pb-2">Actions</h3>
-                  <Button 
-                    onClick={handleRunTests} 
+                  <Button
+                    onClick={handleRunTests}
                     disabled={duel?.status !== DuelStatus.IN_PROGRESS}
                     variant="secondary"
                     className="w-full h-12 text-base font-medium"
@@ -734,8 +853,8 @@ const DuelArenaPage: React.FC = () => {
                     <Play className="mr-2 h-5 w-5" />
                     Run Tests
                   </Button>
-                  <Button 
-                    onClick={handleSubmitSolution} 
+                  <Button
+                    onClick={handleSubmitSolution}
                     disabled={duel?.status !== DuelStatus.IN_PROGRESS}
                     variant="gradient"
                     className="w-full h-12 text-base font-medium"
@@ -743,6 +862,106 @@ const DuelArenaPage: React.FC = () => {
                     <CheckCircle className="mr-2 h-5 w-5" />
                     Submit Solution
                   </Button>
+
+                  {/* Debug: Clear saved code button (only in development) */}
+                  {import.meta.env.DEV && (
+                    <div className="space-y-2">
+                      <Button
+                        onClick={() => {
+                          if (duelId && user?.id) {
+                            clearDuelStorage(duelId, user.id);
+                            setUserCode(duel?.problem?.starter_code?.[currentLanguage.id] || '');
+                            addToast({
+                              type: 'info',
+                              title: 'Debug',
+                              message: 'Saved code cleared'
+                            });
+                          }
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs text-arena-text-muted hover:text-arena-text"
+                      >
+                        Clear Saved Code
+                      </Button>
+                      
+                      <Button
+                        onClick={() => {
+                          if (duelId) {
+                            import('@/utils/aiStateDebug').then(({ checkAiCodeConsistency }) => {
+                              checkAiCodeConsistency(duelId);
+                            });
+                          }
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs text-arena-text-muted hover:text-arena-text"
+                      >
+                        Check AI State
+                      </Button>
+                      
+                      <Button
+                        onClick={() => {
+                          if (duelId) {
+                            import('@/utils/aiCodeRestore').then(({ forceRestoreAiCode, getAiCodeInfo }) => {
+                              const info = getAiCodeInfo(duelId);
+                              console.log('AI Code Info:', info);
+                              
+                              const restoredCode = forceRestoreAiCode(duelId);
+                              if (restoredCode) {
+                                // Force update opponent code
+                                window.location.reload(); // Simple way to trigger restore
+                              } else {
+                                addToast({
+                                  type: 'warning',
+                                  title: 'No AI Code',
+                                  message: 'No saved AI code found'
+                                });
+                              }
+                            });
+                          }
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs text-arena-text-muted hover:text-arena-text"
+                      >
+                        Restore AI Code
+                      </Button>
+                      
+                      <Button
+                        onClick={() => {
+                          if (duelId) {
+                            import('@/utils/debugLocalStorage').then(({ inspectDuelStorage, reconstructCodeFromStoredProcess }) => {
+                              inspectDuelStorage(duelId);
+                              const reconstructed = reconstructCodeFromStoredProcess(duelId);
+                              if (reconstructed) {
+                                console.log('Reconstructed code length:', reconstructed.length);
+                              }
+                            });
+                          }
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs text-arena-text-muted hover:text-arena-text"
+                      >
+                        Inspect Storage
+                      </Button>
+                      
+                      <Button
+                        onClick={() => {
+                          console.log('Current opponent code:', opponentCode);
+                          console.log('Current AI progress:', aiProgress);
+                          console.log('AI finished typing:', aiFinishedTyping);
+                          console.log('AI status:', aiStatus);
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs text-arena-text-muted hover:text-arena-text"
+                      >
+                        Log Current State
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Test Results */}
@@ -761,11 +980,10 @@ const DuelArenaPage: React.FC = () => {
                           {/* Enhanced Test Results Display */}
                           <div className="space-y-4">
                             {/* Overall Status */}
-                            <div className={`p-4 rounded-xl border ${
-                              submissionResult.is_correct 
-                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-                                : 'bg-red-500/10 border-red-500/30 text-red-400'
-                            }`}>
+                            <div className={`p-4 rounded-xl border ${submissionResult.is_correct
+                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                              : 'bg-red-500/10 border-red-500/30 text-red-400'
+                              }`}>
                               <div className="flex items-center gap-3">
                                 {submissionResult.is_correct ? (
                                   <CheckCheck className="w-6 h-6" />
@@ -786,10 +1004,10 @@ const DuelArenaPage: React.FC = () => {
                                   {submissionResult.passed} / {submissionResult.total} Passed
                                 </span>
                               </div>
-                              
+
                               {/* Progress Bar */}
                               <div className="w-full h-2 bg-arena-border/50 rounded-full overflow-hidden">
-                                <div 
+                                <div
                                   className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-500"
                                   style={{ width: `${(submissionResult.passed / submissionResult.total) * 100}%` }}
                                 />
@@ -806,11 +1024,10 @@ const DuelArenaPage: React.FC = () => {
                                     <div key={index} className="bg-arena-dark/30 rounded-lg p-3 space-y-2">
                                       <div className="flex items-center justify-between">
                                         <span className="text-sm font-medium">Test {index + 1}</span>
-                                        <span className={`text-xs px-2 py-1 rounded ${
-                                          isPassed 
-                                            ? 'bg-emerald-500/20 text-emerald-400' 
-                                            : 'bg-red-500/20 text-red-400'
-                                        }`}>
+                                        <span className={`text-xs px-2 py-1 rounded ${isPassed
+                                          ? 'bg-emerald-500/20 text-emerald-400'
+                                          : 'bg-red-500/20 text-red-400'
+                                          }`}>
                                           {isPassed ? 'PASSED' : 'FAILED'}
                                         </span>
                                       </div>

@@ -68,7 +68,77 @@ class CodeExecutionResult(BaseModel):
     total: int = 0
 
 async def _execute_code_against_tests(submission: schemas.CodeSubmission, problem: Dict[str, Any]) -> CodeExecutionResult:
-    """Runs the user's code against all test cases for the problem using Judge0."""
+    """
+    Runs the user's code against all test cases using LeetCode-style validation.
+    This provides better multi-language support and more accurate results.
+    """
+    from shared.app.ai.leetcode_validator import leetcode_validator
+    from shared.app.ai.function_validator import function_validator
+    
+    # Validate inputs
+    if not problem or not problem.get("test_cases"):
+        return CodeExecutionResult(is_correct=False, error="Problem has no test cases.")
+    
+    function_name = problem.get("function_name")
+    if not function_name:
+        return CodeExecutionResult(is_correct=False, error="Could not determine function name to test.")
+    
+    # Validate function signature before running tests
+    is_valid, error_message = function_validator.validate_function_signature(
+        user_code=submission.code,
+        expected_function_name=function_name,
+        language=submission.language
+    )
+    
+    if not is_valid:
+        return CodeExecutionResult(
+            is_correct=False,
+            error=f"Function signature error: {error_message}",
+            passed=0,
+            total=len(problem["test_cases"]),
+            details=[error_message]
+        )
+    
+    # Use the new LeetCode-style validator
+    try:
+        validation_result = await leetcode_validator.validate_solution(
+            language=submission.language,
+            function_name=function_name,
+            user_code=submission.code,
+            test_cases=problem["test_cases"],
+            time_limit=problem.get("time_limit", 2.0),
+            memory_limit=problem.get("memory_limit", 128000)
+        )
+        
+        # Convert to our existing format for compatibility
+        error_details = []
+        for failed_test in validation_result.failed_tests:
+            error_details.append(
+                f"Test case {failed_test['test_case']} failed: {failed_test['error']}. "
+                f"Input: {failed_test['input']}. Expected: '{failed_test['expected']}', "
+                f"Got: {failed_test['actual'] or 'No output'}. Ensure your function returns a value."
+            )
+        
+        return CodeExecutionResult(
+            is_correct=validation_result.passed,
+            passed=validation_result.passed_tests,
+            total=validation_result.total_tests,
+            details=error_details,
+            error=None if validation_result.passed else "Some test cases failed"
+        )
+        
+    except Exception as e:
+        return CodeExecutionResult(
+            is_correct=False,
+            error=f"Validation system error: {str(e)}",
+            passed=0,
+            total=len(problem["test_cases"]),
+            details=[f"System error during validation: {str(e)}"]
+        )
+
+# Keep the old implementation as fallback
+async def _execute_code_against_tests_legacy(submission: schemas.CodeSubmission, problem: Dict[str, Any]) -> CodeExecutionResult:
+    """Legacy implementation - kept for fallback"""
     language_id = LANGUAGE_MAP.get(submission.language)
     if language_id is None:
         return CodeExecutionResult(is_correct=False, error="Unsupported language.")
@@ -80,55 +150,34 @@ async def _execute_code_against_tests(submission: schemas.CodeSubmission, proble
     passed_tests = 0
     error_details = []
     
-    source_to_run = submission.code
-    # Always wrap python code to handle I/O, making it easier for the user.
-    if submission.language == "python":
-        function_name = problem.get("function_name")
-        
-        # We always use a wrapper for Python to handle I/O, ensuring consistency.
-        if function_name is None:
-            # This should ideally not happen if the problem generation is correct
-            return CodeExecutionResult(is_correct=False, error="Could not determine function name to test. Problem data is missing this key.")
-
-        # Safer I/O wrapper using ast.literal_eval
-        wrapper = f"""
-
-# User's solution is above this line
-import sys
-import ast
-
-try:
-    input_str = sys.stdin.read().strip()
-    if input_str:
-        # Safely parse the input string into a Python object.
-        # It's expected to be a list or tuple literal, e.g., "[1, 2, 3]" or "('a', 'b')"
-        parsed_input = ast.literal_eval(input_str)
-        
-        # Handle different input patterns by trying to unpack first
-        try:
-            # This will work for multi-argument functions expecting a tuple or list of arguments
-            result = {function_name}(*parsed_input)
-        except TypeError:
-            # If unpacking fails (e.g., function takes 1 argument but receives many),
-            # it's likely a single argument.
-            result = {function_name}(parsed_input)
-            
-        # Print the result to stdout
-        if result is not None:
-            print(result)
-
-except Exception as e:
-    # This helps debug issues with the wrapper or the user's code during execution
-    import traceback
-    print(f"Execution Error: {{type(e).__name__}}: {{e}}", file=sys.stderr)
-    traceback.print_exc(file=sys.stderr)
-"""
-        source_to_run = submission.code + wrapper
+    # Import the language wrapper function from generator
+    from shared.app.ai.generator import create_language_wrapper
+    
+    function_name = problem.get("function_name")
+    if function_name is None:
+        return CodeExecutionResult(is_correct=False, error="Could not determine function name to test. Problem data is missing this key.")
+    
+    # Use language-specific wrapper
+    wrapper = create_language_wrapper(submission.language, function_name)
+    source_to_run = submission.code + "\n" + wrapper
 
     for i, test_case in enumerate(problem["test_cases"]):
-        # The input data should be a string literal of the python object
-        # e.g., "[1, 2, 3]" for a list
-        stdin_to_run = str(test_case.get("input_data"))
+        # Prepare input data based on language
+        if submission.language.lower() in ["javascript", "typescript"]:
+            # For JavaScript, convert Python-style input to JSON
+            input_str = str(test_case.get("input_data"))
+            try:
+                # Parse Python literal and convert to JSON
+                import ast
+                import json
+                python_obj = ast.literal_eval(input_str)
+                stdin_to_run = json.dumps(python_obj)
+            except:
+                # Fallback to original string
+                stdin_to_run = input_str
+        else:
+            # For Python and other languages, use original format
+            stdin_to_run = str(test_case.get("input_data"))
         
         params = SubmissionParams(
             source_code=source_to_run,
